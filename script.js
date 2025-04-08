@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let stimuliIndex;
     let randomizeStimuli;
     let responseKey;
+    let additionalResponses; // Array to store additional valid responses
     let stimulusSize;
     let stimulusColor;
     let provideFeedback;
@@ -66,6 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.stimulusSize) document.getElementById('stimulus-size').value = savedState.stimulusSize;
             if (savedState.stimulusColor) document.getElementById('stimulus-color').value = savedState.stimulusColor;
             if (savedState.responseKey) document.getElementById('response-key').value = savedState.responseKey;
+            if (savedState.additionalResponses) document.getElementById('additional-responses').value = savedState.additionalResponses;
             if (savedState.provideFeedback !== undefined) document.getElementById('provide-feedback').checked = savedState.provideFeedback;
             if (savedState.feedbackDuration) document.getElementById('feedback-duration').value = savedState.feedbackDuration;
             if (savedState.positionX !== undefined) document.getElementById('position-x').value = savedState.positionX;
@@ -119,6 +121,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         responseKey = document.getElementById('response-key').value.trim() || 'Space';
         
+        // Parse additional responses
+        const additionalResponsesInput = document.getElementById('additional-responses').value.trim();
+        additionalResponses = additionalResponsesInput ? 
+            additionalResponsesInput.split(',').map(r => r.trim().toUpperCase()) : 
+            ['A']; // Default to 'A' if empty
+        
         // Validate inputs
         if (trialCount < 1 || trialCount > 999) {
             alert('Trial count must be between 1 and 999');
@@ -153,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
             stimulusSize: document.getElementById('stimulus-size').value,
             stimulusColor: document.getElementById('stimulus-color').value,
             responseKey: document.getElementById('response-key').value.trim(),
+            additionalResponses: document.getElementById('additional-responses').value.trim(),
             provideFeedback: document.getElementById('provide-feedback').checked,
             feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
             positionX: parseInt(document.getElementById('position-x').value) || 0,
@@ -389,6 +398,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Get correct key based on custom mappings or default
             let isCorrect = false;
+            let isAdditionalResponse = false;
+            
+            // Check if the pressed key is in additionalResponses
+            isAdditionalResponse = additionalResponses.includes(keyPressed);
+            
             if (hasCustomMappings) {
                 const stimulusDisplay = currentSequence.length > 1
                     ? `[${currentSequence.join(', ')}]`
@@ -403,8 +417,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 isCorrect = (keyPressed === responseKey.toUpperCase());
             }
 
-            // If correct
-            if (isCorrect) {
+            // If correct or it's an additional response key
+            if (isCorrect || isAdditionalResponse) {
                 // Move to the next item if not the last in the sequence
                 if (!isEndOfSequence) {
                     sequenceIndex++;
@@ -412,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     // Only show feedback at the last item
                     if (provideFeedback) {
-                        showFeedback(true);
+                        showFeedback(isCorrect); // Only show "correct" feedback for the specific correct key
                         feedbackTimer = setTimeout(() => {
                             hideFeedback();
                             processCorrectResponse();

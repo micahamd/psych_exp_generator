@@ -122,10 +122,17 @@
                 </div>
             </div>
             
-            <div class="form-group">
-                <label for="response-key">Response key (leave blank for SPACEBAR):</label>
-                <input type="text" id="response-key" placeholder="SPACEBAR">
-                <p class="helper-text">Key that participants press to advance to the next trial. Defaults to SPACEBAR if left empty.</p>
+            <div class="form-group form-row">
+                <div class="form-column">
+                    <label for="response-key">Response key (leave blank for SPACEBAR):</label>
+                    <input type="text" id="response-key" placeholder="SPACEBAR">
+                    <p class="helper-text">Key that participants press to advance to the next trial. Defaults to SPACEBAR if left empty.</p>
+                </div>
+                <div class="form-column">
+                    <label for="additional-responses">Additional Responses (optional):</label>
+                    <input type="text" id="additional-responses" placeholder="a">
+                    <p class="helper-text">Other keys that can advance trials (comma-separated). These are always accepted.</p>
+                </div>
             </div>
             
             <div class="form-group">

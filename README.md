@@ -26,6 +26,10 @@ The project consists of three main files:
   - Stimulus Text Color: Color of the stimulus text (white, black, or grey)
   - Randomize stimulus sequence: Option to present stimuli in random or sequential order
   - Response key: Customize the key used to progress through trials (defaults to SPACEBAR)
+  - Response feedback: Option to provide visual feedback after responses
+    * Customizable feedback text for correct and incorrect responses
+    * Configurable feedback duration
+    * Visual indication with green (correct) and red (incorrect) colors
 - Fixed-size experiment display (800x600 pixels) centered on a black background
 - Stimulus presentation: Fixation → Text Stimulus → Response → Inter-trial interval
 - Helper text explanations for all parameters
@@ -49,6 +53,9 @@ The project consists of three main files:
    - **Stimulus Text Color**: Choose the color of the stimulus text
    - **Randomize stimulus sequence**: Check to randomize the order of stimuli or uncheck for sequential presentation
    - **Response key**: Set which key advances to the next trial (leave blank for SPACEBAR)
+   - **Provide Feedback**: Check to enable response feedback
+   - **Feedback Text**: Enter text for correct and incorrect responses, separated by comma
+   - **Feedback Duration**: Set how long (in milliseconds) feedback appears on screen
 3. Click the "BEGIN" button to start the experiment
 4. During the experiment:
    - The fixation point appears (if enabled) for the specified fixation interval
@@ -57,6 +64,7 @@ The project consists of three main files:
      * For stimulus sequences with offset > 0, each item in the sequence appears for the specified duration
      * For stimulus sequences with offset = 0, each item requires a response to advance
    - The participant presses the designated response key (even if stimulus disappeared)
+   - If feedback is enabled, the feedback text appears for the specified duration
    - There's a blank interval between trials with the duration specified
    - After all trials are complete, a "Task complete!" message will appear
 5. Click "OK" on the completion screen to return to the parameter configuration screen
@@ -92,6 +100,7 @@ How sequences behave depends on the stimulus offset setting:
    - A text stimulus appears (cycling through the list)
    - If stimulus offset > 0, stimulus disappears after specified milliseconds
    - User presses response key (required to advance even if stimulus is no longer visible)
+   - If feedback is enabled, the feedback text appears for the specified duration
    - Stimulus disappears for the trial interval (blank screen)
    - Next trial begins
    - Process repeats for the specified number of trials
@@ -109,6 +118,15 @@ The experiment can present stimuli in two modes:
    - Example: With sequences `[apple, corn]`, `speed`, and `[bull, mind]` in 4 trials, they would appear in that order, followed by `[apple, corn]` again.
 
 Note: Randomization applies to the sequences themselves, not the items within a sequence. Items within a sequence always appear in the order specified.
+
+## Feedback System
+
+When the feedback option is enabled, participants receive immediate visual feedback after their responses:
+
+- When the correct key is pressed (as specified in the response key setting), the feedback "Correct" appears in green.
+- When any other key is pressed, the feedback "X" appears in red.
+- Feedback remains visible for the specified duration before advancing to the next stimulus or trial.
+- Only the correct response will advance the trial; incorrect responses only display feedback.
 
 ## Troubleshooting
 

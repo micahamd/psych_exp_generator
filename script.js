@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const completionScreen = document.getElementById('completion-screen');
     const fixationPoint = document.getElementById('fixation-point');
     const stimulusText = document.getElementById('stimulus-text');
+    const feedbackText = document.getElementById('feedback-text');
     const okBtn = document.getElementById('ok-btn');
     
     // Experiment variables
@@ -23,14 +24,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let responseKey;
     let stimulusSize;
     let stimulusColor;
+    let provideFeedback;
+    let feedbackDuration;
     let currentTrial = 0;
     let experimentRunning = false;
-    let stimuliUsed = []; // Track which stimuli have been used (for random mode)
-    let stimulusTimer = null; // Timer for stimulus offset
-    
-    // New variables for handling sequences
-    let currentSequence = []; // Current sequence being presented
-    let sequenceIndex = 0;    // Position within the current sequence
+    let stimuliUsed = [];
+    let stimulusTimer = null;
+    let feedbackTimer = null;
+    let currentSequence = [];
+    let sequenceIndex = 0;
     
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
@@ -47,8 +49,11 @@ document.addEventListener('DOMContentLoaded', function() {
         randomizeStimuli = document.getElementById('randomize-stimuli').checked;
         stimulusSize = parseInt(document.getElementById('stimulus-size').value);
         stimulusColor = document.getElementById('stimulus-color').value;
+        provideFeedback = document.getElementById('provide-feedback').checked;
         
-        // Parse stimuli with support for sequences
+        feedbackDuration = parseInt(document.getElementById('feedback-duration').value);
+        
+        // Parse stimuli
         const stimuliInput = document.getElementById('stimuli-text').value;
         stimuli = parseStimuli(stimuliInput);
         
@@ -65,15 +70,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Initialize stimuli index and tracking
+        // Initialize variables
         stimuliIndex = 0;
         stimuliUsed = [];
+        sequenceIndex = 0;
+        currentTrial = 0;
         
         // Start experiment
         startExperiment();
     });
-    
-    // Parse stimuli input to handle sequences (items within square brackets)
+
+    // Parse stimuli input to handle sequences
     function parseStimuli(input) {
         const result = [];
         let inSequence = false;
@@ -132,8 +139,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add any remaining item
         addItem();
         
-        // Log the parsed result for debugging
-        console.log("Parsed stimuli:", result);
+        // If no valid stimuli were found, create a default stimulus
+        if (result.length === 0) {
+            result.push(["default"]);
+        }
+        
         return result;
     }
     
@@ -146,15 +156,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set background color
         experimentScreen.style.backgroundColor = trialBackground;
         
-        // Set fixation color and visibility
+        // Set fixation color
         fixationPoint.style.color = fixationColor;
         
-        // Initialize and hide both fixation and stimulus
+        // Hide all elements initially
         fixationPoint.classList.add('hidden');
         stimulusText.classList.add('hidden');
+        feedbackText.classList.add('hidden');
         
         // Start first trial
-        currentTrial = 0;
         experimentRunning = true;
         
         // Listen for key press
@@ -173,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (showFixation) {
             fixationPoint.classList.remove('hidden');
             stimulusText.classList.add('hidden');
+            feedbackText.classList.add('hidden');
             
             // After fixation interval, show stimulus
             setTimeout(showStimulus, fixationInterval);
@@ -182,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Get the next stimulus sequence based on randomization setting
+    // Get the next stimulus sequence
     function getNextStimulusSequence() {
         if (randomizeStimuli) {
             // If all stimuli have been used, reset the tracking
@@ -220,14 +231,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show the stimulus for this trial
     function showStimulus() {
-        // Clear any existing timer
-        if (stimulusTimer) {
-            clearTimeout(stimulusTimer);
-            stimulusTimer = null;
-        }
+        // Clear any existing timers
+        clearAllTimers();
         
-        // Hide fixation
+        // Hide fixation and feedback
         fixationPoint.classList.add('hidden');
+        feedbackText.classList.add('hidden');
         
         // If this is the start of a new trial, get the next sequence
         if (sequenceIndex === 0) {
@@ -239,9 +248,10 @@ document.addEventListener('DOMContentLoaded', function() {
         stimulusText.textContent = currentStimulus;
         
         // Apply the configured text size and color
-        stimulusText.style.fontSize = stimulusSize + 'px';
+        stimulusText.style.fontSize = `${stimulusSize}px`;
         stimulusText.style.color = stimulusColor;
         
+        // Show the stimulus
         stimulusText.classList.remove('hidden');
         
         // Set timer for stimulus offset if specified (not 0)
@@ -249,56 +259,78 @@ document.addEventListener('DOMContentLoaded', function() {
             stimulusTimer = setTimeout(function() {
                 stimulusText.classList.add('hidden');
                 
-                // If there are more stimuli in the sequence, show the next one after offset
-                sequenceIndex++;
-                if (sequenceIndex < currentSequence.length) {
-                    setTimeout(showStimulus, 10); // Short delay before showing next item
+                // If there are more stimuli in the sequence and no feedback, show the next one
+                if (!provideFeedback && sequenceIndex + 1 < currentSequence.length) {
+                    sequenceIndex++;
+                    setTimeout(showStimulus, 10);
                 }
             }, stimulusOffset);
         }
     }
     
-    // Handle key press during experiment
+    // Updated handleKeyPress function
     function handleKeyPress(e) {
         if (!experimentRunning) return;
-        
-        const keyPressed = e.code === 'Space' ? 'Space' : e.key.toUpperCase();
-        
-        if (keyPressed.toUpperCase() === responseKey.toUpperCase()) {
-            e.preventDefault(); // Prevent default action (like scrolling)
-            
-            // Only respond if the trial is active (after fixation)
-            if (fixationPoint.classList.contains('hidden')) {
-                // If stimulus offset is 0, handle sequence progression on response
-                if (stimulusOffset === 0) {
-                    // Move to next item in sequence or advance trial if sequence is complete
-                    sequenceIndex++;
-                    if (sequenceIndex < currentSequence.length) {
-                        // Show next stimulus in sequence
-                        showStimulus();
-                    } else {
-                        // End of sequence, advance to next trial
-                        advanceTrial();
-                    }
-                } else {
-                    // For timed stimuli, just advance the trial on response
-                    // (the sequence progression is handled by the timers)
+        // Change here: return "SPACE" instead of "Space"
+        const keyPressed = (e.code === 'Space') ? 'SPACE' : e.key.toUpperCase();
+        const correctKey = responseKey.toUpperCase();
+        if (fixationPoint.classList.contains('hidden')) {
+            e.preventDefault();
+            if (provideFeedback) {
+                const isCorrect = (keyPressed === correctKey);
+                showFeedback(isCorrect);
+                feedbackTimer = setTimeout(() => {
+                    hideFeedback();
+                    advanceTrial();
+                }, feedbackDuration);
+            } else {
+                // Without feedback, only correct responses advance the trial
+                if (keyPressed === correctKey) {
                     advanceTrial();
                 }
             }
         }
     }
     
-    // Advance to the next trial
-    function advanceTrial() {
-        // Clear any existing timer
-        if (stimulusTimer) {
-            clearTimeout(stimulusTimer);
-            stimulusTimer = null;
+    // Hard-code the feedback text
+    function showFeedback(isCorrect) {
+        // Clear any existing feedback timer
+        if (feedbackTimer) {
+            clearTimeout(feedbackTimer);
+            feedbackTimer = null;
         }
         
-        // Hide stimulus during the inter-trial interval
+        // Hide stimulus
         stimulusText.classList.add('hidden');
+        
+        // Set feedback text
+        feedbackText.textContent = isCorrect ? 'Correct' : 'X';
+        
+        // Set feedback color
+        feedbackText.style.color = isCorrect ? '#4CAF50' : '#F44336'; // Green or Red
+        
+        // Show feedback
+        feedbackText.classList.remove('hidden');
+    }
+    
+    // Hide feedback
+    function hideFeedback() {
+        feedbackText.classList.add('hidden');
+    }
+    
+    // Remove extra branching in progress; simply advance trial
+    function progressExperiment() {
+        advanceTrial();
+    }
+    
+    // Advance to the next trial
+    function advanceTrial() {
+        // Clear any existing timers
+        clearAllTimers();
+        
+        // Hide elements during inter-trial interval
+        stimulusText.classList.add('hidden');
+        feedbackText.classList.add('hidden');
         
         setTimeout(function() {
             currentTrial++;
@@ -313,6 +345,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }, trialInterval);
     }
     
+    // Clear all timers
+    function clearAllTimers() {
+        if (stimulusTimer) {
+            clearTimeout(stimulusTimer);
+            stimulusTimer = null;
+        }
+        
+        if (feedbackTimer) {
+            clearTimeout(feedbackTimer);
+            feedbackTimer = null;
+        }
+    }
+    
     // End the experiment
     function endExperiment() {
         experimentRunning = false;
@@ -320,11 +365,8 @@ document.addEventListener('DOMContentLoaded', function() {
         completionScreen.classList.remove('hidden');
         document.removeEventListener('keydown', handleKeyPress);
         
-        // Clear any existing timer
-        if (stimulusTimer) {
-            clearTimeout(stimulusTimer);
-            stimulusTimer = null;
-        }
+        // Clear timers
+        clearAllTimers();
     }
     
     // OK button click
@@ -345,5 +387,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('stimulus-color').value = 'white';
         document.getElementById('response-key').value = '';
         document.getElementById('randomize-stimuli').checked = true;
+        document.getElementById('provide-feedback').checked = false;
+        document.getElementById('feedback-text').value = 'Correct, X';
+        document.getElementById('feedback-duration').value = 500;
     });
 });

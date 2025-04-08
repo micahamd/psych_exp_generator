@@ -112,6 +112,24 @@
                 <p class="helper-text">Key that participants press to advance to the next trial. Defaults to SPACEBAR if left empty.</p>
             </div>
             
+            <div class="form-group">
+                <label>Response Feedback:</label>
+                <div class="form-row">
+                    <div class="form-column">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="provide-feedback">
+                            <label for="provide-feedback">Provide Feedback</label>
+                        </div>
+                        <p class="helper-text">When checked, participants will receive feedback on their responses.</p>
+                    </div>
+                    <div class="form-column">
+                        <label for="feedback-duration">Feedback Duration (ms):</label>
+                        <input type="number" id="feedback-duration" min="1" value="500" required>
+                        <p class="helper-text">Duration (in milliseconds) feedback remains visible.</p>
+                    </div>
+                </div>
+            </div>
+            
             <button type="submit" id="begin-btn">BEGIN</button>
         </form>
     </div>
@@ -120,6 +138,7 @@
         <div id="experiment-screen">
             <div id="fixation-point">+</div>
             <div id="stimulus-text" class="hidden"></div>
+            <div id="feedback-text" class="hidden"></div>
         </div>
     </div>
     

@@ -283,15 +283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const stimulusDisplay = currentSequence.length > 1
                     ? `[${currentSequence.join(', ')}]`
                     : currentSequence[0];
-                let correctKey = null;
-                Object.keys(stimuliResponses).forEach(key => {
-                    const cleanKey = key.replace(/^\["|"\]$/g, '')
-                                        .replace(/", "/g, ', ')
-                                        .replace(/"/g, '');
-                    if (cleanKey === stimulusDisplay) {
-                        correctKey = stimuliResponses[key];
-                    }
-                });
+                const correctKey = stimuliResponses[stimulusDisplay];
                 if (correctKey) {
                     isCorrect = (keyPressed === correctKey.toUpperCase());
                 } else {
@@ -492,25 +484,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusSeq => {
             const row = document.createElement('tr');
-            // Store the raw JSON string as data attribute
-            const stimulusJSON = JSON.stringify(stimulusSeq);
-            row.setAttribute('data-stimulus', stimulusJSON);
-            
-            // Display the stimulus in a readable format
+            // Use "[apple, corn]" for multi-item sequences or "apple" for single-item
+            const storedStimulus = (stimulusSeq.length > 1)
+                ? `[${stimulusSeq.join(', ')}]`
+                : stimulusSeq[0];
+
+            row.setAttribute('data-stimulus', storedStimulus);
+
             const stimulusCell = document.createElement('td');
-            stimulusCell.textContent = stimulusSeq.length > 1 ? 
-                `[${stimulusSeq.join(', ')}]` : stimulusSeq[0];
+            stimulusCell.textContent = storedStimulus;
             row.appendChild(stimulusCell);
-            
-            // Response cell with input
+
             const responseCell = document.createElement('td');
             const responseInput = document.createElement('input');
             responseInput.type = 'text';
             responseInput.placeholder = 'Enter key';
             
             // Set value if mapping exists
-            if (stimuliResponses[stimulusJSON]) {
-                responseInput.value = stimuliResponses[stimulusJSON];
+            if (stimuliResponses[storedStimulus]) {
+                responseInput.value = stimuliResponses[storedStimulus];
             }
             
             responseCell.appendChild(responseInput);

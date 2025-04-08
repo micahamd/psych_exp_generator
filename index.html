@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychology Experiment Builder</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="intro-screen" class="container">
+        <h1>Psychology Experiment Builder</h1>
+        <form id="experiment-form">
+            <div class="form-group">
+                <label for="trial-interval">Trial interval (milliseconds):</label>
+                <input type="number" id="trial-interval" min="1" required value="200">
+            </div>
+            
+            <div class="form-group">
+                <label for="trial-background">Trial background:</label>
+                <select id="trial-background" required>
+                    <option value="white">White</option>
+                    <option value="black">Black</option>
+                    <option value="grey" selected>Grey</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="fixation">Fixation:</label>
+                <select id="fixation" required>
+                    <option value="yes" selected>Yes</option>
+                    <option value="no">No</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="trial-count">Trial count (1-999):</label>
+                <input type="number" id="trial-count" min="1" max="999" required value="4">
+            </div>
+            
+            <div class="form-group">
+                <label for="response-key">Response key (leave blank for SPACEBAR):</label>
+                <input type="text" id="response-key" placeholder="SPACEBAR">
+            </div>
+            
+            <button type="submit" id="begin-btn">BEGIN</button>
+        </form>
+    </div>
+    
+    <div id="experiment-screen" class="container hidden">
+        <div id="fixation-point">+</div>
+    </div>
+    
+    <div id="completion-screen" class="container hidden">
+        <h2>Task complete!</h2>
+        <button id="ok-btn">OK</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

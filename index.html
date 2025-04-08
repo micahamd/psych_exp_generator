@@ -42,6 +42,12 @@
             </div>
             
             <div class="form-group">
+                <label for="stimulus-offset">Stimulus offset (milliseconds):</label>
+                <input type="number" id="stimulus-offset" min="0" required value="0">
+                <p class="helper-text">How long the stimulus remains visible (0 = until response, any other value = milliseconds before disappearing).</p>
+            </div>
+            
+            <div class="form-group">
                 <label for="trial-count">Trial count (1-999):</label>
                 <input type="number" id="trial-count" min="1" max="999" required value="4">
                 <p class="helper-text">Total number of trials in the experiment. Each trial presents one stimulus.</p>

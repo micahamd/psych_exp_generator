@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Experiment variables
     let trialInterval;
     let fixationInterval;
+    let stimulusOffset;
     let trialBackground;
     let showFixation;
     let trialCount;
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTrial = 0;
     let experimentRunning = false;
     let stimuliUsed = []; // Track which stimuli have been used (for random mode)
+    let stimulusTimer = null; // Timer for stimulus offset
     
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
@@ -30,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get form values
         trialInterval = parseInt(document.getElementById('trial-interval').value);
         fixationInterval = parseInt(document.getElementById('fixation-interval').value);
+        stimulusOffset = parseInt(document.getElementById('stimulus-offset').value);
         trialBackground = document.getElementById('trial-background').value;
         showFixation = document.getElementById('fixation').value === 'yes';
         trialCount = parseInt(document.getElementById('trial-count').value);
@@ -133,6 +136,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show the stimulus for this trial
     function showStimulus() {
+        // Clear any existing timer
+        if (stimulusTimer) {
+            clearTimeout(stimulusTimer);
+            stimulusTimer = null;
+        }
+        
         // Hide fixation
         fixationPoint.classList.add('hidden');
         
@@ -140,6 +149,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentStimulus = getNextStimulus();
         stimulusText.textContent = currentStimulus;
         stimulusText.classList.remove('hidden');
+        
+        // Set timer for stimulus offset if specified (not 0)
+        if (stimulusOffset > 0) {
+            stimulusTimer = setTimeout(function() {
+                stimulusText.classList.add('hidden');
+            }, stimulusOffset);
+        }
     }
     
     // Handle key press during experiment
@@ -151,8 +167,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (keyPressed.toUpperCase() === responseKey.toUpperCase()) {
             e.preventDefault(); // Prevent default action (like scrolling)
             
-            // Only respond if stimulus is showing (not during fixation or interval)
-            if (!stimulusText.classList.contains('hidden')) {
+            // Only respond if the trial is active (after fixation)
+            // We allow responses even if the stimulus has disappeared due to the offset
+            if (fixationPoint.classList.contains('hidden')) {
                 advanceTrial();
             }
         }
@@ -160,6 +177,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Advance to the next trial
     function advanceTrial() {
+        // Clear any existing timer
+        if (stimulusTimer) {
+            clearTimeout(stimulusTimer);
+            stimulusTimer = null;
+        }
+        
         // Hide stimulus during the inter-trial interval
         stimulusText.classList.add('hidden');
         
@@ -182,6 +205,12 @@ document.addEventListener('DOMContentLoaded', function() {
         experimentContainer.classList.add('hidden');
         completionScreen.classList.remove('hidden');
         document.removeEventListener('keydown', handleKeyPress);
+        
+        // Clear any existing timer
+        if (stimulusTimer) {
+            clearTimeout(stimulusTimer);
+            stimulusTimer = null;
+        }
     }
     
     // OK button click
@@ -192,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset form values to defaults
         document.getElementById('trial-interval').value = 200;
         document.getElementById('fixation-interval').value = 100;
+        document.getElementById('stimulus-offset').value = 0;
         document.getElementById('trial-background').value = 'grey';
         document.getElementById('fixation').value = 'yes';
         document.getElementById('trial-count').value = 4;

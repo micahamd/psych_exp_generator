@@ -238,85 +238,109 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show the stimulus for this trial
     function showStimulus() {
-        // Clear any existing timers
         clearAllTimers();
-        
-        // Hide fixation and feedback
         fixationPoint.classList.add('hidden');
         feedbackText.classList.add('hidden');
-        
-        // If this is the start of a new trial, get the next sequence
+
         if (sequenceIndex === 0) {
             currentSequence = getNextStimulusSequence();
         }
-        
-        // Get the current stimulus in the sequence and set it
         const currentStimulus = currentSequence[sequenceIndex];
         stimulusText.textContent = currentStimulus;
-        
-        // Apply the configured text size and color
         stimulusText.style.fontSize = `${stimulusSize}px`;
         stimulusText.style.color = stimulusColor;
-        
-        // Show the stimulus
         stimulusText.classList.remove('hidden');
-        
-        // Set timer for stimulus offset if specified (not 0)
+
         if (stimulusOffset > 0) {
-            stimulusTimer = setTimeout(function() {
+            stimulusTimer = setTimeout(() => {
                 stimulusText.classList.add('hidden');
-                
-                // If there are more stimuli in the sequence and no feedback, show the next one
-                if (!provideFeedback && sequenceIndex + 1 < currentSequence.length) {
+                if (sequenceIndex < currentSequence.length - 1) {
                     sequenceIndex++;
                     setTimeout(showStimulus, 10);
+                } else if (!provideFeedback) {
+                    setTimeout(() => {
+                        advanceTrial();
+                    }, 10);
                 }
             }, stimulusOffset);
         }
     }
-    
-    // Updated handleKeyPress function that uses custom mappings
+
+    // Corrected handleKeyPress function
     function handleKeyPress(e) {
         if (!experimentRunning) return;
         const keyPressed = (e.code === 'Space') ? 'SPACE' : e.key.toUpperCase();
-        
+
         if (fixationPoint.classList.contains('hidden')) {
             e.preventDefault();
-            
+
+            // Determine if we're at the last item in the current sequence
+            const isEndOfSequence = (sequenceIndex === currentSequence.length - 1);
+
             // Get correct key based on custom mappings or default
             let isCorrect = false;
-            
             if (hasCustomMappings) {
-                // Use custom mapping for current stimulus
-                const currentStimulusText = JSON.stringify(currentSequence);
-                const correctKey = stimuliResponses[currentStimulusText];
-                
+                const stimulusDisplay = currentSequence.length > 1
+                    ? `[${currentSequence.join(', ')}]`
+                    : currentSequence[0];
+                let correctKey = null;
+                Object.keys(stimuliResponses).forEach(key => {
+                    const cleanKey = key.replace(/^\["|"\]$/g, '')
+                                        .replace(/", "/g, ', ')
+                                        .replace(/"/g, '');
+                    if (cleanKey === stimulusDisplay) {
+                        correctKey = stimuliResponses[key];
+                    }
+                });
                 if (correctKey) {
                     isCorrect = (keyPressed === correctKey.toUpperCase());
                 } else {
-                    // Fall back to default if no mapping for this stimulus
                     isCorrect = (keyPressed === responseKey.toUpperCase());
                 }
             } else {
-                // Use default response key
                 isCorrect = (keyPressed === responseKey.toUpperCase());
             }
-            
-            if (provideFeedback) {
-                showFeedback(isCorrect);
-                feedbackTimer = setTimeout(() => {
-                    hideFeedback();
-                    advanceTrial();
-                }, feedbackDuration);
+
+            // If correct
+            if (isCorrect) {
+                // Move to the next item if not the last in the sequence
+                if (!isEndOfSequence) {
+                    sequenceIndex++;
+                    showStimulus();
+                } else {
+                    // Only show feedback at the last item
+                    if (provideFeedback) {
+                        showFeedback(true);
+                        feedbackTimer = setTimeout(() => {
+                            hideFeedback();
+                            processCorrectResponse();
+                        }, feedbackDuration);
+                    } else {
+                        processCorrectResponse();
+                    }
+                }
             } else {
-                // Without feedback, only correct responses advance the trial
-                if (isCorrect) {
-                    advanceTrial();
+                // If incorrect, only show feedback at the last item
+                if (provideFeedback && isEndOfSequence) {
+                    showFeedback(false);
+                    feedbackTimer = setTimeout(() => {
+                        hideFeedback();
+                    }, feedbackDuration);
                 }
             }
         }
     }
-    
+
+    // Introduced helper to process correct responses in sequences
+    function processCorrectResponse() {
+        if (sequenceIndex < currentSequence.length - 1) {
+            sequenceIndex++;
+            showStimulus();
+        } else {
+            advanceTrial();
+        }
+    }
+
     // Hard-code the feedback text
     function showFeedback(isCorrect) {
         // Clear any existing feedback timer
@@ -324,10 +348,10 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(feedbackTimer);
             feedbackTimer = null;
         }
-        
+
         // Hide stimulus
         stimulusText.classList.add('hidden');
-        
+
         // Set feedback text
         feedbackText.textContent = isCorrect ? 'Correct' : 'X';
         
@@ -342,34 +366,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideFeedback() {
         feedbackText.classList.add('hidden');
     }
-    
-    // Remove extra branching in progress; simply advance trial
-    function progressExperiment() {
-        advanceTrial();
-    }
-    
-    // Advance to the next trial
+
+    // Clean up advanceTrial
     function advanceTrial() {
-        // Clear any existing timers
         clearAllTimers();
-        
-        // Hide elements during inter-trial interval
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
-        
-        setTimeout(function() {
+        setTimeout(() => {
             currentTrial++;
-            
             if (currentTrial < trialCount) {
-                // Start the next trial
                 startTrial();
             } else {
-                // End experiment
                 endExperiment();
             }
         }, trialInterval);
     }
-    
+
+    // Correct endExperiment
+    function endExperiment() {
+        experimentRunning = false;
+        experimentContainer.classList.add('hidden');
+        completionScreen.classList.remove('hidden');
+        document.removeEventListener('keydown', handleKeyPress);
+        clearAllTimers();
+    }
+
     // Clear all timers
     function clearAllTimers() {
         if (stimulusTimer) {
@@ -381,17 +402,6 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(feedbackTimer);
             feedbackTimer = null;
         }
-    }
-    
-    // End the experiment
-    function endExperiment() {
-        experimentRunning = false;
-        experimentContainer.classList.add('hidden');
-        completionScreen.classList.remove('hidden');
-        document.removeEventListener('keydown', handleKeyPress);
-        
-        // Clear timers
-        clearAllTimers();
     }
     
     // OK button click
@@ -482,10 +492,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusSeq => {
             const row = document.createElement('tr');
-            const stimulusText = JSON.stringify(stimulusSeq);
-            row.setAttribute('data-stimulus', stimulusText);
+            // Store the raw JSON string as data attribute
+            const stimulusJSON = JSON.stringify(stimulusSeq);
+            row.setAttribute('data-stimulus', stimulusJSON);
             
-            // Stimulus cell
+            // Display the stimulus in a readable format
             const stimulusCell = document.createElement('td');
             stimulusCell.textContent = stimulusSeq.length > 1 ? 
                 `[${stimulusSeq.join(', ')}]` : stimulusSeq[0];
@@ -498,8 +509,8 @@ document.addEventListener('DOMContentLoaded', function() {
             responseInput.placeholder = 'Enter key';
             
             // Set value if mapping exists
-            if (stimuliResponses[stimulusText]) {
-                responseInput.value = stimuliResponses[stimulusText];
+            if (stimuliResponses[stimulusJSON]) {
+                responseInput.value = stimuliResponses[stimulusJSON];
             }
             
             responseCell.appendChild(responseInput);

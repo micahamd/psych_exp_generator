@@ -18,6 +18,7 @@ The project consists of three main files:
   - Fixation point: Option to show or hide a central fixation cross
   - Fixation interval: The duration (in milliseconds) that the fixation appears
   - Fixation color: Color of the fixation cross (white, grey, or black)
+  - Fixation and Stimulus Location: Control the position of stimuli and fixation relative to screen center
   - Stimulus offset: Controls how long the stimulus remains visible (0 = until response)
   - Trial count: Set the number of trials (between 1 and 999)
   - Stimuli - Text: Comma-separated list of text stimuli to display during trials
@@ -46,6 +47,10 @@ The project consists of three main files:
    - **Fixation**: Choose whether to display a fixation cross in the center of the screen
    - **Fixation interval**: Set how long (in milliseconds) the fixation cross appears
    - **Fixation color**: Select the color of the fixation cross (white, grey, or black)
+   - **Fixation and Stimulus Location**: Position stimuli and fixation relative to center (X,Y coordinates in pixels)
+      * [0,0] represents the screen center
+      * Negative X values move left, positive X values move right
+      * Negative Y values move up, positive Y values move down
    - **Stimulus offset**: Set how long (in milliseconds) stimuli remain visible (0 = until response)
    - **Trial count**: Set how many trials the experiment should run
    - **Stimuli - Text**: Enter a comma-separated list of text stimuli to be presented
@@ -123,22 +128,28 @@ Note: Randomization applies to the sequences themselves, not the items within a 
 
 ## Custom Stimulus-Response Mappings
 
-The experiment builder allows you to define specific response keys for each stimulus or sequence:
+The experiment builder allows you to define specific response keys and positions for each stimulus or sequence:
 
 1. Configure your stimuli in the "Stimuli - Text" field
 2. Click the "Custom S-R Mappings" button to open the mapping dialog
-3. For each stimulus or sequence, enter the corresponding correct response key
+3. For each stimulus or sequence, you can set:
+   - The corresponding correct response key
+   - Custom X position (horizontal offset from center)
+   - Custom Y position (vertical offset from center)
 4. Click "Save Mappings" to apply your custom mappings
 
 When custom mappings are set:
 - The specified key will be considered the correct response for that specific stimulus
 - The default response key will be used for any stimuli that don't have a custom mapping
 - Different stimuli can have different correct responses
+- Different stimuli can appear at different positions on the screen
+- The custom positions override the global position setting for specific stimuli only
+- If either X or Y is not specified for a stimulus, the global position value is used for that coordinate
 
 Example:
-- For stimulus sequence `[apple, corn]`, the correct response could be set to 'K'
-- For stimulus `speed`, the correct response could be set to 'J'
-- This allows for more complex experimental designs with stimulus-specific responses
+- For stimulus sequence `[apple, corn]`, the correct response could be set to 'K' with position [100, 0]
+- For stimulus `speed`, the correct response could be set to 'J' with position [-100, 0]
+- This allows for more complex experimental designs with stimulus-specific responses and locations
 
 ## Feedback System
 
@@ -149,6 +160,24 @@ When the feedback option is enabled, participants receive immediate visual feedb
 - Feedback remains visible for the specified duration before advancing to the next stimulus or trial
 - Default feedback values are "Correct" for correct responses and "X" for incorrect responses
 - Only the correct response will advance the trial; incorrect responses just display feedback
+
+## Position Control
+
+The experiment allows you to control the position of both the fixation cross and stimulus:
+
+- **X coordinate**: Controls horizontal position relative to screen center
+  - Negative values move elements to the left
+  - Positive values move elements to the right
+  - Zero keeps them centered horizontally
+
+- **Y coordinate**: Controls vertical position relative to screen center
+  - Negative values move elements upward
+  - Positive values move elements downward
+  - Zero keeps them centered vertically
+
+This feature is useful for creating offset display paradigms, peripheral attention tasks, or visual field experiments.
+
+Note that the position settings affect both the fixation cross and stimuli. If fixation is disabled, only the stimulus position will be affected.
 
 ## Troubleshooting
 

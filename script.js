@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let stimulusColor;
     let provideFeedback;
     let feedbackDuration;
+    let positionX;
+    let positionY;
     let currentTrial = 0;
     let experimentRunning = false;
     let stimuliUsed = [];
@@ -57,8 +59,9 @@ document.addEventListener('DOMContentLoaded', function() {
         stimulusSize = parseInt(document.getElementById('stimulus-size').value);
         stimulusColor = document.getElementById('stimulus-color').value;
         provideFeedback = document.getElementById('provide-feedback').checked;
-        
         feedbackDuration = parseInt(document.getElementById('feedback-duration').value);
+        positionX = parseInt(document.getElementById('position-x').value) || 0;
+        positionY = parseInt(document.getElementById('position-y').value) || 0;
         
         // Parse stimuli
         const stimuliInput = document.getElementById('stimuli-text').value;
@@ -165,6 +168,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Set fixation color
         fixationPoint.style.color = fixationColor;
+        
+        // Apply the position offset correctly - the transform needs to maintain
+        // the initial -50% centering while adding the user's desired offset
+        fixationPoint.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
+        stimulusText.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
+        feedbackText.style.transform = `translate(-50%, -50%)`; // Keep feedback at center
         
         // Hide all elements initially
         fixationPoint.classList.add('hidden');
@@ -408,6 +417,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('trial-background').value = 'grey';
         document.getElementById('fixation').value = 'yes';
         document.getElementById('fixation-color').value = 'white';
+        document.getElementById('position-x').value = 0;
+        document.getElementById('position-y').value = 0;
         document.getElementById('trial-count').value = 4;
         document.getElementById('stimuli-text').value = 'apple, corn, speed';
         document.getElementById('stimulus-size').value = '42';

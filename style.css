@@ -237,6 +237,22 @@ button:hover {
     /* font-size and color set dynamically in JS */
 }
 
+/* For the fixation point and stimulus text elements to enable relative positioning */
+#fixation-point, #stimulus-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(0, 0); /* Will be overridden by JS */
+}
+
+/* Position fixation point and stimulus text at center by default */
+#fixation-point, #stimulus-text, #feedback-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center by default */
+}
+
 /* Feedback text styles */
 #feedback-text {
     font-family: Arial, sans-serif;

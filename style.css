@@ -287,6 +287,16 @@ close-btn:hover,
     /* color is set dynamically in JS */
 }
 
+/* Concurrent stimulus styles */
+.concurrent-stimulus {
+    font-family: Consolas, monospace;
+    position: absolute;
+    z-index: 1;
+    text-align: center;
+    max-width: 80%;
+    overflow-wrap: break-word;
+}
+
 /* Completion screen styles */
 #completion-screen {
     text-align: center;

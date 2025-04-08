@@ -173,12 +173,14 @@ document.addEventListener('DOMContentLoaded', function() {
         savedState = currentState;
     }
 
-    // Parse stimuli input to handle sequences
+    // Parse stimuli input to handle sequences and concurrent stimuli
     function parseStimuli(input) {
         const result = [];
         let inSequence = false;
+        let inConcurrent = false;
         let currentItem = '';
         let currentSequence = [];
+        let currentConcurrent = [];
         
         // Helper function to add an item to the result
         function addItem() {
@@ -186,6 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (trimmed) {
                 if (inSequence) {
                     currentSequence.push(trimmed);
+                } else if (inConcurrent) {
+                    currentConcurrent.push(trimmed);
                 } else {
                     // Single item becomes a sequence of one
                     result.push([trimmed]);
@@ -202,6 +206,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 inSequence = true;
                 // If there was text before the bracket, ignore it
                 currentItem = '';
+            } else if (char === '(') {
+                inConcurrent = true;
+                // If there was text before the bracket, ignore it
+                currentItem = '';
             } else if (char === ']') {
                 // End of a sequence, add the current item if any
                 addItem();
@@ -211,14 +219,27 @@ document.addEventListener('DOMContentLoaded', function() {
                     result.push([...currentSequence]);
                     currentSequence = [];
                 }
-            } else if (char === ',' && !inSequence) {
-                // End of an item outside a sequence
+            } else if (char === ')') {
+                // End of a concurrent group, add the current item if any
+                addItem();
+                inConcurrent = false;
+                // Add the concurrent group to the result if not empty
+                if (currentConcurrent.length > 0) {
+                    // Use object to mark this as concurrent stimuli
+                    result.push({
+                        type: 'concurrent',
+                        stimuli: [...currentConcurrent]
+                    });
+                    currentConcurrent = [];
+                }
+            } else if (char === ',' && !inSequence && !inConcurrent) {
+                // End of an item outside brackets
                 addItem();
             } else {
                 // Regular character
-                if (inSequence) {
+                if (inSequence || inConcurrent) {
                     if (char === ',') {
-                        // Within a sequence, comma separates items
+                        // Within brackets, comma separates items
                         addItem();
                     } else {
                         currentItem += char;
@@ -239,7 +260,47 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return result;
     }
+
+    // Generate formatted stimulus key for storage/retrieval
+    function getFormattedStimulusKey(stimulusItem) {
+        if (Array.isArray(stimulusItem)) {
+            // Sequential stimulus
+            return stimulusItem.length > 1 ? `[${stimulusItem.join(', ')}]` : stimulusItem[0];
+        } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'concurrent') {
+            // Concurrent stimulus
+            return `(${stimulusItem.stimuli.join(', ')})`;
+        }
+        // Default case (shouldn't happen)
+        return String(stimulusItem);
+    }
     
+    // Generate default positions for concurrent stimuli
+    function generateConcurrentPositions(stimuliCount) {
+        const positions = [];
+        
+        // Skip if only one stimulus (will use center position)
+        if (stimuliCount <= 1) return [[0, 0]];
+        
+        // Distance from center in pixels
+        const distance = 150;
+        
+        if (stimuliCount === 2) {
+            // Place horizontally left and right
+            positions.push([-distance, 0]);
+            positions.push([distance, 0]);
+        } else {
+            // Place in a circle
+            for (let i = 0; i < stimuliCount; i++) {
+                const angle = (i / stimuliCount) * 2 * Math.PI; // Distribute around circle
+                const x = Math.sin(angle) * distance;
+                const y = -Math.cos(angle) * distance; // Negative to start from top
+                positions.push([Math.round(x), Math.round(y)]);
+            }
+        }
+        
+        return positions;
+    }
+
     // Start the experiment
     function startExperiment() {
         // Hide intro screen and show experiment container
@@ -333,56 +394,145 @@ document.addEventListener('DOMContentLoaded', function() {
         clearAllTimers();
         fixationPoint.classList.add('hidden');
         feedbackText.classList.add('hidden');
+        
+        // Clear any existing concurrent stimuli
+        clearConcurrentStimuli();
 
         if (sequenceIndex === 0) {
             currentSequence = getNextStimulusSequence();
         }
-        const currentStimulus = currentSequence[sequenceIndex];
-        stimulusText.textContent = currentStimulus;
         
-        // Check for custom settings for this stimulus
-        const stimulusDisplay = currentSequence.length > 1
-            ? `[${currentSequence.join(', ')}]`
-            : currentSequence[0];
+        // Check if we're handling a concurrent stimulus group
+        const isConcurrent = 
+            typeof currentSequence === 'object' && 
+            currentSequence.type === 'concurrent';
             
+        if (isConcurrent) {
+            displayConcurrentStimuli(currentSequence);
+        } else {
+            // Regular single or sequential stimulus
+            const currentStimulus = currentSequence[sequenceIndex];
+            stimulusText.textContent = currentStimulus;
+            
+            // Check for custom settings for this stimulus
+            const stimulusDisplay = Array.isArray(currentSequence) && currentSequence.length > 1
+                ? `[${currentSequence.join(', ')}]`
+                : currentSequence[0];
+                
+            const mapping = stimuliResponses[stimulusDisplay] || {};
+            
+            // Apply custom or default stimulus size
+            const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
+            stimulusText.style.fontSize = `${customSize}px`;
+            
+            // Apply custom or default stimulus color
+            const customColor = mapping.color || stimulusColor;
+            stimulusText.style.color = customColor;
+            
+            // Apply custom position if available, otherwise use global position
+            const customX = mapping.x !== undefined ? mapping.x : positionX;
+            const customY = mapping.y !== undefined ? mapping.y : positionY;
+            stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
+            
+            // Also update fixation position if we're at the start of a sequence
+            if (sequenceIndex === 0 && showFixation) {
+                fixationPoint.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
+            }
+            
+            stimulusText.classList.remove('hidden');
+
+            // Use custom offset if available, otherwise use global offset
+            const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
+            
+            if (customOffset > 0) {
+                stimulusTimer = setTimeout(() => {
+                    stimulusText.classList.add('hidden');
+                    clearConcurrentStimuli();
+                    if (sequenceIndex < currentSequence.length - 1) {
+                        sequenceIndex++;
+                        setTimeout(showStimulus, 10);
+                    } else if (!provideFeedback) {
+                        setTimeout(() => {
+                            advanceTrial();
+                        }, 10);
+                    }
+                }, customOffset);
+            }
+        }
+    }
+    
+    // Display concurrent stimuli
+    function displayConcurrentStimuli(concurrentGroup) {
+        const stimuli = concurrentGroup.stimuli;
+        const stimulusDisplay = `(${stimuli.join(', ')})`;
         const mapping = stimuliResponses[stimulusDisplay] || {};
         
-        // Apply custom or default stimulus size
-        const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
-        stimulusText.style.fontSize = `${customSize}px`;
+        // Get default positions for the stimuli
+        const defaultPositions = generateConcurrentPositions(stimuli.length);
         
-        // Apply custom or default stimulus color
-        const customColor = mapping.color || stimulusColor;
-        stimulusText.style.color = customColor;
-        
-        // Apply custom position if available, otherwise use global position
-        const customX = mapping.x !== undefined ? mapping.x : positionX;
-        const customY = mapping.y !== undefined ? mapping.y : positionY;
-        stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
-        
-        // Also update fixation position if we're at the start of a sequence
-        if (sequenceIndex === 0 && showFixation) {
-            fixationPoint.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
+        // Create DOM elements for each stimulus
+        for (let i = 0; i < stimuli.length; i++) {
+            const stimulus = stimuli[i];
+            const stimElement = document.createElement('div');
+            stimElement.className = 'concurrent-stimulus';
+            stimElement.textContent = stimulus;
+            
+            // Apply styling
+            stimElement.style.position = 'absolute';
+            stimElement.style.top = '50%';
+            stimElement.style.left = '50%';
+            
+            // Get custom position if available
+            const posKey = stimulus.toLowerCase().replace(/\s+/g, '_');
+            const customX = mapping[`${posKey}_x`] !== undefined ? 
+                mapping[`${posKey}_x`] : defaultPositions[i][0];
+            const customY = mapping[`${posKey}_y`] !== undefined ? 
+                mapping[`${posKey}_y`] : defaultPositions[i][1];
+            
+            // Apply global offset plus specific offset for this item
+            const totalX = (positionX || 0) + customX;
+            const totalY = (positionY || 0) + customY;
+            
+            stimElement.style.transform = `translate(calc(-50% + ${totalX}px), calc(-50% + ${totalY}px))`;
+            
+            // Apply custom or default color and size
+            const customColor = mapping[`${posKey}_color`] || mapping.color || stimulusColor;
+            const customSize = mapping[`${posKey}_size`] !== undefined ? 
+                mapping[`${posKey}_size`] : (mapping.size !== undefined ? mapping.size : stimulusSize);
+            
+            stimElement.style.color = customColor;
+            stimElement.style.fontSize = `${customSize}px`;
+            stimElement.style.fontFamily = 'Consolas, monospace';
+            stimElement.style.zIndex = '1';
+            stimElement.style.textAlign = 'center';
+            
+            // Add to experiment screen
+            experimentScreen.appendChild(stimElement);
         }
         
-        stimulusText.classList.remove('hidden');
-
-        // Use custom offset if available, otherwise use global offset
-        const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
+        // Update fixation position to match global position
+        if (showFixation) {
+            fixationPoint.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
+        }
         
+        // Handle timeout if needed
+        const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
         if (customOffset > 0) {
             stimulusTimer = setTimeout(() => {
-                stimulusText.classList.add('hidden');
-                if (sequenceIndex < currentSequence.length - 1) {
-                    sequenceIndex++;
-                    setTimeout(showStimulus, 10);
-                } else if (!provideFeedback) {
+                clearConcurrentStimuli();
+                if (!provideFeedback) {
                     setTimeout(() => {
                         advanceTrial();
                     }, 10);
                 }
             }, customOffset);
         }
+    }
+    
+    // Clear concurrent stimuli
+    function clearConcurrentStimuli() {
+        const concurrentElements = document.querySelectorAll('.concurrent-stimulus');
+        concurrentElements.forEach(el => el.remove());
     }
 
     // Corrected handleKeyPress function
@@ -393,10 +543,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (fixationPoint.classList.contains('hidden')) {
             e.preventDefault();
 
-            // Determine if we're at the last item in the current sequence
-            const isEndOfSequence = (sequenceIndex === currentSequence.length - 1);
+            // Determine if we're at the last item in a sequence
+            const isEndOfSequence = 
+                Array.isArray(currentSequence) ? 
+                (sequenceIndex === currentSequence.length - 1) : 
+                true; // For concurrent stimuli, always consider it the end
 
-            // Get correct key based on custom mappings or default
+            // Get stimulus display key
+            const stimulusDisplay = 
+                typeof currentSequence === 'object' && currentSequence.type === 'concurrent' ?
+                `(${currentSequence.stimuli.join(', ')})` :
+                (Array.isArray(currentSequence) && currentSequence.length > 1 ?
+                    `[${currentSequence.join(', ')}]` :
+                    currentSequence[0]);
+
+            // Determine if the key pressed is correct
             let isCorrect = false;
             let isAdditionalResponse = false;
             
@@ -404,9 +565,6 @@ document.addEventListener('DOMContentLoaded', function() {
             isAdditionalResponse = additionalResponses.includes(keyPressed);
             
             if (hasCustomMappings) {
-                const stimulusDisplay = currentSequence.length > 1
-                    ? `[${currentSequence.join(', ')}]`
-                    : currentSequence[0];
                 const mappingInfo = stimuliResponses[stimulusDisplay];
                 if (mappingInfo && mappingInfo.key) {
                     isCorrect = (keyPressed === mappingInfo.key.toUpperCase());
@@ -419,24 +577,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If correct or it's an additional response key
             if (isCorrect || isAdditionalResponse) {
-                // Move to the next item if not the last in the sequence
-                if (!isEndOfSequence) {
-                    sequenceIndex++;
-                    showStimulus();
-                } else {
-                    // Only show feedback at the last item
+                if (isEndOfSequence) {
                     if (provideFeedback) {
-                        showFeedback(isCorrect); // Only show "correct" feedback for the specific correct key
+                        showFeedback(isCorrect);
                         feedbackTimer = setTimeout(() => {
                             hideFeedback();
-                            processCorrectResponse();
+                            advanceTrial();
                         }, feedbackDuration);
                     } else {
-                        processCorrectResponse();
+                        advanceTrial();
                     }
                 }
             } else {
-                // If incorrect, only show feedback at the last item
                 if (provideFeedback && isEndOfSequence) {
                     showFeedback(false);
                     feedbackTimer = setTimeout(() => {
@@ -444,16 +596,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, feedbackDuration);
                 }
             }
-        }
-    }
-
-    // Introduced helper to process correct responses in sequences
-    function processCorrectResponse() {
-        if (sequenceIndex < currentSequence.length - 1) {
-            sequenceIndex++;
-            showStimulus();
-        } else {
-            advanceTrial();
         }
     }
 
@@ -467,6 +609,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Hide stimulus
         stimulusText.classList.add('hidden');
+        clearConcurrentStimuli();
 
         // Set feedback text
         feedbackText.textContent = isCorrect ? 'Correct' : 'X';
@@ -507,7 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearAllTimers();
     }
 
-    // Clear all timers
+    // Clear all timers and elements
     function clearAllTimers() {
         if (stimulusTimer) {
             clearTimeout(stimulusTimer);
@@ -518,6 +661,8 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(feedbackTimer);
             feedbackTimer = null;
         }
+        
+        clearConcurrentStimuli();
     }
     
     // OK button click
@@ -550,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // If stimuli changed, clear old mappings that no longer apply
             const newParsedStimuli = parseStimuli(stimuliInput);
             const newStimuliKeys = newParsedStimuli.map(seq => {
-                return seq.length > 1 ? `[${seq.join(', ')}]` : seq[0];
+                return getFormattedStimulusKey(seq);
             });
             
             // Create a new stimuliResponses with only valid keys
@@ -588,7 +733,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Save mappings button
     saveMappingsBtn.addEventListener('click', function() {
-        // Save the mappings from the inputs
         const mappingRows = mappingTbody.querySelectorAll('tr');
         
         stimuliResponses = {};
@@ -596,37 +740,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         mappingRows.forEach(row => {
             const stimulusText = row.getAttribute('data-stimulus');
-            const responseInput = row.querySelector('input[data-type="key"]');
-            const xPosInput = row.querySelector('input[data-type="x-pos"]');
-            const yPosInput = row.querySelector('input[data-type="y-pos"]');
-            const offsetInput = row.querySelector('input[data-type="offset"]');
-            const colorInput = row.querySelector('input[data-type="color"]');
-            const sizeInput = row.querySelector('input[data-type="size"]');
-            
-            // Get values, use default if empty
-            const responseKey = responseInput.value.trim() || responseInput.getAttribute('data-default');
-            const xPos = xPosInput.value.trim() ? parseInt(xPosInput.value) : parseInt(xPosInput.getAttribute('data-default'));
-            const yPos = yPosInput.value.trim() ? parseInt(yPosInput.value) : parseInt(yPosInput.getAttribute('data-default'));
-            const offset = offsetInput.value.trim() ? parseInt(offsetInput.value) : parseInt(offsetInput.getAttribute('data-default'));
-            const color = colorInput.value.trim() || colorInput.getAttribute('data-default');
-            const size = sizeInput.value.trim() ? parseInt(sizeInput.value) : parseInt(sizeInput.getAttribute('data-default'));
-            
-            // Store the custom values (only if different from form defaults)
             const customMapping = {};
             
-            const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
-            const defaultSize = parseInt(document.getElementById('stimulus-size').value);
-            const defaultColor = document.getElementById('stimulus-color').value;
-            const defaultOffset = parseInt(document.getElementById('stimulus-offset').value);
-            const defaultX = parseInt(document.getElementById('position-x').value) || 0;
-            const defaultY = parseInt(document.getElementById('position-y').value) || 0;
-            
-            if (responseKey !== defaultResponseKey) customMapping.key = responseKey;
-            if (xPos !== defaultX) customMapping.x = xPos;
-            if (yPos !== defaultY) customMapping.y = yPos;
-            if (offset !== defaultOffset) customMapping.offset = offset;
-            if (color !== defaultColor) customMapping.color = color;
-            if (size !== defaultSize) customMapping.size = size;
+            // Get all input values based on data-type attribute
+            row.querySelectorAll('input').forEach(input => {
+                const dataType = input.getAttribute('data-type');
+                const defaultValue = input.getAttribute('data-default');
+                const value = input.value.trim();
+                
+                if (value && value !== defaultValue) {
+                    // Check if it's a number type
+                    if (input.type === 'number') {
+                        customMapping[dataType] = parseInt(value);
+                    } else {
+                        customMapping[dataType] = value;
+                    }
+                }
+            });
             
             // Only save if there's at least one custom setting
             if (Object.keys(customMapping).length > 0) {
@@ -646,7 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveCurrentState();
     });
     
-    // Generate mapping table with default values
+    // Generate mapping table with columns for concurrent stimuli
     function generateMappingTable(parsedStimuli) {
         // Clear existing rows
         mappingTbody.innerHTML = '';
@@ -660,12 +790,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultY = document.getElementById('position-y').value || '0';
         
         // Create a row for each stimulus or sequence
-        parsedStimuli.forEach(stimulusSeq => {
+        parsedStimuli.forEach(stimulusItem => {
             const row = document.createElement('tr');
-            // Use "[apple, corn]" for multi-item sequences or "apple" for single-item
-            const storedStimulus = (stimulusSeq.length > 1)
-                ? `[${stimulusSeq.join(', ')}]`
-                : stimulusSeq[0];
+            
+            // Determine the type of stimulus and create formatted key
+            let storedStimulus;
+            let isConcurrent = false;
+            let concurrentStimuli = [];
+            
+            if (Array.isArray(stimulusItem)) {
+                // Sequential stimulus
+                storedStimulus = stimulusItem.length > 1 ?
+                    `[${stimulusItem.join(', ')}]` :
+                    stimulusItem[0];
+            } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'concurrent') {
+                // Concurrent stimulus
+                storedStimulus = `(${stimulusItem.stimuli.join(', ')})`;
+                isConcurrent = true;
+                concurrentStimuli = stimulusItem.stimuli;
+            }
 
             row.setAttribute('data-stimulus', storedStimulus);
 
@@ -682,24 +825,65 @@ document.addEventListener('DOMContentLoaded', function() {
             responseInput.setAttribute('data-type', 'key');
             responseInput.setAttribute('data-default', defaultResponseKey);
             responseCell.appendChild(responseInput);
+            row.appendChild(responseCell);
             
-            // X position cell
-            const xPosCell = document.createElement('td');
-            const xPosInput = document.createElement('input');
-            xPosInput.type = 'number';
-            xPosInput.placeholder = defaultX;
-            xPosInput.setAttribute('data-type', 'x-pos');
-            xPosInput.setAttribute('data-default', defaultX);
-            xPosCell.appendChild(xPosInput);
-            
-            // Y position cell
-            const yPosCell = document.createElement('td');
-            const yPosInput = document.createElement('input');
-            yPosInput.type = 'number';
-            yPosInput.placeholder = defaultY;
-            yPosInput.setAttribute('data-type', 'y-pos');
-            yPosInput.setAttribute('data-default', defaultY);
-            yPosCell.appendChild(yPosInput);
+            if (!isConcurrent) {
+                // Regular stimulus - add normal position columns
+                
+                // X position cell
+                const xPosCell = document.createElement('td');
+                const xPosInput = document.createElement('input');
+                xPosInput.type = 'number';
+                xPosInput.placeholder = defaultX;
+                xPosInput.setAttribute('data-type', 'x-pos');
+                xPosInput.setAttribute('data-default', defaultX);
+                xPosCell.appendChild(xPosInput);
+                row.appendChild(xPosCell);
+                
+                // Y position cell
+                const yPosCell = document.createElement('td');
+                const yPosInput = document.createElement('input');
+                yPosInput.type = 'number';
+                yPosInput.placeholder = defaultY;
+                yPosInput.setAttribute('data-type', 'y-pos');
+                yPosInput.setAttribute('data-default', defaultY);
+                yPosCell.appendChild(yPosInput);
+                row.appendChild(yPosCell);
+            } else {
+                // Concurrent stimulus - add position columns for each stimulus
+                
+                // Calculate default positions
+                const defaultPositions = generateConcurrentPositions(concurrentStimuli.length);
+                
+                // Create position fields for each item
+                concurrentStimuli.forEach((stim, index) => {
+                    const posKey = stim.toLowerCase().replace(/\s+/g, '_');
+                    const defaultPosX = defaultPositions[index][0];
+                    const defaultPosY = defaultPositions[index][1];
+                    
+                    // X position cell
+                    const xPosCell = document.createElement('td');
+                    const xPosInput = document.createElement('input');
+                    xPosInput.type = 'number';
+                    xPosInput.placeholder = defaultPosX;
+                    xPosInput.setAttribute('data-type', `${posKey}_x`);
+                    xPosInput.setAttribute('data-default', defaultPosX);
+                    xPosInput.title = `${stim} X Position`;
+                    xPosCell.appendChild(xPosInput);
+                    row.appendChild(xPosCell);
+                    
+                    // Y position cell
+                    const yPosCell = document.createElement('td');
+                    const yPosInput = document.createElement('input');
+                    yPosInput.type = 'number';
+                    yPosInput.placeholder = defaultPosY;
+                    yPosInput.setAttribute('data-type', `${posKey}_y`);
+                    yPosInput.setAttribute('data-default', defaultPosY);
+                    yPosInput.title = `${stim} Y Position`;
+                    yPosCell.appendChild(yPosInput);
+                    row.appendChild(yPosCell);
+                });
+            }
             
             // Offset cell
             const offsetCell = document.createElement('td');
@@ -709,8 +893,9 @@ document.addEventListener('DOMContentLoaded', function() {
             offsetInput.setAttribute('data-type', 'offset');
             offsetInput.setAttribute('data-default', defaultOffset);
             offsetCell.appendChild(offsetInput);
+            row.appendChild(offsetCell);
             
-            // Color cell
+            // Color cell - Universal color for all stimuli in the group
             const colorCell = document.createElement('td');
             const colorInput = document.createElement('input');
             colorInput.type = 'text';
@@ -718,8 +903,9 @@ document.addEventListener('DOMContentLoaded', function() {
             colorInput.setAttribute('data-type', 'color');
             colorInput.setAttribute('data-default', defaultColor);
             colorCell.appendChild(colorInput);
+            row.appendChild(colorCell);
             
-            // Size cell
+            // Size cell - Universal size for all stimuli in the group
             const sizeCell = document.createElement('td');
             const sizeInput = document.createElement('input');
             sizeInput.type = 'number';
@@ -727,30 +913,120 @@ document.addEventListener('DOMContentLoaded', function() {
             sizeInput.setAttribute('data-type', 'size');
             sizeInput.setAttribute('data-default', defaultSize);
             sizeCell.appendChild(sizeInput);
+            row.appendChild(sizeCell);
+            
+            // Individual color and size for concurrent stimuli
+            if (isConcurrent) {
+                concurrentStimuli.forEach(stim => {
+                    const posKey = stim.toLowerCase().replace(/\s+/g, '_');
+                    
+                    // Individual color
+                    const colorCell = document.createElement('td');
+                    const colorInput = document.createElement('input');
+                    colorInput.type = 'text';
+                    colorInput.placeholder = defaultColor;
+                    colorInput.setAttribute('data-type', `${posKey}_color`);
+                    colorInput.setAttribute('data-default', defaultColor);
+                    colorInput.title = `${stim} Color`;
+                    colorCell.appendChild(colorInput);
+                    row.appendChild(colorCell);
+                    
+                    // Individual size
+                    const sizeCell = document.createElement('td');
+                    const sizeInput = document.createElement('input');
+                    sizeInput.type = 'number';
+                    sizeInput.placeholder = defaultSize;
+                    sizeInput.setAttribute('data-type', `${posKey}_size`);
+                    sizeInput.setAttribute('data-default', defaultSize);
+                    sizeInput.title = `${stim} Size`;
+                    sizeCell.appendChild(sizeInput);
+                    row.appendChild(sizeCell);
+                });
+            }
             
             // Set values if mapping exists
             if (stimuliResponses[storedStimulus]) {
                 const mapping = stimuliResponses[storedStimulus];
-                if (mapping.key) responseInput.value = mapping.key;
-                if (mapping.x !== undefined) xPosInput.value = mapping.x;
-                if (mapping.y !== undefined) yPosInput.value = mapping.y;
-                if (mapping.offset !== undefined) offsetInput.value = mapping.offset;
-                if (mapping.color) colorInput.value = mapping.color;
-                if (mapping.size !== undefined) sizeInput.value = mapping.size;
+                
+                // Set each input based on data-type attribute
+                row.querySelectorAll('input').forEach(input => {
+                    const dataType = input.getAttribute('data-type');
+                    if (mapping[dataType] !== undefined) {
+                        input.value = mapping[dataType];
+                    }
+                });
             }
-            
-            // Append all cells to the row
-            row.appendChild(responseCell);
-            row.appendChild(xPosCell);
-            row.appendChild(yPosCell);
-            row.appendChild(offsetCell);
-            row.appendChild(colorCell);
-            row.appendChild(sizeCell);
             
             mappingTbody.appendChild(row);
         });
+        
+        // Update header columns for concurrent stimuli
+        updateMappingTableHeader(parsedStimuli);
     }
-
+    
+    // Update the mapping table header to include columns for concurrent stimuli
+    function updateMappingTableHeader(parsedStimuli) {
+        const headerRow = document.querySelector('#mapping-table thead tr');
+        
+        // Clear existing headers, keeping just the first three columns
+        while (headerRow.children.length > 3) {
+            headerRow.removeChild(headerRow.lastElementChild);
+        }
+        
+        // Check for concurrent stimuli to determine additional headers
+        let hasConcurrent = false;
+        let maxConcurrentCount = 0;
+        
+        parsedStimuli.forEach(item => {
+            if (typeof item === 'object' && item.type === 'concurrent') {
+                hasConcurrent = true;
+                maxConcurrentCount = Math.max(maxConcurrentCount, item.stimuli.length);
+            }
+        });
+        
+        if (!hasConcurrent) {
+            // Add standard headers
+            const positionHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
+            positionHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+        } else {
+            // Add custom headers for concurrent stimuli
+            const concurrentHeaders = ['Offset (ms)', 'Group Color', 'Group Size (px)'];
+            
+            // Add all position headers first
+            for (let i = 0; i < maxConcurrentCount; i++) {
+                const xHeader = document.createElement('th');
+                xHeader.textContent = `Item ${i+1} X`;
+                headerRow.appendChild(xHeader);
+                
+                const yHeader = document.createElement('th');
+                yHeader.textContent = `Item ${i+1} Y`;
+                headerRow.appendChild(yHeader);
+            }
+            
+            // Add the other standard headers
+            concurrentHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            
+            // Add individual color and size headers for each concurrent stimulus
+            for (let i = 0; i < maxConcurrentCount; i++) {
+                const colorHeader = document.createElement('th');
+                colorHeader.textContent = `Item ${i+1} Color`;
+                headerRow.appendChild(colorHeader);
+                
+                const sizeHeader = document.createElement('th');
+                sizeHeader.textContent = `Item ${i+1} Size`;
+                headerRow.appendChild(sizeHeader);
+            }
+        }
+    }
+    
     // Listen for changes to stimuli text and update last known value
     document.getElementById('stimuli-text').addEventListener('change', function() {
         const newValue = this.value;

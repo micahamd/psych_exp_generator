@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const stimulusText = document.getElementById('stimulus-text');
     const feedbackText = document.getElementById('feedback-text');
     const okBtn = document.getElementById('ok-btn');
+    const srMappingBtn = document.getElementById('sr-mapping-btn');
+    const srMappingModal = document.getElementById('sr-mapping-modal');
+    const mappingTbody = document.getElementById('mapping-tbody');
+    const saveMappingsBtn = document.getElementById('save-mappings-btn');
+    const closeModalBtn = document.querySelector('.close-btn');
     
     // Experiment variables
     let trialInterval;
@@ -33,6 +38,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let feedbackTimer = null;
     let currentSequence = [];
     let sequenceIndex = 0;
+    let stimuliResponses = {}; // Object to store stimulus-response mappings
+    let hasCustomMappings = false; // Flag to check if custom mappings are in use
     
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
@@ -268,16 +275,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Updated handleKeyPress function
+    // Updated handleKeyPress function that uses custom mappings
     function handleKeyPress(e) {
         if (!experimentRunning) return;
-        // Change here: return "SPACE" instead of "Space"
         const keyPressed = (e.code === 'Space') ? 'SPACE' : e.key.toUpperCase();
-        const correctKey = responseKey.toUpperCase();
+        
         if (fixationPoint.classList.contains('hidden')) {
             e.preventDefault();
+            
+            // Get correct key based on custom mappings or default
+            let isCorrect = false;
+            
+            if (hasCustomMappings) {
+                // Use custom mapping for current stimulus
+                const currentStimulusText = JSON.stringify(currentSequence);
+                const correctKey = stimuliResponses[currentStimulusText];
+                
+                if (correctKey) {
+                    isCorrect = (keyPressed === correctKey.toUpperCase());
+                } else {
+                    // Fall back to default if no mapping for this stimulus
+                    isCorrect = (keyPressed === responseKey.toUpperCase());
+                }
+            } else {
+                // Use default response key
+                isCorrect = (keyPressed === responseKey.toUpperCase());
+            }
+            
             if (provideFeedback) {
-                const isCorrect = (keyPressed === correctKey);
                 showFeedback(isCorrect);
                 feedbackTimer = setTimeout(() => {
                     hideFeedback();
@@ -285,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, feedbackDuration);
             } else {
                 // Without feedback, only correct responses advance the trial
-                if (keyPressed === correctKey) {
+                if (isCorrect) {
                     advanceTrial();
                 }
             }
@@ -390,5 +415,97 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('provide-feedback').checked = false;
         document.getElementById('feedback-text').value = 'Correct, X';
         document.getElementById('feedback-duration').value = 500;
+        
+        // Reset stimulus-response mappings
+        stimuliResponses = {};
+        hasCustomMappings = false;
+        srMappingBtn.textContent = "Custom S-R Mappings";
     });
+    
+    // Add event listener for S-R mapping button
+    srMappingBtn.addEventListener('click', function() {
+        // Parse current stimuli to generate mapping table
+        const stimuliInput = document.getElementById('stimuli-text').value;
+        const parsedStimuli = parseStimuli(stimuliInput);
+        
+        // Generate table rows
+        generateMappingTable(parsedStimuli);
+        
+        // Show modal
+        srMappingModal.classList.remove('hidden');
+    });
+    
+    // Close modal when clicking X
+    closeModalBtn.addEventListener('click', function() {
+        srMappingModal.classList.add('hidden');
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+        if (e.target === srMappingModal) {
+            srMappingModal.classList.add('hidden');
+        }
+    });
+    
+    // Save mappings button
+    saveMappingsBtn.addEventListener('click', function() {
+        // Save the mappings from the inputs
+        const mappingRows = mappingTbody.querySelectorAll('tr');
+        
+        stimuliResponses = {};
+        hasCustomMappings = false;
+        
+        mappingRows.forEach(row => {
+            const stimulusText = row.getAttribute('data-stimulus');
+            const responseInput = row.querySelector('input');
+            const responseKey = responseInput.value.trim();
+            
+            if (responseKey) {
+                stimuliResponses[stimulusText] = responseKey;
+                hasCustomMappings = true;
+            }
+        });
+        
+        // Close the modal
+        srMappingModal.classList.add('hidden');
+        
+        // Visual feedback that mappings were saved
+        srMappingBtn.textContent = hasCustomMappings ? 
+            "Custom S-R Mappings (Set)" : "Custom S-R Mappings";
+    });
+    
+    // Generate mapping table based on stimuli
+    function generateMappingTable(parsedStimuli) {
+        // Clear existing rows
+        mappingTbody.innerHTML = '';
+        
+        // Create a row for each stimulus or sequence
+        parsedStimuli.forEach(stimulusSeq => {
+            const row = document.createElement('tr');
+            const stimulusText = JSON.stringify(stimulusSeq);
+            row.setAttribute('data-stimulus', stimulusText);
+            
+            // Stimulus cell
+            const stimulusCell = document.createElement('td');
+            stimulusCell.textContent = stimulusSeq.length > 1 ? 
+                `[${stimulusSeq.join(', ')}]` : stimulusSeq[0];
+            row.appendChild(stimulusCell);
+            
+            // Response cell with input
+            const responseCell = document.createElement('td');
+            const responseInput = document.createElement('input');
+            responseInput.type = 'text';
+            responseInput.placeholder = 'Enter key';
+            
+            // Set value if mapping exists
+            if (stimuliResponses[stimulusText]) {
+                responseInput.value = stimuliResponses[stimulusText];
+            }
+            
+            responseCell.appendChild(responseInput);
+            row.appendChild(responseCell);
+            
+            mappingTbody.appendChild(row);
+        });
+    }
 });

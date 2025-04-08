@@ -26,6 +26,7 @@ The project consists of three main files:
   - Stimulus Text Color: Color of the stimulus text (white, black, or grey)
   - Randomize stimulus sequence: Option to present stimuli in random or sequential order
   - Response key: Customize the key used to progress through trials (defaults to SPACEBAR)
+  - Custom Stimulus-Response Mappings: Assign different response keys to specific stimuli
   - Response feedback: Option to provide visual feedback after responses
     * Customizable feedback text for correct and incorrect responses
     * Configurable feedback duration
@@ -52,7 +53,8 @@ The project consists of three main files:
    - **Stimulus Text Size**: Select the font size for your stimuli
    - **Stimulus Text Color**: Choose the color of the stimulus text
    - **Randomize stimulus sequence**: Check to randomize the order of stimuli or uncheck for sequential presentation
-   - **Response key**: Set which key advances to the next trial (leave blank for SPACEBAR)
+   - **Response key**: Set the default key that advances to the next trial (leave blank for SPACEBAR)
+   - **Custom S-R Mappings**: Click to set specific response keys for individual stimuli
    - **Provide Feedback**: Check to enable response feedback
    - **Feedback Text**: Enter text for correct and incorrect responses, separated by comma
    - **Feedback Duration**: Set how long (in milliseconds) feedback appears on screen
@@ -119,14 +121,34 @@ The experiment can present stimuli in two modes:
 
 Note: Randomization applies to the sequences themselves, not the items within a sequence. Items within a sequence always appear in the order specified.
 
+## Custom Stimulus-Response Mappings
+
+The experiment builder allows you to define specific response keys for each stimulus or sequence:
+
+1. Configure your stimuli in the "Stimuli - Text" field
+2. Click the "Custom S-R Mappings" button to open the mapping dialog
+3. For each stimulus or sequence, enter the corresponding correct response key
+4. Click "Save Mappings" to apply your custom mappings
+
+When custom mappings are set:
+- The specified key will be considered the correct response for that specific stimulus
+- The default response key will be used for any stimuli that don't have a custom mapping
+- Different stimuli can have different correct responses
+
+Example:
+- For stimulus sequence `[apple, corn]`, the correct response could be set to 'K'
+- For stimulus `speed`, the correct response could be set to 'J'
+- This allows for more complex experimental designs with stimulus-specific responses
+
 ## Feedback System
 
 When the feedback option is enabled, participants receive immediate visual feedback after their responses:
 
-- When the correct key is pressed (as specified in the response key setting), the feedback "Correct" appears in green.
-- When any other key is pressed, the feedback "X" appears in red.
-- Feedback remains visible for the specified duration before advancing to the next stimulus or trial.
-- Only the correct response will advance the trial; incorrect responses only display feedback.
+- When the correct key is pressed (as specified in the response key setting), the "correct" feedback text will appear in green
+- When any other key is pressed, the "incorrect" feedback text will appear in red
+- Feedback remains visible for the specified duration before advancing to the next stimulus or trial
+- Default feedback values are "Correct" for correct responses and "X" for incorrect responses
+- Only the correct response will advance the trial; incorrect responses just display feedback
 
 ## Troubleshooting
 

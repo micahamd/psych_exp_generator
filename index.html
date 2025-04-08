@@ -75,6 +75,9 @@
                 <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed, [bull, mind]</p>
                 <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
                 
+                <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
+                <p class="helper-text">Map accurate responses to specific stimuli.</p>
+                
                 <div class="form-row">
                     <div class="form-column">
                         <label for="stimulus-size">Stimulus Text Size:</label>
@@ -132,6 +135,31 @@
             
             <button type="submit" id="begin-btn">BEGIN</button>
         </form>
+    </div>
+    
+    <!-- S-R Mapping Modal -->
+    <div id="sr-mapping-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Custom Stimulus-Response Mappings</h2>
+            <p>Specify the correct response key for each stimulus:</p>
+            
+            <div class="mapping-table-container">
+                <table id="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>Stimulus</th>
+                            <th>Correct Response Key</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-tbody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <button type="button" id="save-mappings-btn">Save Mappings</button>
+        </div>
     </div>
     
     <div id="experiment-container" class="hidden">

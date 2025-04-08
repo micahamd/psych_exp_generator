@@ -206,6 +206,19 @@ close-btn:hover,
     background-color: #f2f2f2;
     position: sticky;
     top: 0;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px; /* Limit width of headers */
+}
+
+/* Add hover effect to show full header text */
+#mapping-table th:hover {
+    overflow: visible;
+    white-space: normal;
+    z-index: 1;
+    background-color: #e0e0e0;
 }
 
 #mapping-table input {

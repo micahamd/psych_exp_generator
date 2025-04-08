@@ -577,7 +577,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If correct or it's an additional response key
             if (isCorrect || isAdditionalResponse) {
-                if (isEndOfSequence) {
+                // For sequential presentations, progress through the sequence
+                if (!isEndOfSequence && Array.isArray(currentSequence)) {
+                    sequenceIndex++;
+                    showStimulus();
+                }
+                else if (isEndOfSequence) {
+                    // At the end of a sequence or for concurrent stimuli
                     if (provideFeedback) {
                         showFeedback(isCorrect);
                         feedbackTimer = setTimeout(() => {
@@ -789,6 +795,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultX = document.getElementById('position-x').value || '0';
         const defaultY = document.getElementById('position-y').value || '0';
         
+        // Update header columns first to match the inputs we'll create
+        updateMappingTableHeader(parsedStimuli);
+        
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusItem => {
             const row = document.createElement('tr');
@@ -959,17 +968,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             mappingTbody.appendChild(row);
         });
-        
-        // Update header columns for concurrent stimuli
-        updateMappingTableHeader(parsedStimuli);
     }
     
     // Update the mapping table header to include columns for concurrent stimuli
     function updateMappingTableHeader(parsedStimuli) {
         const headerRow = document.querySelector('#mapping-table thead tr');
         
-        // Clear existing headers, keeping just the first three columns
-        while (headerRow.children.length > 3) {
+        // Clear existing headers, keeping just the first two columns (Stimulus and Response Key)
+        while (headerRow.children.length > 2) {
             headerRow.removeChild(headerRow.lastElementChild);
         }
         
@@ -980,23 +986,21 @@ document.addEventListener('DOMContentLoaded', function() {
         parsedStimuli.forEach(item => {
             if (typeof item === 'object' && item.type === 'concurrent') {
                 hasConcurrent = true;
+                // Keep track of the maximum number of concurrent stimuli
                 maxConcurrentCount = Math.max(maxConcurrentCount, item.stimuli.length);
             }
         });
         
         if (!hasConcurrent) {
-            // Add standard headers
-            const positionHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
-            positionHeaders.forEach(header => {
+            // Add standard headers for regular stimuli
+            const standardHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
+            standardHeaders.forEach(header => {
                 const th = document.createElement('th');
                 th.textContent = header;
                 headerRow.appendChild(th);
             });
         } else {
-            // Add custom headers for concurrent stimuli
-            const concurrentHeaders = ['Offset (ms)', 'Group Color', 'Group Size (px)'];
-            
-            // Add all position headers first
+            // First add position headers for each possible item
             for (let i = 0; i < maxConcurrentCount; i++) {
                 const xHeader = document.createElement('th');
                 xHeader.textContent = `Item ${i+1} X`;
@@ -1007,14 +1011,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 headerRow.appendChild(yHeader);
             }
             
-            // Add the other standard headers
-            concurrentHeaders.forEach(header => {
+            // Add common property headers
+            const commonHeaders = ['Offset (ms)', 'Group Color', 'Group Size (px)'];
+            commonHeaders.forEach(header => {
                 const th = document.createElement('th');
                 th.textContent = header;
                 headerRow.appendChild(th);
             });
             
-            // Add individual color and size headers for each concurrent stimulus
+            // Add individual property headers for each possible item
             for (let i = 0; i < maxConcurrentCount; i++) {
                 const colorHeader = document.createElement('th');
                 colorHeader.textContent = `Item ${i+1} Color`;

@@ -83,11 +83,22 @@ button:hover {
     align-items: center;
     justify-content: center;
     background-color: grey; /* Default, will be overwritten by JS */
+    position: relative;
 }
 
 #fixation-point {
     font-size: 48px;
     font-weight: bold;
+    position: absolute;
+    z-index: 1;
+}
+
+#stimulus-text {
+    font-family: Consolas, monospace;
+    font-size: 14px;
+    color: black;
+    position: absolute;
+    z-index: 1;
 }
 
 /* Completion screen styles */

@@ -33,8 +33,18 @@
             </div>
             
             <div class="form-group">
+                <label for="fixation-interval">Fixation interval (milliseconds):</label>
+                <input type="number" id="fixation-interval" min="1" required value="100">
+            </div>
+            
+            <div class="form-group">
                 <label for="trial-count">Trial count (1-999):</label>
                 <input type="number" id="trial-count" min="1" max="999" required value="4">
+            </div>
+            
+            <div class="form-group">
+                <label for="stimuli-text">Stimuli - Text (comma separated):</label>
+                <textarea id="stimuli-text" rows="3" required>apple, corn, speed</textarea>
             </div>
             
             <div class="form-group">
@@ -49,6 +59,7 @@
     <div id="experiment-container" class="hidden">
         <div id="experiment-screen">
             <div id="fixation-point">+</div>
+            <div id="stimulus-text" class="hidden"></div>
         </div>
     </div>
     

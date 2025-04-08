@@ -6,13 +6,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const experimentScreen = document.getElementById('experiment-screen');
     const completionScreen = document.getElementById('completion-screen');
     const fixationPoint = document.getElementById('fixation-point');
+    const stimulusText = document.getElementById('stimulus-text');
     const okBtn = document.getElementById('ok-btn');
     
     // Experiment variables
     let trialInterval;
+    let fixationInterval;
     let trialBackground;
     let showFixation;
     let trialCount;
+    let stimuli;
+    let stimuliIndex;
     let responseKey;
     let currentTrial = 0;
     let experimentRunning = false;
@@ -23,9 +27,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Get form values
         trialInterval = parseInt(document.getElementById('trial-interval').value);
+        fixationInterval = parseInt(document.getElementById('fixation-interval').value);
         trialBackground = document.getElementById('trial-background').value;
         showFixation = document.getElementById('fixation').value === 'yes';
         trialCount = parseInt(document.getElementById('trial-count').value);
+        
+        // Parse stimuli - trim each item to remove extra spaces
+        const stimuliInput = document.getElementById('stimuli-text').value;
+        stimuli = stimuliInput.split(',').map(item => item.trim()).filter(item => item !== '');
+        
+        if (stimuli.length === 0) {
+            alert('Please enter at least one stimulus');
+            return;
+        }
+        
         responseKey = document.getElementById('response-key').value.trim() || 'Space';
         
         // Validate inputs
@@ -33,6 +48,9 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Trial count must be between 1 and 999');
             return;
         }
+        
+        // Initialize stimuli index - for cycling through stimuli
+        stimuliIndex = 0;
         
         // Start experiment
         startExperiment();
@@ -47,12 +65,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set background color
         experimentScreen.style.backgroundColor = trialBackground;
         
-        // Show/hide fixation point based on settings
-        if (showFixation) {
-            fixationPoint.classList.remove('hidden');
-        } else {
-            fixationPoint.classList.add('hidden');
-        }
+        // Initialize and hide both fixation and stimulus
+        fixationPoint.classList.add('hidden');
+        stimulusText.classList.add('hidden');
         
         // Start first trial
         currentTrial = 0;
@@ -60,6 +75,38 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Listen for key press
         document.addEventListener('keydown', handleKeyPress);
+        
+        // Begin the trial sequence
+        startTrial();
+    }
+    
+    // Start a new trial
+    function startTrial() {
+        // Show fixation if enabled
+        if (showFixation) {
+            fixationPoint.classList.remove('hidden');
+            stimulusText.classList.add('hidden');
+            
+            // After fixation interval, show stimulus
+            setTimeout(showStimulus, fixationInterval);
+        } else {
+            // Skip fixation, show stimulus immediately
+            showStimulus();
+        }
+    }
+    
+    // Show the stimulus for this trial
+    function showStimulus() {
+        // Hide fixation
+        fixationPoint.classList.add('hidden');
+        
+        // Get the current stimulus and set it
+        const currentStimulus = stimuli[stimuliIndex];
+        stimulusText.textContent = currentStimulus;
+        stimulusText.classList.remove('hidden');
+        
+        // Update stimuli index for next trial, cycling through the list
+        stimuliIndex = (stimuliIndex + 1) % stimuli.length;
     }
     
     // Handle key press during experiment
@@ -70,23 +117,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (keyPressed.toUpperCase() === responseKey.toUpperCase()) {
             e.preventDefault(); // Prevent default action (like scrolling)
-            advanceTrial();
+            
+            // Only respond if stimulus is showing (not during fixation or interval)
+            if (!stimulusText.classList.contains('hidden')) {
+                advanceTrial();
+            }
         }
     }
     
     // Advance to the next trial
     function advanceTrial() {
-        // Hide fixation for the inter-trial interval
-        fixationPoint.classList.add('hidden');
+        // Hide stimulus during the inter-trial interval
+        stimulusText.classList.add('hidden');
         
         setTimeout(function() {
             currentTrial++;
             
             if (currentTrial < trialCount) {
-                // Show fixation again for the next trial if enabled
-                if (showFixation) {
-                    fixationPoint.classList.remove('hidden');
-                }
+                // Start the next trial
+                startTrial();
             } else {
                 // End experiment
                 endExperiment();
@@ -96,33 +145,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // End the experiment
     function endExperiment() {
-        // Stop the experiment and clean up
         experimentRunning = false;
         experimentContainer.classList.add('hidden');
-        
-        // Make sure intro screen is hidden before showing completion
-        introScreen.classList.add('hidden');
-        
-        // Show completion screen
         completionScreen.classList.remove('hidden');
-        
-        // Remove event listener
         document.removeEventListener('keydown', handleKeyPress);
     }
     
-    // OK button click handler
+    // OK button click
     okBtn.addEventListener('click', function() {
-        // Hide completion screen
         completionScreen.classList.add('hidden');
-        
-        // Show intro screen again
         introScreen.classList.remove('hidden');
         
         // Reset form values to defaults
         document.getElementById('trial-interval').value = 200;
+        document.getElementById('fixation-interval').value = 100;
         document.getElementById('trial-background').value = 'grey';
         document.getElementById('fixation').value = 'yes';
         document.getElementById('trial-count').value = 4;
+        document.getElementById('stimuli-text').value = 'apple, corn, speed';
         document.getElementById('response-key').value = '';
     });
 });

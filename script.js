@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get DOM elements
     const experimentForm = document.getElementById('experiment-form');
     const introScreen = document.getElementById('intro-screen');
+    const experimentContainer = document.getElementById('experiment-container');
     const experimentScreen = document.getElementById('experiment-screen');
     const completionScreen = document.getElementById('completion-screen');
     const fixationPoint = document.getElementById('fixation-point');
@@ -39,9 +40,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start the experiment
     function startExperiment() {
-        // Hide intro screen and show experiment screen
+        // Hide intro screen and show experiment container
         introScreen.classList.add('hidden');
-        experimentScreen.classList.remove('hidden');
+        experimentContainer.classList.remove('hidden');
         
         // Set background color
         experimentScreen.style.backgroundColor = trialBackground;
@@ -95,15 +96,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // End the experiment
     function endExperiment() {
+        // Stop the experiment and clean up
         experimentRunning = false;
-        experimentScreen.classList.add('hidden');
+        experimentContainer.classList.add('hidden');
+        
+        // Make sure intro screen is hidden before showing completion
+        introScreen.classList.add('hidden');
+        
+        // Show completion screen
         completionScreen.classList.remove('hidden');
+        
+        // Remove event listener
         document.removeEventListener('keydown', handleKeyPress);
     }
     
-    // OK button click
+    // OK button click handler
     okBtn.addEventListener('click', function() {
+        // Hide completion screen
         completionScreen.classList.add('hidden');
+        
+        // Show intro screen again
         introScreen.classList.remove('hidden');
         
         // Reset form values to defaults

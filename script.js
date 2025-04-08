@@ -17,9 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let trialCount;
     let stimuli;
     let stimuliIndex;
+    let randomizeStimuli;
     let responseKey;
     let currentTrial = 0;
     let experimentRunning = false;
+    let stimuliUsed = []; // Track which stimuli have been used (for random mode)
     
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
@@ -31,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
         trialBackground = document.getElementById('trial-background').value;
         showFixation = document.getElementById('fixation').value === 'yes';
         trialCount = parseInt(document.getElementById('trial-count').value);
+        randomizeStimuli = document.getElementById('randomize-stimuli').checked;
         
         // Parse stimuli - trim each item to remove extra spaces
         const stimuliInput = document.getElementById('stimuli-text').value;
@@ -49,8 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Initialize stimuli index - for cycling through stimuli
+        // Initialize stimuli index and tracking
         stimuliIndex = 0;
+        stimuliUsed = [];
         
         // Start experiment
         startExperiment();
@@ -95,18 +99,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Get the next stimulus based on randomization setting
+    function getNextStimulus() {
+        if (randomizeStimuli) {
+            // If all stimuli have been used, reset the tracking
+            if (stimuliUsed.length >= stimuli.length) {
+                stimuliUsed = [];
+            }
+            
+            // Find an unused stimulus
+            let availableStimuli = stimuli.filter(item => !stimuliUsed.includes(item));
+            let selectedStimulus;
+            
+            if (availableStimuli.length > 0) {
+                // Select a random stimulus from available ones
+                const randomIndex = Math.floor(Math.random() * availableStimuli.length);
+                selectedStimulus = availableStimuli[randomIndex];
+            } else {
+                // This shouldn't happen, but just in case
+                selectedStimulus = stimuli[Math.floor(Math.random() * stimuli.length)];
+            }
+            
+            // Mark this stimulus as used
+            stimuliUsed.push(selectedStimulus);
+            return selectedStimulus;
+        } else {
+            // Sequential mode: just advance the index
+            const selectedStimulus = stimuli[stimuliIndex];
+            stimuliIndex = (stimuliIndex + 1) % stimuli.length;
+            return selectedStimulus;
+        }
+    }
+    
     // Show the stimulus for this trial
     function showStimulus() {
         // Hide fixation
         fixationPoint.classList.add('hidden');
         
         // Get the current stimulus and set it
-        const currentStimulus = stimuli[stimuliIndex];
+        const currentStimulus = getNextStimulus();
         stimulusText.textContent = currentStimulus;
         stimulusText.classList.remove('hidden');
-        
-        // Update stimuli index for next trial, cycling through the list
-        stimuliIndex = (stimuliIndex + 1) % stimuli.length;
     }
     
     // Handle key press during experiment
@@ -164,5 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('trial-count').value = 4;
         document.getElementById('stimuli-text').value = 'apple, corn, speed';
         document.getElementById('response-key').value = '';
+        document.getElementById('randomize-stimuli').checked = true;
     });
 });

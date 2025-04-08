@@ -13,6 +13,7 @@
             <div class="form-group">
                 <label for="trial-interval">Trial interval (milliseconds):</label>
                 <input type="number" id="trial-interval" min="1" required value="200">
+                <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>
             </div>
             
             <div class="form-group">
@@ -22,6 +23,7 @@
                     <option value="black">Black</option>
                     <option value="grey" selected>Grey</option>
                 </select>
+                <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
             </div>
             
             <div class="form-group">
@@ -30,26 +32,36 @@
                     <option value="yes" selected>Yes</option>
                     <option value="no">No</option>
                 </select>
+                <p class="helper-text">Displays a "+" in the center of the screen to focus participant's attention before stimulus appears.</p>
             </div>
             
             <div class="form-group">
                 <label for="fixation-interval">Fixation interval (milliseconds):</label>
                 <input type="number" id="fixation-interval" min="1" required value="100">
+                <p class="helper-text">Duration the fixation cross appears before showing the stimulus.</p>
             </div>
             
             <div class="form-group">
                 <label for="trial-count">Trial count (1-999):</label>
                 <input type="number" id="trial-count" min="1" max="999" required value="4">
+                <p class="helper-text">Total number of trials in the experiment. Each trial presents one stimulus.</p>
             </div>
             
-            <div class="form-group">
+            <div class="form-group stimulus-group">
                 <label for="stimuli-text">Stimuli - Text (comma separated):</label>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="randomize-stimuli" checked>
+                    <label for="randomize-stimuli">Randomize stimulus sequence</label>
+                </div>
                 <textarea id="stimuli-text" rows="3" required>apple, corn, speed</textarea>
+                <p class="helper-text">List of text stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
+                <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
             </div>
             
             <div class="form-group">
                 <label for="response-key">Response key (leave blank for SPACEBAR):</label>
                 <input type="text" id="response-key" placeholder="SPACEBAR">
+                <p class="helper-text">Key that participants press to advance to the next trial. Defaults to SPACEBAR if left empty.</p>
             </div>
             
             <button type="submit" id="begin-btn">BEGIN</button>

@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let stimuliUsed = []; // Track which stimuli have been used (for random mode)
     let stimulusTimer = null; // Timer for stimulus offset
     
+    // New variables for handling sequences
+    let currentSequence = []; // Current sequence being presented
+    let sequenceIndex = 0;    // Position within the current sequence
+    
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -38,9 +42,9 @@ document.addEventListener('DOMContentLoaded', function() {
         trialCount = parseInt(document.getElementById('trial-count').value);
         randomizeStimuli = document.getElementById('randomize-stimuli').checked;
         
-        // Parse stimuli - trim each item to remove extra spaces
+        // Parse stimuli with support for sequences
         const stimuliInput = document.getElementById('stimuli-text').value;
-        stimuli = stimuliInput.split(',').map(item => item.trim()).filter(item => item !== '');
+        stimuli = parseStimuli(stimuliInput);
         
         if (stimuli.length === 0) {
             alert('Please enter at least one stimulus');
@@ -62,6 +66,70 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start experiment
         startExperiment();
     });
+    
+    // Parse stimuli input to handle sequences (items within square brackets)
+    function parseStimuli(input) {
+        const result = [];
+        let inSequence = false;
+        let currentItem = '';
+        let currentSequence = [];
+        
+        // Helper function to add an item to the result
+        function addItem() {
+            const trimmed = currentItem.trim();
+            if (trimmed) {
+                if (inSequence) {
+                    currentSequence.push(trimmed);
+                } else {
+                    // Single item becomes a sequence of one
+                    result.push([trimmed]);
+                }
+            }
+            currentItem = '';
+        }
+        
+        // Process each character in the input
+        for (let i = 0; i < input.length; i++) {
+            const char = input[i];
+            
+            if (char === '[') {
+                inSequence = true;
+                // If there was text before the bracket, ignore it
+                currentItem = '';
+            } else if (char === ']') {
+                // End of a sequence, add the current item if any
+                addItem();
+                inSequence = false;
+                // Add the sequence to the result if not empty
+                if (currentSequence.length > 0) {
+                    result.push([...currentSequence]);
+                    currentSequence = [];
+                }
+            } else if (char === ',' && !inSequence) {
+                // End of an item outside a sequence
+                addItem();
+            } else {
+                // Regular character
+                if (inSequence) {
+                    if (char === ',') {
+                        // Within a sequence, comma separates items
+                        addItem();
+                    } else {
+                        currentItem += char;
+                    }
+                } else {
+                    currentItem += char;
+                }
+            }
+        }
+        
+        // Add any remaining item
+        addItem();
+        
+        // Log the parsed result for debugging
+        console.log("Parsed stimuli:", result);
+        return result;
+    }
     
     // Start the experiment
     function startExperiment() {
@@ -89,6 +157,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start a new trial
     function startTrial() {
+        // Reset sequence index for the new trial
+        sequenceIndex = 0;
+        
         // Show fixation if enabled
         if (showFixation) {
             fixationPoint.classList.remove('hidden');
@@ -102,35 +173,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Get the next stimulus based on randomization setting
-    function getNextStimulus() {
+    // Get the next stimulus sequence based on randomization setting
+    function getNextStimulusSequence() {
         if (randomizeStimuli) {
             // If all stimuli have been used, reset the tracking
             if (stimuliUsed.length >= stimuli.length) {
                 stimuliUsed = [];
             }
             
-            // Find an unused stimulus
-            let availableStimuli = stimuli.filter(item => !stimuliUsed.includes(item));
-            let selectedStimulus;
+            // Find an unused stimulus sequence
+            let availableStimuli = stimuli.filter(function(_, index) {
+                return !stimuliUsed.includes(index);
+            });
             
             if (availableStimuli.length > 0) {
                 // Select a random stimulus from available ones
                 const randomIndex = Math.floor(Math.random() * availableStimuli.length);
-                selectedStimulus = availableStimuli[randomIndex];
+                const selectedSequence = availableStimuli[randomIndex];
+                
+                // Find the original index of this sequence to mark as used
+                const originalIndex = stimuli.findIndex(seq => 
+                    JSON.stringify(seq) === JSON.stringify(selectedSequence));
+                stimuliUsed.push(originalIndex);
+                
+                return selectedSequence;
             } else {
                 // This shouldn't happen, but just in case
-                selectedStimulus = stimuli[Math.floor(Math.random() * stimuli.length)];
+                return stimuli[Math.floor(Math.random() * stimuli.length)];
             }
-            
-            // Mark this stimulus as used
-            stimuliUsed.push(selectedStimulus);
-            return selectedStimulus;
         } else {
             // Sequential mode: just advance the index
-            const selectedStimulus = stimuli[stimuliIndex];
+            const selectedSequence = stimuli[stimuliIndex];
             stimuliIndex = (stimuliIndex + 1) % stimuli.length;
-            return selectedStimulus;
+            return selectedSequence;
         }
     }
     
@@ -145,8 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide fixation
         fixationPoint.classList.add('hidden');
         
-        // Get the current stimulus and set it
-        const currentStimulus = getNextStimulus();
+        // If this is the start of a new trial, get the next sequence
+        if (sequenceIndex === 0) {
+            currentSequence = getNextStimulusSequence();
+        }
+        
+        // Get the current stimulus in the sequence and set it
+        const currentStimulus = currentSequence[sequenceIndex];
         stimulusText.textContent = currentStimulus;
         stimulusText.classList.remove('hidden');
         
@@ -154,6 +234,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (stimulusOffset > 0) {
             stimulusTimer = setTimeout(function() {
                 stimulusText.classList.add('hidden');
+                
+                // If there are more stimuli in the sequence, show the next one after offset
+                sequenceIndex++;
+                if (sequenceIndex < currentSequence.length) {
+                    setTimeout(showStimulus, 10); // Short delay before showing next item
+                }
             }, stimulusOffset);
         }
     }
@@ -168,9 +254,23 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault(); // Prevent default action (like scrolling)
             
             // Only respond if the trial is active (after fixation)
-            // We allow responses even if the stimulus has disappeared due to the offset
             if (fixationPoint.classList.contains('hidden')) {
-                advanceTrial();
+                // If stimulus offset is 0, handle sequence progression on response
+                if (stimulusOffset === 0) {
+                    // Move to next item in sequence or advance trial if sequence is complete
+                    sequenceIndex++;
+                    if (sequenceIndex < currentSequence.length) {
+                        // Show next stimulus in sequence
+                        showStimulus();
+                    } else {
+                        // End of sequence, advance to next trial
+                        advanceTrial();
+                    }
+                } else {
+                    // For timed stimuli, just advance the trial on response
+                    // (the sequence progression is handled by the timers)
+                    advanceTrial();
+                }
             }
         }
     }

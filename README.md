@@ -131,7 +131,7 @@ Note: Randomization applies to the sequences themselves, not the items within a 
 The experiment builder allows you to define specific properties for each stimulus or sequence:
 
 1. Configure your stimuli in the "Stimuli - Text" field
-2. Click the "Custom S-R Mappings" button to open the mapping dialog
+2. Click the "Custom S-R Mappings" button to open the mapping dialog (resizable from the bottom-right corner)
 3. For each stimulus or sequence, you can set:
    - The corresponding correct response key
    - Custom X position (horizontal offset from center)
@@ -139,7 +139,8 @@ The experiment builder allows you to define specific properties for each stimulu
    - Custom offset time (how long the stimulus remains visible)
    - Custom text color
    - Custom font size (in pixels)
-4. Click "Save Mappings" to apply your custom mappings
+4. Empty fields will automatically use the values set in the main form
+5. Click "Save Mappings" to apply your custom mappings
 
 When custom mappings are set:
 - The specified key will be considered the correct response for that specific stimulus
@@ -158,6 +159,18 @@ Example applications:
 - Create tasks requiring different responses to different stimuli
 
 This flexible mapping system allows for complex experimental designs without requiring programming knowledge.
+
+## State Persistence
+
+The experiment builder remembers your settings even after the experiment completes:
+
+- All form values persist between sessions (saved in browser's localStorage)
+- Custom S-R mappings are preserved as long as the stimuli text doesn't change
+- When stimuli text changes, only mappings for stimuli that no longer exist are removed
+- You can run multiple experiment sessions without needing to reconfigure settings
+- Browser refresh or closing the page will still preserve your last-used settings
+
+This persistence allows for efficient iteration when developing and testing experimental protocols.
 
 ## Feedback System
 

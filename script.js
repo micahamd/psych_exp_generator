@@ -42,6 +42,51 @@ document.addEventListener('DOMContentLoaded', function() {
     let sequenceIndex = 0;
     let stimuliResponses = {}; // Object to store stimulus-response mappings and positions
     let hasCustomMappings = false; // Flag to check if custom mappings are in use
+
+    // New variables for state persistence
+    let lastStimuliText = '';
+    let savedState = {};
+    
+    // Load saved state from localStorage if available
+    try {
+        const savedStateJSON = localStorage.getItem('experimentBuilderState');
+        if (savedStateJSON) {
+            savedState = JSON.parse(savedStateJSON);
+            
+            // Populate form with saved values
+            if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
+            if (savedState.fixationInterval) document.getElementById('fixation-interval').value = savedState.fixationInterval;
+            if (savedState.stimulusOffset) document.getElementById('stimulus-offset').value = savedState.stimulusOffset;
+            if (savedState.trialBackground) document.getElementById('trial-background').value = savedState.trialBackground;
+            if (savedState.fixation) document.getElementById('fixation').value = savedState.fixation;
+            if (savedState.fixationColor) document.getElementById('fixation-color').value = savedState.fixationColor;
+            if (savedState.trialCount) document.getElementById('trial-count').value = savedState.trialCount;
+            if (savedState.stimuliText) document.getElementById('stimuli-text').value = savedState.stimuliText;
+            if (savedState.randomizeStimuli !== undefined) document.getElementById('randomize-stimuli').checked = savedState.randomizeStimuli;
+            if (savedState.stimulusSize) document.getElementById('stimulus-size').value = savedState.stimulusSize;
+            if (savedState.stimulusColor) document.getElementById('stimulus-color').value = savedState.stimulusColor;
+            if (savedState.responseKey) document.getElementById('response-key').value = savedState.responseKey;
+            if (savedState.provideFeedback !== undefined) document.getElementById('provide-feedback').checked = savedState.provideFeedback;
+            if (savedState.feedbackDuration) document.getElementById('feedback-duration').value = savedState.feedbackDuration;
+            if (savedState.positionX !== undefined) document.getElementById('position-x').value = savedState.positionX;
+            if (savedState.positionY !== undefined) document.getElementById('position-y').value = savedState.positionY;
+            
+            // Restore S-R mappings
+            if (savedState.stimuliResponses) {
+                stimuliResponses = savedState.stimuliResponses;
+                hasCustomMappings = Object.keys(stimuliResponses).length > 0;
+                if (hasCustomMappings) {
+                    srMappingBtn.textContent = "Custom S-R Mappings (Set)";
+                }
+            }
+            
+            // Remember last stimuli text to track changes
+            lastStimuliText = document.getElementById('stimuli-text').value;
+        }
+    } catch (e) {
+        console.error("Error loading saved state:", e);
+        // If there's an error, we'll just use the default values
+    }
     
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
@@ -86,9 +131,38 @@ document.addEventListener('DOMContentLoaded', function() {
         sequenceIndex = 0;
         currentTrial = 0;
         
+        // Save current state before starting experiment
+        saveCurrentState();
+        
         // Start experiment
         startExperiment();
     });
+
+    // Function to save current state to localStorage
+    function saveCurrentState() {
+        const currentState = {
+            trialInterval: parseInt(document.getElementById('trial-interval').value),
+            fixationInterval: parseInt(document.getElementById('fixation-interval').value),
+            stimulusOffset: parseInt(document.getElementById('stimulus-offset').value),
+            trialBackground: document.getElementById('trial-background').value,
+            fixation: document.getElementById('fixation').value,
+            fixationColor: document.getElementById('fixation-color').value,
+            trialCount: parseInt(document.getElementById('trial-count').value),
+            stimuliText: document.getElementById('stimuli-text').value,
+            randomizeStimuli: document.getElementById('randomize-stimuli').checked,
+            stimulusSize: document.getElementById('stimulus-size').value,
+            stimulusColor: document.getElementById('stimulus-color').value,
+            responseKey: document.getElementById('response-key').value.trim(),
+            provideFeedback: document.getElementById('provide-feedback').checked,
+            feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
+            positionX: parseInt(document.getElementById('position-x').value) || 0,
+            positionY: parseInt(document.getElementById('position-y').value) || 0,
+            stimuliResponses: stimuliResponses
+        };
+        
+        localStorage.setItem('experimentBuilderState', JSON.stringify(currentState));
+        savedState = currentState;
+    }
 
     // Parse stimuli input to handle sequences
     function parseStimuli(input) {
@@ -437,35 +511,46 @@ document.addEventListener('DOMContentLoaded', function() {
         completionScreen.classList.add('hidden');
         introScreen.classList.remove('hidden');
         
-        // Reset form values to defaults
-        document.getElementById('trial-interval').value = 200;
-        document.getElementById('fixation-interval').value = 100;
-        document.getElementById('stimulus-offset').value = 0;
-        document.getElementById('trial-background').value = 'grey';
-        document.getElementById('fixation').value = 'yes';
-        document.getElementById('fixation-color').value = 'white';
-        document.getElementById('position-x').value = 0;
-        document.getElementById('position-y').value = 0;
-        document.getElementById('trial-count').value = 4;
-        document.getElementById('stimuli-text').value = 'apple, corn, speed';
-        document.getElementById('stimulus-size').value = '42';
-        document.getElementById('stimulus-color').value = 'white';
-        document.getElementById('response-key').value = '';
-        document.getElementById('randomize-stimuli').checked = true;
-        document.getElementById('provide-feedback').checked = false;
-        document.getElementById('feedback-text').value = 'Correct, X';
-        document.getElementById('feedback-duration').value = 500;
+        // Reset experiment-specific variables but keep configurations
+        currentTrial = 0;
+        experimentRunning = false;
+        stimuliUsed = [];
+        clearAllTimers();
         
-        // Reset stimulus-response mappings
-        stimuliResponses = {};
-        hasCustomMappings = false;
-        srMappingBtn.textContent = "Custom S-R Mappings";
+        // Save current state
+        saveCurrentState();
     });
     
     // Add event listener for S-R mapping button
     srMappingBtn.addEventListener('click', function() {
         // Parse current stimuli to generate mapping table
         const stimuliInput = document.getElementById('stimuli-text').value;
+        
+        // Check if stimuli have changed
+        const stimuliChanged = (stimuliInput !== lastStimuliText);
+        
+        // If stimuli changed, we need to regenerate mappings
+        if (stimuliChanged) {
+            lastStimuliText = stimuliInput;
+            
+            // If stimuli changed, clear old mappings that no longer apply
+            const newParsedStimuli = parseStimuli(stimuliInput);
+            const newStimuliKeys = newParsedStimuli.map(seq => {
+                return seq.length > 1 ? `[${seq.join(', ')}]` : seq[0];
+            });
+            
+            // Create a new stimuliResponses with only valid keys
+            const updatedResponses = {};
+            for (const key of newStimuliKeys) {
+                if (stimuliResponses[key]) {
+                    updatedResponses[key] = stimuliResponses[key];
+                }
+            }
+            
+            // Update with new mappings object
+            stimuliResponses = updatedResponses;
+        }
+        
         const parsedStimuli = parseStimuli(stimuliInput);
         
         // Generate table rows
@@ -504,23 +589,34 @@ document.addEventListener('DOMContentLoaded', function() {
             const colorInput = row.querySelector('input[data-type="color"]');
             const sizeInput = row.querySelector('input[data-type="size"]');
             
-            const responseKey = responseInput.value.trim();
-            const xPos = xPosInput.value.trim() ? parseInt(xPosInput.value) : undefined;
-            const yPos = yPosInput.value.trim() ? parseInt(yPosInput.value) : undefined;
-            const offset = offsetInput.value.trim() ? parseInt(offsetInput.value) : undefined;
-            const color = colorInput.value.trim() || undefined;
-            const size = sizeInput.value.trim() ? parseInt(sizeInput.value) : undefined;
+            // Get values, use default if empty
+            const responseKey = responseInput.value.trim() || responseInput.getAttribute('data-default');
+            const xPos = xPosInput.value.trim() ? parseInt(xPosInput.value) : parseInt(xPosInput.getAttribute('data-default'));
+            const yPos = yPosInput.value.trim() ? parseInt(yPosInput.value) : parseInt(yPosInput.getAttribute('data-default'));
+            const offset = offsetInput.value.trim() ? parseInt(offsetInput.value) : parseInt(offsetInput.getAttribute('data-default'));
+            const color = colorInput.value.trim() || colorInput.getAttribute('data-default');
+            const size = sizeInput.value.trim() ? parseInt(sizeInput.value) : parseInt(sizeInput.getAttribute('data-default'));
             
-            if (responseKey || xPos !== undefined || yPos !== undefined || 
-                offset !== undefined || color !== undefined || size !== undefined) {
-                stimuliResponses[stimulusText] = {
-                    key: responseKey,
-                    x: xPos,
-                    y: yPos,
-                    offset: offset,
-                    color: color,
-                    size: size
-                };
+            // Store the custom values (only if different from form defaults)
+            const customMapping = {};
+            
+            const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
+            const defaultSize = parseInt(document.getElementById('stimulus-size').value);
+            const defaultColor = document.getElementById('stimulus-color').value;
+            const defaultOffset = parseInt(document.getElementById('stimulus-offset').value);
+            const defaultX = parseInt(document.getElementById('position-x').value) || 0;
+            const defaultY = parseInt(document.getElementById('position-y').value) || 0;
+            
+            if (responseKey !== defaultResponseKey) customMapping.key = responseKey;
+            if (xPos !== defaultX) customMapping.x = xPos;
+            if (yPos !== defaultY) customMapping.y = yPos;
+            if (offset !== defaultOffset) customMapping.offset = offset;
+            if (color !== defaultColor) customMapping.color = color;
+            if (size !== defaultSize) customMapping.size = size;
+            
+            // Only save if there's at least one custom setting
+            if (Object.keys(customMapping).length > 0) {
+                stimuliResponses[stimulusText] = customMapping;
                 hasCustomMappings = true;
             }
         });
@@ -531,12 +627,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Visual feedback that mappings were saved
         srMappingBtn.textContent = hasCustomMappings ? 
             "Custom S-R Mappings (Set)" : "Custom S-R Mappings";
+            
+        // Save state with updated mappings
+        saveCurrentState();
     });
     
-    // Generate mapping table based on stimuli
+    // Generate mapping table with default values
     function generateMappingTable(parsedStimuli) {
         // Clear existing rows
         mappingTbody.innerHTML = '';
+        
+        // Get default values from current form settings
+        const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
+        const defaultSize = document.getElementById('stimulus-size').value;
+        const defaultColor = document.getElementById('stimulus-color').value;
+        const defaultOffset = document.getElementById('stimulus-offset').value;
+        const defaultX = document.getElementById('position-x').value || '0';
+        const defaultY = document.getElementById('position-y').value || '0';
         
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusSeq => {
@@ -557,48 +664,54 @@ document.addEventListener('DOMContentLoaded', function() {
             const responseCell = document.createElement('td');
             const responseInput = document.createElement('input');
             responseInput.type = 'text';
-            responseInput.placeholder = 'Enter key';
+            responseInput.placeholder = defaultResponseKey;
             responseInput.setAttribute('data-type', 'key');
+            responseInput.setAttribute('data-default', defaultResponseKey);
             responseCell.appendChild(responseInput);
             
             // X position cell
             const xPosCell = document.createElement('td');
             const xPosInput = document.createElement('input');
             xPosInput.type = 'number';
-            xPosInput.placeholder = 'X offset';
+            xPosInput.placeholder = defaultX;
             xPosInput.setAttribute('data-type', 'x-pos');
+            xPosInput.setAttribute('data-default', defaultX);
             xPosCell.appendChild(xPosInput);
             
             // Y position cell
             const yPosCell = document.createElement('td');
             const yPosInput = document.createElement('input');
             yPosInput.type = 'number';
-            yPosInput.placeholder = 'Y offset';
+            yPosInput.placeholder = defaultY;
             yPosInput.setAttribute('data-type', 'y-pos');
+            yPosInput.setAttribute('data-default', defaultY);
             yPosCell.appendChild(yPosInput);
             
             // Offset cell
             const offsetCell = document.createElement('td');
             const offsetInput = document.createElement('input');
             offsetInput.type = 'number';
-            offsetInput.placeholder = 'ms';
+            offsetInput.placeholder = defaultOffset;
             offsetInput.setAttribute('data-type', 'offset');
+            offsetInput.setAttribute('data-default', defaultOffset);
             offsetCell.appendChild(offsetInput);
             
             // Color cell
             const colorCell = document.createElement('td');
             const colorInput = document.createElement('input');
             colorInput.type = 'text';
-            colorInput.placeholder = 'color';
+            colorInput.placeholder = defaultColor;
             colorInput.setAttribute('data-type', 'color');
+            colorInput.setAttribute('data-default', defaultColor);
             colorCell.appendChild(colorInput);
             
             // Size cell
             const sizeCell = document.createElement('td');
             const sizeInput = document.createElement('input');
             sizeInput.type = 'number';
-            sizeInput.placeholder = 'px';
+            sizeInput.placeholder = defaultSize;
             sizeInput.setAttribute('data-type', 'size');
+            sizeInput.setAttribute('data-default', defaultSize);
             sizeCell.appendChild(sizeInput);
             
             // Set values if mapping exists
@@ -623,4 +736,19 @@ document.addEventListener('DOMContentLoaded', function() {
             mappingTbody.appendChild(row);
         });
     }
+
+    // Listen for changes to stimuli text and update last known value
+    document.getElementById('stimuli-text').addEventListener('change', function() {
+        const newValue = this.value;
+        if (newValue !== lastStimuliText) {
+            lastStimuliText = newValue;
+            // We don't clear mappings immediately, only when opening the mapping dialog
+        }
+    });
+    
+    // Add event listener for all form inputs to save state when changed
+    const formInputs = document.querySelectorAll('#experiment-form input, #experiment-form select, #experiment-form textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('change', saveCurrentState);
+    });
 });

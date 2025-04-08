@@ -15,11 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
     let stimulusOffset;
     let trialBackground;
     let showFixation;
+    let fixationColor;
     let trialCount;
     let stimuli;
     let stimuliIndex;
     let randomizeStimuli;
     let responseKey;
+    let stimulusSize;
+    let stimulusColor;
     let currentTrial = 0;
     let experimentRunning = false;
     let stimuliUsed = []; // Track which stimuli have been used (for random mode)
@@ -39,8 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
         stimulusOffset = parseInt(document.getElementById('stimulus-offset').value);
         trialBackground = document.getElementById('trial-background').value;
         showFixation = document.getElementById('fixation').value === 'yes';
+        fixationColor = document.getElementById('fixation-color').value;
         trialCount = parseInt(document.getElementById('trial-count').value);
         randomizeStimuli = document.getElementById('randomize-stimuli').checked;
+        stimulusSize = parseInt(document.getElementById('stimulus-size').value);
+        stimulusColor = document.getElementById('stimulus-color').value;
         
         // Parse stimuli with support for sequences
         const stimuliInput = document.getElementById('stimuli-text').value;
@@ -140,6 +146,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set background color
         experimentScreen.style.backgroundColor = trialBackground;
         
+        // Set fixation color and visibility
+        fixationPoint.style.color = fixationColor;
+        
         // Initialize and hide both fixation and stimulus
         fixationPoint.classList.add('hidden');
         stimulusText.classList.add('hidden');
@@ -228,6 +237,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get the current stimulus in the sequence and set it
         const currentStimulus = currentSequence[sequenceIndex];
         stimulusText.textContent = currentStimulus;
+        
+        // Apply the configured text size and color
+        stimulusText.style.fontSize = stimulusSize + 'px';
+        stimulusText.style.color = stimulusColor;
+        
         stimulusText.classList.remove('hidden');
         
         // Set timer for stimulus offset if specified (not 0)
@@ -324,8 +338,11 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('stimulus-offset').value = 0;
         document.getElementById('trial-background').value = 'grey';
         document.getElementById('fixation').value = 'yes';
+        document.getElementById('fixation-color').value = 'white';
         document.getElementById('trial-count').value = 4;
         document.getElementById('stimuli-text').value = 'apple, corn, speed';
+        document.getElementById('stimulus-size').value = '42';
+        document.getElementById('stimulus-color').value = 'white';
         document.getElementById('response-key').value = '';
         document.getElementById('randomize-stimuli').checked = true;
     });

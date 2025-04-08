@@ -10,35 +10,46 @@
     <div id="intro-screen" class="container">
         <h1>Psychology Experiment Builder</h1>
         <form id="experiment-form">
-            <div class="form-group">
-                <label for="trial-interval">Trial interval (milliseconds):</label>
-                <input type="number" id="trial-interval" min="1" required value="200">
-                <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>
+            <div class="form-group form-row">
+                <div class="form-column">
+                    <label for="trial-interval">Trial interval (milliseconds):</label>
+                    <input type="number" id="trial-interval" min="1" required value="200">
+                    <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>
+                </div>
+                <div class="form-column">
+                    <label for="trial-background">Trial background:</label>
+                    <select id="trial-background" required>
+                        <option value="white">White</option>
+                        <option value="black">Black</option>
+                        <option value="grey" selected>Grey</option>
+                    </select>
+                    <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="trial-background">Trial background:</label>
-                <select id="trial-background" required>
-                    <option value="white">White</option>
-                    <option value="black">Black</option>
-                    <option value="grey" selected>Grey</option>
-                </select>
-                <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="fixation">Fixation:</label>
-                <select id="fixation" required>
-                    <option value="yes" selected>Yes</option>
-                    <option value="no">No</option>
-                </select>
-                <p class="helper-text">Displays a "+" in the center of the screen to focus participant's attention before stimulus appears.</p>
-            </div>
-            
-            <div class="form-group">
-                <label for="fixation-interval">Fixation interval (milliseconds):</label>
-                <input type="number" id="fixation-interval" min="1" required value="100">
-                <p class="helper-text">Duration the fixation cross appears before showing the stimulus.</p>
+            <div class="form-group form-row">
+                <div class="form-column">
+                    <label for="fixation">Fixation:</label>
+                    <select id="fixation" required>
+                        <option value="yes" selected>Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                    <p class="helper-text">Displays a "+" in the center of the screen to focus participant's attention.</p>
+                </div>
+                <div class="form-column">
+                    <label for="fixation-interval">Fixation interval (milliseconds):</label>
+                    <input type="number" id="fixation-interval" min="1" required value="100">
+                    <p class="helper-text">Duration the fixation cross appears before showing the stimulus.</p>
+                </div>
+                <div class="form-column">
+                    <label for="fixation-color">Fixation color:</label>
+                    <select id="fixation-color" required>
+                        <option value="white" selected>White</option>
+                        <option value="grey">Grey</option>
+                        <option value="black">Black</option>
+                    </select>
+                    <p class="helper-text">Color of the fixation cross that appears in the center of the screen.</p>
+                </div>
             </div>
             
             <div class="form-group">
@@ -63,6 +74,36 @@
                 <p class="helper-text">List of text stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
                 <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed, [bull, mind]</p>
                 <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
+                
+                <div class="form-row">
+                    <div class="form-column">
+                        <label for="stimulus-size">Stimulus Text Size:</label>
+                        <select id="stimulus-size" required>
+                            <option value="12">12</option>
+                            <option value="16">16</option>
+                            <option value="24">24</option>
+                            <option value="32">32</option>
+                            <option value="42" selected>42</option>
+                            <option value="48">48</option>
+                            <option value="56">56</option>
+                            <option value="64">64</option>
+                            <option value="72">72</option>
+                            <option value="84">84</option>
+                            <option value="96">96</option>
+                            <option value="120">120</option>
+                        </select>
+                        <p class="helper-text">The font size of the stimulus text in pixels.</p>
+                    </div>
+                    <div class="form-column">
+                        <label for="stimulus-color">Stimulus Text Color:</label>
+                        <select id="stimulus-color" required>
+                            <option value="white" selected>White</option>
+                            <option value="black">Black</option>
+                            <option value="grey">Grey</option>
+                        </select>
+                        <p class="helper-text">The color of the stimulus text displayed during trials.</p>
+                    </div>
+                </div>
             </div>
             
             <div class="form-group">

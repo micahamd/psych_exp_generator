@@ -27,6 +27,19 @@ h1 {
     margin-bottom: 20px;
 }
 
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: -10px;
+    margin-right: -10px;
+}
+
+.form-column {
+    flex: 1;
+    padding: 0 10px;
+    min-width: 200px; /* Ensure columns don't get too narrow */
+}
+
 label {
     display: block;
     margin-bottom: 5px;
@@ -126,8 +139,8 @@ button:hover {
 
 #stimulus-text {
     font-family: Consolas, monospace;
-    font-size: 42px; /* Increased from 14px to 42px (tripled) */
-    color: black;
+    /* font-size is now dynamically set via JavaScript */
+    /* color is now dynamically set via JavaScript */
     position: absolute;
     z-index: 1;
     text-align: center;

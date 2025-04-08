@@ -17,15 +17,19 @@ The project consists of three main files:
   - Trial background color: Choose between white, black, or grey
   - Fixation point: Option to show or hide a central fixation cross
   - Fixation interval: The duration (in milliseconds) that the fixation appears
+  - Fixation color: Color of the fixation cross (white, grey, or black)
   - Stimulus offset: Controls how long the stimulus remains visible (0 = until response)
   - Trial count: Set the number of trials (between 1 and 999)
   - Stimuli - Text: Comma-separated list of text stimuli to display during trials
      * Support for stimulus sequences using square brackets notation
+  - Stimulus Text Size: Font size of stimuli (12px to 120px)
+  - Stimulus Text Color: Color of the stimulus text (white, black, or grey)
   - Randomize stimulus sequence: Option to present stimuli in random or sequential order
   - Response key: Customize the key used to progress through trials (defaults to SPACEBAR)
 - Fixed-size experiment display (800x600 pixels) centered on a black background
 - Stimulus presentation: Fixation → Text Stimulus → Response → Inter-trial interval
 - Helper text explanations for all parameters
+- Fully customizable text appearance
 - Large text stimuli (42px) for better visibility
 
 ## How to Use
@@ -36,10 +40,13 @@ The project consists of three main files:
    - **Trial background**: Choose the background color for the experiment screen
    - **Fixation**: Choose whether to display a fixation cross in the center of the screen
    - **Fixation interval**: Set how long (in milliseconds) the fixation cross appears
+   - **Fixation color**: Select the color of the fixation cross (white, grey, or black)
    - **Stimulus offset**: Set how long (in milliseconds) stimuli remain visible (0 = until response)
    - **Trial count**: Set how many trials the experiment should run
    - **Stimuli - Text**: Enter a comma-separated list of text stimuli to be presented
      * For stimulus sequences, use square brackets: `[apple, corn], speed, [bull, mind, rap]`
+   - **Stimulus Text Size**: Select the font size for your stimuli
+   - **Stimulus Text Color**: Choose the color of the stimulus text
    - **Randomize stimulus sequence**: Check to randomize the order of stimuli or uncheck for sequential presentation
    - **Response key**: Set which key advances to the next trial (leave blank for SPACEBAR)
 3. Click the "BEGIN" button to start the experiment

@@ -18,11 +18,23 @@
                 </div>
                 <div class="form-column">
                     <label for="trial-background">Trial background:</label>
-                    <select id="trial-background" required>
-                        <option value="white">White</option>
-                        <option value="black">Black</option>
-                        <option value="grey" selected>Grey</option>
-                    </select>
+                    <div class="color-select-container">
+                        <select id="trial-background" required>
+                            <option value="white">White</option>
+                            <option value="black">Black</option>
+                            <option value="grey" selected>Grey</option>
+                            <option value="red">Red</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="yellow">Yellow</option>
+                            <option value="purple">Purple</option>
+                            <option value="orange">Orange</option>
+                            <option value="pink">Pink</option>
+                            <option value="cyan">Cyan</option>
+                            <option value="brown">Brown</option>
+                        </select>
+                        <span class="color-preview-large" id="trial-background-preview" style="background-color: grey;"></span>
+                    </div>
                     <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
                 </div>
             </div>
@@ -43,11 +55,23 @@
                 </div>
                 <div class="form-column">
                     <label for="fixation-color">Fixation color:</label>
-                    <select id="fixation-color" required>
-                        <option value="white" selected>White</option>
-                        <option value="grey">Grey</option>
-                        <option value="black">Black</option>
-                    </select>
+                    <div class="color-select-container">
+                        <select id="fixation-color" required>
+                            <option value="white" selected>White</option>
+                            <option value="grey">Grey</option>
+                            <option value="black">Black</option>
+                            <option value="red">Red</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="yellow">Yellow</option>
+                            <option value="purple">Purple</option>
+                            <option value="orange">Orange</option>
+                            <option value="pink">Pink</option>
+                            <option value="cyan">Cyan</option>
+                            <option value="brown">Brown</option>
+                        </select>
+                        <span class="color-preview-large" id="fixation-color-preview" style="background-color: white;"></span>
+                    </div>
                     <p class="helper-text">Color of the fixation cross that appears in the center of the screen.</p>
                 </div>
             </div>
@@ -113,11 +137,23 @@
                     </div>
                     <div class="form-column">
                         <label for="stimulus-color">Stimulus Text Color:</label>
-                        <select id="stimulus-color" required>
-                            <option value="white" selected>White</option>
-                            <option value="black">Black</option>
-                            <option value="grey">Grey</option>
-                        </select>
+                        <div class="color-select-container">
+                            <select id="stimulus-color" required>
+                                <option value="white" selected>White</option>
+                                <option value="black">Black</option>
+                                <option value="grey">Grey</option>
+                                <option value="red">Red</option>
+                                <option value="green">Green</option>
+                                <option value="blue">Blue</option>
+                                <option value="yellow">Yellow</option>
+                                <option value="purple">Purple</option>
+                                <option value="orange">Orange</option>
+                                <option value="pink">Pink</option>
+                                <option value="cyan">Cyan</option>
+                                <option value="brown">Brown</option>
+                            </select>
+                            <span class="color-preview-large" id="stimulus-color-preview" style="background-color: white;"></span>
+                        </div>
                         <p class="helper-text">The color of the stimulus text displayed during trials.</p>
                     </div>
                 </div>

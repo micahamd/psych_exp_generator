@@ -347,3 +347,36 @@ close-btn:hover,
         padding: 10px 20px;
     }
 }
+
+/* Color preview styles */
+.color-preview {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+/* Color select container */
+.color-select-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.color-select-container select {
+    padding-right: 25px;
+}
+
+.color-preview-large {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    position: absolute;
+    right: 5px;
+    pointer-events: none;
+}

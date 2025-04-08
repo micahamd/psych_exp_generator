@@ -1046,4 +1046,27 @@ document.addEventListener('DOMContentLoaded', function() {
     formInputs.forEach(input => {
         input.addEventListener('change', saveCurrentState);
     });
+
+    // Set up color preview functionality
+    setupColorPreviews();
+
+    // Function to set up color previews
+    function setupColorPreviews() {
+        // For each color select element
+        const colorSelects = ['trial-background', 'fixation-color', 'stimulus-color'];
+        
+        colorSelects.forEach(id => {
+            const select = document.getElementById(id);
+            const preview = document.getElementById(`${id}-preview`);
+            
+            // Set initial color preview
+            if (preview) preview.style.backgroundColor = select.value;
+            
+            // Update preview when selection changes
+            select.addEventListener('change', function() {
+                if (preview) preview.style.backgroundColor = this.value;
+                saveCurrentState();
+            });
+        });
+    }
 });

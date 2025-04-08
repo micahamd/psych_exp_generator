@@ -128,7 +128,7 @@ Note: Randomization applies to the sequences themselves, not the items within a 
 
 ## Custom Stimulus-Response Mappings
 
-The experiment builder allows you to define specific response keys and positions for each stimulus or sequence:
+The experiment builder allows you to define specific properties for each stimulus or sequence:
 
 1. Configure your stimuli in the "Stimuli - Text" field
 2. Click the "Custom S-R Mappings" button to open the mapping dialog
@@ -136,20 +136,28 @@ The experiment builder allows you to define specific response keys and positions
    - The corresponding correct response key
    - Custom X position (horizontal offset from center)
    - Custom Y position (vertical offset from center)
+   - Custom offset time (how long the stimulus remains visible)
+   - Custom text color
+   - Custom font size (in pixels)
 4. Click "Save Mappings" to apply your custom mappings
 
 When custom mappings are set:
 - The specified key will be considered the correct response for that specific stimulus
-- The default response key will be used for any stimuli that don't have a custom mapping
 - Different stimuli can have different correct responses
 - Different stimuli can appear at different positions on the screen
-- The custom positions override the global position setting for specific stimuli only
-- If either X or Y is not specified for a stimulus, the global position value is used for that coordinate
+- Different stimuli can have different display durations
+- Different stimuli can have different colors and sizes
+- Any custom settings override the global settings for that specific stimulus only
+- If any property is not specified for a stimulus, the global setting is used for that property
 
-Example:
-- For stimulus sequence `[apple, corn]`, the correct response could be set to 'K' with position [100, 0]
-- For stimulus `speed`, the correct response could be set to 'J' with position [-100, 0]
-- This allows for more complex experimental designs with stimulus-specific responses and locations
+Example applications:
+- Create a Stroop task with color words displayed in conflicting colors
+- Create a flanker task with target stimuli at center and distractors offset to the sides
+- Create a stimulus-response compatibility task with varying spatial mappings
+- Create an attentional blink paradigm with varying stimulus durations
+- Create tasks requiring different responses to different stimuli
+
+This flexible mapping system allows for complex experimental designs without requiring programming knowledge.
 
 ## Feedback System
 

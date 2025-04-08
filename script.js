@@ -256,37 +256,38 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const currentStimulus = currentSequence[sequenceIndex];
         stimulusText.textContent = currentStimulus;
-        stimulusText.style.fontSize = `${stimulusSize}px`;
-        stimulusText.style.color = stimulusColor;
         
-        // Check for custom position for this stimulus
+        // Check for custom settings for this stimulus
         const stimulusDisplay = currentSequence.length > 1
             ? `[${currentSequence.join(', ')}]`
             : currentSequence[0];
+            
+        const mapping = stimuliResponses[stimulusDisplay] || {};
+        
+        // Apply custom or default stimulus size
+        const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
+        stimulusText.style.fontSize = `${customSize}px`;
+        
+        // Apply custom or default stimulus color
+        const customColor = mapping.color || stimulusColor;
+        stimulusText.style.color = customColor;
         
         // Apply custom position if available, otherwise use global position
-        if (stimuliResponses[stimulusDisplay] && 
-            (stimuliResponses[stimulusDisplay].x !== undefined || 
-             stimuliResponses[stimulusDisplay].y !== undefined)) {
-            const customX = stimuliResponses[stimulusDisplay].x !== undefined ? 
-                stimuliResponses[stimulusDisplay].x : positionX;
-            const customY = stimuliResponses[stimulusDisplay].y !== undefined ? 
-                stimuliResponses[stimulusDisplay].y : positionY;
-                
-            stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
-            
-            // Also update fixation position if we're at the start of a sequence
-            if (sequenceIndex === 0 && showFixation) {
-                fixationPoint.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
-            }
-        } else {
-            // Use global position setting
-            stimulusText.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
+        const customX = mapping.x !== undefined ? mapping.x : positionX;
+        const customY = mapping.y !== undefined ? mapping.y : positionY;
+        stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
+        
+        // Also update fixation position if we're at the start of a sequence
+        if (sequenceIndex === 0 && showFixation) {
+            fixationPoint.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
         }
         
         stimulusText.classList.remove('hidden');
 
-        if (stimulusOffset > 0) {
+        // Use custom offset if available, otherwise use global offset
+        const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
+        
+        if (customOffset > 0) {
             stimulusTimer = setTimeout(() => {
                 stimulusText.classList.add('hidden');
                 if (sequenceIndex < currentSequence.length - 1) {
@@ -297,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         advanceTrial();
                     }, 10);
                 }
-            }, stimulusOffset);
+            }, customOffset);
         }
     }
 
@@ -499,16 +500,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const responseInput = row.querySelector('input[data-type="key"]');
             const xPosInput = row.querySelector('input[data-type="x-pos"]');
             const yPosInput = row.querySelector('input[data-type="y-pos"]');
+            const offsetInput = row.querySelector('input[data-type="offset"]');
+            const colorInput = row.querySelector('input[data-type="color"]');
+            const sizeInput = row.querySelector('input[data-type="size"]');
             
             const responseKey = responseInput.value.trim();
             const xPos = xPosInput.value.trim() ? parseInt(xPosInput.value) : undefined;
             const yPos = yPosInput.value.trim() ? parseInt(yPosInput.value) : undefined;
+            const offset = offsetInput.value.trim() ? parseInt(offsetInput.value) : undefined;
+            const color = colorInput.value.trim() || undefined;
+            const size = sizeInput.value.trim() ? parseInt(sizeInput.value) : undefined;
             
-            if (responseKey || xPos !== undefined || yPos !== undefined) {
+            if (responseKey || xPos !== undefined || yPos !== undefined || 
+                offset !== undefined || color !== undefined || size !== undefined) {
                 stimuliResponses[stimulusText] = {
                     key: responseKey,
                     x: xPos,
-                    y: yPos
+                    y: yPos,
+                    offset: offset,
+                    color: color,
+                    size: size
                 };
                 hasCustomMappings = true;
             }
@@ -548,6 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
             responseInput.type = 'text';
             responseInput.placeholder = 'Enter key';
             responseInput.setAttribute('data-type', 'key');
+            responseCell.appendChild(responseInput);
             
             // X position cell
             const xPosCell = document.createElement('td');
@@ -555,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
             xPosInput.type = 'number';
             xPosInput.placeholder = 'X offset';
             xPosInput.setAttribute('data-type', 'x-pos');
+            xPosCell.appendChild(xPosInput);
             
             // Y position cell
             const yPosCell = document.createElement('td');
@@ -562,6 +575,31 @@ document.addEventListener('DOMContentLoaded', function() {
             yPosInput.type = 'number';
             yPosInput.placeholder = 'Y offset';
             yPosInput.setAttribute('data-type', 'y-pos');
+            yPosCell.appendChild(yPosInput);
+            
+            // Offset cell
+            const offsetCell = document.createElement('td');
+            const offsetInput = document.createElement('input');
+            offsetInput.type = 'number';
+            offsetInput.placeholder = 'ms';
+            offsetInput.setAttribute('data-type', 'offset');
+            offsetCell.appendChild(offsetInput);
+            
+            // Color cell
+            const colorCell = document.createElement('td');
+            const colorInput = document.createElement('input');
+            colorInput.type = 'text';
+            colorInput.placeholder = 'color';
+            colorInput.setAttribute('data-type', 'color');
+            colorCell.appendChild(colorInput);
+            
+            // Size cell
+            const sizeCell = document.createElement('td');
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'number';
+            sizeInput.placeholder = 'px';
+            sizeInput.setAttribute('data-type', 'size');
+            sizeCell.appendChild(sizeInput);
             
             // Set values if mapping exists
             if (stimuliResponses[storedStimulus]) {
@@ -569,15 +607,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (mapping.key) responseInput.value = mapping.key;
                 if (mapping.x !== undefined) xPosInput.value = mapping.x;
                 if (mapping.y !== undefined) yPosInput.value = mapping.y;
+                if (mapping.offset !== undefined) offsetInput.value = mapping.offset;
+                if (mapping.color) colorInput.value = mapping.color;
+                if (mapping.size !== undefined) sizeInput.value = mapping.size;
             }
             
-            responseCell.appendChild(responseInput);
-            xPosCell.appendChild(xPosInput);
-            yPosCell.appendChild(yPosInput);
-            
+            // Append all cells to the row
             row.appendChild(responseCell);
             row.appendChild(xPosCell);
             row.appendChild(yPosCell);
+            row.appendChild(offsetCell);
+            row.appendChild(colorCell);
+            row.appendChild(sizeCell);
             
             mappingTbody.appendChild(row);
         });

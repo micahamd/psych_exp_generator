@@ -1607,6 +1607,39 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.readAsText(file);
     }
 
+    // Parse CSV line function (missing implementation)
+    function parseCSVLine(text) {
+        // This function handles CSV parsing with proper quote handling
+        const result = [];
+        let cell = '';
+        let inQuote = false;
+        
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            
+            if (char === '"') {
+                // Handle quotes - toggle quote state
+                if (inQuote && i + 1 < text.length && text[i + 1] === '"') {
+                    // Double quotes inside quoted string = escaped quote
+                    cell += '"';
+                    i++; // Skip the next quote
+                } else {
+                    inQuote = !inQuote;
+                }
+            } else if (char === ',' && !inQuote) {
+                // End of field, add to result
+                result.push(cell);
+                cell = '';
+            } else {
+                cell += char;
+            }
+        }
+        
+        // Add the last cell
+        result.push(cell);
+        return result;
+    }
+    
     if (importMappingsBtn && csvFileInput) {
         importMappingsBtn.addEventListener('click', function() {
             csvFileInput.click(); // Trigger file input dialog
@@ -1618,6 +1651,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Clear the input so the same file can be selected again
                 this.value = '';
             }
+        });
+    }
+    
+    // Add event listener for export button
+    if (exportMappingsBtn) {
+        exportMappingsBtn.addEventListener('click', function() {
+            exportMappingsToCSV();
         });
     }
 });

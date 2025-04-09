@@ -134,12 +134,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Begin Study button click handler
     document.getElementById('begin-study-btn').addEventListener('click', () => {
+        console.log('Begin Study clicked');
+        console.log('Current configurations:', studyConfigurations);
+        
         if (studyConfigurations.length === 0) {
             alert('Please add at least one configuration to the study.');
             return;
         }
         
         currentStudyIndex = 0;
+        console.log('Starting configuration:', currentStudyIndex);
         startNextConfiguration();
     });
 
@@ -156,13 +160,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load configuration into form
         loadConfiguration(config.config);
         
-        // Start the experiment
-        beginExperiment();
+        // Start the experiment using the correct function name
+        startExperiment();  // Changed from beginExperiment to startExperiment
     }
 
-    // Modify existing endExperiment function to handle study progression
-    const originalEndExperiment = endExperiment;
+    // First, store the original endExperiment function
+    const originalEndExperiment = window.endExperiment || function() {
+        experimentRunning = false;
+        experimentContainer.classList.add('hidden');
+        completionScreen.classList.remove('hidden');
+        document.removeEventListener('keydown', handleKeyPress);
+        clearAllTimers();
+        
+        // Download data if save option is enabled and we have data
+        if (saveData && experimentData.length > 0) {
+            downloadExperimentData();
+        }
+    };
+
+    // Then redefine endExperiment with study progression functionality
     function endExperiment() {
+        // Call original functionality
         originalEndExperiment();
         
         // Progress to next configuration if in study mode
@@ -175,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to load a configuration into the form
     function loadConfiguration(config) {
         // Load all saved values back into the form
-        Object.entries(config).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(config)) {
             const element = document.getElementById(key);
             if (element) {
                 if (element.type === 'checkbox') {
@@ -184,10 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     element.value = value;
                 }
             }
-        });
+        }
         
-        // Restore stimulus-response mappings
-        stimuliResponses = config.stimuliResponses;
+        // Restore stimulus-response mappings if they exist
+        if (config.stimuliResponses) {
+            stimuliResponses = config.stimuliResponses;
+        }
     }
     
     // Load saved state from localStorage if available

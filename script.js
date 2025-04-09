@@ -47,6 +47,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // New variables for state persistence
     let lastStimuliText = '';
     let savedState = {};
+
+    // Add new variables for data collection
+    let saveData = false;
+    let experimentData = [];
+    let currentResponse = '';
+    let responseStartTime = null;
     
     // Load saved state from localStorage if available
     try {
@@ -72,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.feedbackDuration) document.getElementById('feedback-duration').value = savedState.feedbackDuration;
             if (savedState.positionX !== undefined) document.getElementById('position-x').value = savedState.positionX;
             if (savedState.positionY !== undefined) document.getElementById('position-y').value = savedState.positionY;
+            if (savedState.saveData !== undefined) document.getElementById('save-data').checked = savedState.saveData;
             
             // Restore S-R mappings
             if (savedState.stimuliResponses) {
@@ -109,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
         feedbackDuration = parseInt(document.getElementById('feedback-duration').value);
         positionX = parseInt(document.getElementById('position-x').value) || 0;
         positionY = parseInt(document.getElementById('position-y').value) || 0;
+        saveData = document.getElementById('save-data').checked;
         
         // Parse stimuli
         const stimuliInput = document.getElementById('stimuli-text').value;
@@ -139,6 +147,9 @@ document.addEventListener('DOMContentLoaded', function() {
         sequenceIndex = 0;
         currentTrial = 0;
         
+        // Reset experiment data
+        experimentData = [];
+        
         // Save current state before starting experiment
         saveCurrentState();
         
@@ -166,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
             positionX: parseInt(document.getElementById('position-x').value) || 0,
             positionY: parseInt(document.getElementById('position-y').value) || 0,
+            saveData: document.getElementById('save-data').checked,
             stimuliResponses: stimuliResponses
         };
         
@@ -459,6 +471,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, customOffset);
             }
         }
+        
+        // Record stimulus start time for timing data
+        responseStartTime = new Date();
     }
     
     // Display concurrent stimuli
@@ -579,11 +594,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isCorrect || isAdditionalResponse) {
                 // For sequential presentations, progress through the sequence
                 if (!isEndOfSequence && Array.isArray(currentSequence)) {
+                    // Save response data for non-end sequence items if data saving is enabled
+                    if (saveData) {
+                        saveTrialData(currentSequence[sequenceIndex], keyPressed, isCorrect);
+                    }
+                    
                     sequenceIndex++;
                     showStimulus();
                 }
                 else if (isEndOfSequence) {
                     // At the end of a sequence or for concurrent stimuli
+                    
+                    // Save data if option is enabled
+                    if (saveData) {
+                        saveTrialData(stimulusDisplay, keyPressed, isCorrect);
+                    }
+                    
                     if (provideFeedback) {
                         showFeedback(isCorrect);
                         feedbackTimer = setTimeout(() => {
@@ -596,6 +622,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 if (provideFeedback && isEndOfSequence) {
+                    // Save data for incorrect response if option is enabled
+                    if (saveData && isEndOfSequence) {
+                        saveTrialData(stimulusDisplay, keyPressed, false);
+                    }
+                    
                     showFeedback(false);
                     feedbackTimer = setTimeout(() => {
                         hideFeedback();
@@ -604,34 +635,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-
-    // Hard-code the feedback text
-    function showFeedback(isCorrect) {
-        // Clear any existing feedback timer
-        if (feedbackTimer) {
-            clearTimeout(feedbackTimer);
-            feedbackTimer = null;
-        }
-
-        // Hide stimulus
-        stimulusText.classList.add('hidden');
-        clearConcurrentStimuli();
-
-        // Set feedback text
-        feedbackText.textContent = isCorrect ? 'Correct' : 'X';
+    
+    // Function to save trial data
+    function saveTrialData(stimulus, response, accurate) {
+        const now = new Date();
+        const responseTime = now - responseStartTime; // Calculate response time in ms
         
-        // Set feedback color
-        feedbackText.style.color = isCorrect ? '#4CAF50' : '#F44336'; // Green or Red
+        // Format timestamp as HH:MM:SS_DD:MM:YYYY
+        const timestamp = formatDateTime(now);
         
-        // Show feedback
-        feedbackText.classList.remove('hidden');
+        // Create data object
+        const trialData = {
+            Timestamp: timestamp,
+            "Trial Number": currentTrial + 1, // +1 because currentTrial is 0-indexed
+            Stimulus: stimulus,
+            Stimulus_Offset: stimulusOffset,
+            Response: response,
+            Accurate: accurate ? 1 : 0,
+            ResponseTime_ms: responseTime
+        };
+        
+        // Add to experiment data array
+        experimentData.push(trialData);
     }
     
-    // Hide feedback
-    function hideFeedback() {
-        feedbackText.classList.add('hidden');
+    // Helper function to format date as HH:MM:SS_DD:MM:YYYY
+    function formatDateTime(date) {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+        const year = date.getFullYear();
+        
+        return `${hours}:${minutes}:${seconds}_${day}:${month}:${year}`;
     }
-
+    
     // Clean up advanceTrial
     function advanceTrial() {
         clearAllTimers();
@@ -654,6 +693,42 @@ document.addEventListener('DOMContentLoaded', function() {
         completionScreen.classList.remove('hidden');
         document.removeEventListener('keydown', handleKeyPress);
         clearAllTimers();
+        
+        // Download data if save option is enabled and we have data
+        if (saveData && experimentData.length > 0) {
+            downloadExperimentData();
+        }
+    }
+
+    // Function to download experiment data as JSON
+    function downloadExperimentData() {
+        const dataStr = JSON.stringify(experimentData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        // Create timestamp for filename
+        const timestamp = formatDateTime(new Date()).replace(/:/g, '-').replace(/_/g, '_');
+        const filename = `experiment_data_${timestamp}.json`;
+        
+        // Create download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = filename;
+        
+        // Add download button to completion screen
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = 'Download Data';
+        downloadBtn.className = 'secondary-btn';
+        downloadBtn.style.marginTop = '20px';
+        
+        downloadBtn.addEventListener('click', function() {
+            downloadLink.click();
+        });
+        
+        // Add button to completion screen
+        completionScreen.insertBefore(downloadBtn, okBtn);
+        
+        // Auto download
+        downloadLink.click();
     }
 
     // Clear all timers and elements

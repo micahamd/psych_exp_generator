@@ -32,6 +32,9 @@ The project consists of three main files:
     * Customizable feedback text for correct and incorrect responses
     * Configurable feedback duration correct and incorrect responses
     * Visual indication with green (correct) and red (incorrect) colors
+  - Data collection: Option to save experiment data in JSON format
+    * Records trial information, responses, accuracy, and timing
+    * Automatic download when experiment completes
 - Fixed-size experiment display (800x600 pixels) centered on a black background
 - Stimulus presentation: Fixation → Text Stimulus → Response → Inter-trial interval
 - Helper text explanations for all parameters
@@ -63,6 +66,7 @@ The project consists of three main files:
    - **Provide Feedback**: Check to enable response feedback
    - **Feedback Text**: Enter text for correct and incorrect responses, separated by comma
    - **Feedback Duration**: Set how long (in milliseconds) feedback appears on screen
+   - **Save Data**: Check to enable data collection and download results at the end of the experiment
 3. Click the "BEGIN" button to start the experiment
 4. During the experiment:
    - The fixation point appears (if enabled) for the specified fixation interval
@@ -247,6 +251,47 @@ The experiment allows you to control the position of both the fixation cross and
 This feature is useful for creating offset display paradigms, peripheral attention tasks, or visual field experiments.
 
 Note that the position settings affect both the fixation cross and stimuli. If fixation is disabled, only the stimulus position will be affected.
+
+## Data Collection
+
+When the "Save Data" option is enabled, the experiment collects the following data for each trial:
+
+1. **Timestamp**: Date and time of the response (HH:MM:SS_DD:MM:YYYY format)
+2. **Trial Number**: Sequential trial number (starting from 1)
+3. **Stimulus**: The stimulus or sequence presented
+4. **Stimulus_Offset**: The stimulus timing configuration (in milliseconds)
+5. **Response**: The actual key pressed by the participant
+6. **Accurate**: Whether the response was correct (1) or incorrect (0)
+7. **ResponseTime_ms**: The time taken to respond (in milliseconds)
+
+When the experiment completes, a JSON file containing this data is automatically downloaded. A download button is also provided on the completion screen for manual download if needed.
+
+### Data Format Example:
+
+```json
+[
+  {
+    "Timestamp": "13:45:22_15:06:2023",
+    "Trial Number": 1,
+    "Stimulus": "apple",
+    "Stimulus_Offset": 0,
+    "Response": "SPACE",
+    "Accurate": 1,
+    "ResponseTime_ms": 543
+  },
+  {
+    "Timestamp": "13:45:24_15:06:2023",
+    "Trial Number": 2,
+    "Stimulus": "[red, green, blue]",
+    "Stimulus_Offset": 0,
+    "Response": "SPACE",
+    "Accurate": 1,
+    "ResponseTime_ms": 782
+  }
+]
+```
+
+This data can be imported into statistical software or spreadsheets for further analysis.
 
 ## Technical Implementation
 

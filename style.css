@@ -455,3 +455,18 @@ close-btn:hover,
 #add-to-study-btn:hover {
     background-color: #45a049;
 }
+
+#begin-study-btn {
+    width: 100%;
+    margin-top: 10px;
+    background-color: #2196F3;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#begin-study-btn:hover {
+    background-color: #0b7dda;
+}

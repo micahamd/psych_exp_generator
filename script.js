@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let stimuliResponses = {}; // Object to store stimulus-response mappings and positions
     let hasCustomMappings = false; // Flag to check if custom mappings are in use
 
+    // Add new flag to track zero-offset concurrent stimuli
+    let hasConcurrentWithZeroOffset = false;
+
     // New variables for state persistence
     let lastStimuliText = '';
     let savedState = {};
@@ -424,26 +427,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show the stimulus for this trial
     function showStimulus() {
-        clearAllTimers();
-        fixationPoint.classList.add('hidden');
-        feedbackText.classList.add('hidden');
-        
-        // Clear any existing concurrent stimuli
+        // Reset all concurrent elements to ensure clean state
         clearConcurrentStimuli();
-
+        
+        // Get sequence if needed
         if (sequenceIndex === 0) {
             currentSequence = getNextStimulusSequence();
         }
         
         // Check if we're handling a concurrent stimulus group
-        const isConcurrent = 
-            typeof currentSequence === 'object' && 
-            currentSequence.type === 'concurrent';
-            
+        const isConcurrent = typeof currentSequence === 'object' && currentSequence.type === 'concurrent';
+        
+        // For concurrent stimuli, we want to preserve the flag status
+        if (!isConcurrent) {
+            clearAllTimers();
+        }
+        
+        fixationPoint.classList.add('hidden');
+        feedbackText.classList.add('hidden');
+        
         if (isConcurrent) {
             displayConcurrentStimuli(currentSequence);
         } else {
-            // Regular single or sequential stimulus
             const currentStimulus = currentSequence[sequenceIndex];
             stimulusText.textContent = currentStimulus;
             
@@ -480,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (customOffset > 0) {
                 stimulusTimer = setTimeout(() => {
                     stimulusText.classList.add('hidden');
-                    clearConcurrentStimuli();
                     if (sequenceIndex < currentSequence.length - 1) {
                         sequenceIndex++;
                         setTimeout(showStimulus, 10);
@@ -496,10 +500,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Record stimulus start time for timing data
         responseStartTime = new Date();
     }
-    
-    // Display concurrent stimuli
-    function displayConcurrentStimuli(concurrentGroup) {
-        const stimuli = concurrentGroup.stimuli;
+
+    // Display concurrent stimuli - SIMPLIFIED to always wait for response
+    function displayConcurrentStimuli(currentSequence) {
+        const stimuli = currentSequence.stimuli;
         const stimulusDisplay = `(${stimuli.join(', ')})`;
         const mapping = stimuliResponses[stimulusDisplay] || {};
         
@@ -551,20 +555,10 @@ document.addEventListener('DOMContentLoaded', function() {
             fixationPoint.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
         }
         
-        // Handle timeout if needed
-        const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
-        if (customOffset > 0) {
-            stimulusTimer = setTimeout(() => {
-                clearConcurrentStimuli();
-                if (!provideFeedback) {
-                    setTimeout(() => {
-                        advanceTrial();
-                    }, 10);
-                }
-            }, customOffset);
-        }
+        // Always set flag to true - concurrent stimuli always wait for response
+        hasConcurrentWithZeroOffset = true;
     }
-    
+
     // Clear concurrent stimuli
     function clearConcurrentStimuli() {
         const concurrentElements = document.querySelectorAll('.concurrent-stimulus');
@@ -646,6 +640,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 else if (isEndOfSequence) {
                     // At the end of a sequence or for concurrent stimuli
                     
+                    // Explicitly clear concurrent stimuli on valid key press
+                    if (hasConcurrentWithZeroOffset) {
+                        clearConcurrentStimuli();
+                        hasConcurrentWithZeroOffset = false;
+                    }
+                    
                     // Save data if option is enabled
                     if (saveData) {
                         saveTrialData(stimulusDisplay, keyPressed, isCorrect);
@@ -723,6 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Modify advanceTrial to check threshold at cycle end
     function advanceTrial() {
         clearAllTimers();
+        hasConcurrentWithZeroOffset = false; // Reset flag when advancing trials
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
         setTimeout(() => {
@@ -838,7 +839,10 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackTimer = null;
         }
         
-        clearConcurrentStimuli();
+        // Only clear concurrent stimuli when explicitly called for
+        if (!hasConcurrentWithZeroOffset) {
+            clearConcurrentStimuli();
+        }
     }
     
     // OK button click
@@ -1266,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', function() {
         stimulusText.style.opacity = '1';
     }
 
-    // Export mappings to CSV file
+    // Export mappings to CSV file - modified to include default values
     function exportMappingsToCSV() {
         const mappingRows = mappingTbody.querySelectorAll('tr');
         const headers = [];
@@ -1297,7 +1301,11 @@ document.addEventListener('DOMContentLoaded', function() {
             for (let i = 1; i < headers.length; i++) {
                 if (inputIndex < inputs.length) {
                     const input = inputs[inputIndex];
-                    const value = input.value.trim();
+                    // Get value or default value if empty
+                    let value = input.value.trim();
+                    if (!value) {
+                        value = input.placeholder || input.getAttribute('data-default') || '';
+                    }
                     
                     // Add the value, properly escaped if it contains commas or quotes
                     if (value.includes(',') || value.includes('"')) {
@@ -1339,7 +1347,64 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Import mappings from CSV file
+    // Helper function to detect and properly format stimulus structure from import
+    function detectStimulusStructure(stimulusText) {
+        // Trim whitespace
+        stimulusText = stimulusText.trim();
+        
+        // Check if it's a sequential stimulus (enclosed in square brackets)
+        if (stimulusText.startsWith('[') && stimulusText.endsWith(']')) {
+            return {
+                type: 'sequential',
+                text: stimulusText, // Keep original format for display
+                valid: true
+            };
+        }
+        
+        // Check if it's a concurrent stimulus (enclosed in parentheses)
+        if (stimulusText.startsWith('(') && stimulusText.endsWith(')')) {
+            return {
+                type: 'concurrent',
+                text: stimulusText, // Keep original format for display
+                valid: true
+            };
+        }
+        
+        // It's a single stimulus
+        return {
+            type: 'single',
+            text: stimulusText,
+            valid: !stimulusText.includes('[') && !stimulusText.includes(']') && 
+                  !stimulusText.includes('(') && !stimulusText.includes(')')
+        };
+    }
+    
+    // Helper function to properly add new stimuli to the text input
+    function addNewStimuliToInput(currentInput, newStimuli) {
+        let updatedInput = currentInput.trim();
+        let newValidStimuli = [];
+        
+        // Process each new stimulus
+        newStimuli.forEach(stimulus => {
+            const structure = detectStimulusStructure(stimulus);
+            if (structure.valid) {
+                newValidStimuli.push(structure.text);
+            }
+        });
+        
+        // Add all valid new stimuli to the input
+        if (newValidStimuli.length > 0) {
+            if (updatedInput) {
+                updatedInput += ', ' + newValidStimuli.join(', ');
+            } else {
+                updatedInput = newValidStimuli.join(', ');
+            }
+        }
+        
+        return updatedInput;
+    }
+
+    // Enhanced import function to handle the S-R mapping import
     function importMappingsFromCSV(file) {
         const reader = new FileReader();
         
@@ -1358,25 +1423,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error('Invalid CSV format: First column must be "Stimulus"');
                 }
                 
-                // Create column mapping
-                const columnIndices = {};
-                headers.forEach((header, index) => {
-                    columnIndices[header.toLowerCase()] = index;
-                });
+                // Get current stimuli to identify new ones
+                const currentStimuliInput = document.getElementById('stimuli-text').value;
+                const currentParsedStimuli = parseStimuli(currentStimuliInput);
+                const currentStimuliKeys = currentParsedStimuli.map(seq => getFormattedStimulusKey(seq));
                 
-                // Process data rows
+                // Process data rows to find new stimuli
                 const importedMappings = {};
+                const newStimuliList = [];
                 let validRowCount = 0;
                 
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue; // Skip empty lines
                     
                     const values = parseCSVLine(lines[i]);
-                    if (values.length < headers.length) continue; // Skip invalid rows
+                    if (values.length < 1) continue; // Skip invalid rows
                     
                     const stimulus = values[0].trim();
                     if (!stimulus) continue; // Skip rows without stimulus
                     
+                    // Check if this is a new stimulus not in the current list
+                    if (!currentStimuliKeys.includes(stimulus)) {
+                        newStimuliList.push(stimulus);
+                    }
+                    
+                    // Create mapping for this stimulus regardless of whether it's new
                     const mapping = {};
                     let hasValidMapping = false;
                     
@@ -1384,32 +1455,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers.forEach((header, index) => {
                         if (index === 0) return; // Skip stimulus column
                         
-                        const value = values[index].trim();
-                        if (!value) return; // Skip empty values
-                        
-                        // Convert numeric values
-                        let processedValue;
-                        if (/^\-?\d+$/.test(value)) {
-                            processedValue = parseInt(value);
-                        } else {
-                            processedValue = value;
-                        }
-                        
-                        // Determine the data type based on header
-                        const headerLower = header.toLowerCase();
-                        let dataType;
-                        
-                        if (headerLower === 'correct response key') {
-                            dataType = 'key';
-                        } else if (headerLower.includes('x position') || headerLower.includes('item') && headerLower.includes('x')) {
-                            // Handle both standard and concurrent item positions
-                            if (headerLower === 'x position') {
-                                dataType = 'x';
+                        if (index < values.length) {
+                            const value = values[index].trim();
+                            if (!value) return; // Skip empty values
+                            
+                            // Convert numeric values
+                            let processedValue;
+                            if (/^\-?\d+$/.test(value)) {
+                                processedValue = parseInt(value);
                             } else {
-                                // Extract item identifier
+                                processedValue = value;
+                            }
+                            
+                            // Determine the correct data type based on header
+                            const headerLower = header.toLowerCase();
+                            let dataType;
+                            
+                            if (headerLower === 'correct response key') {
+                                dataType = 'key';
+                            } else if (headerLower === 'x position') {
+                                dataType = 'x';
+                            } else if (headerLower === 'y position') {
+                                dataType = 'y';
+                            } else if (headerLower.includes('item') && headerLower.includes('x')) {
+                                // Extract item identifier for concurrent stimuli
                                 const match = headerLower.match(/item\s+(\d+)\s+x/i);
                                 if (match) {
-                                    const itemNum = parseInt(match[1]) - 1; // Convert to 0-based index
+                                    const itemNum = parseInt(match[1]) - 1;
                                     dataType = `item${itemNum}_x`;
                                 } else {
                                     // Try to extract item name
@@ -1420,12 +1492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         dataType = headerLower;
                                     }
                                 }
-                            }
-                        } else if (headerLower.includes('y position') || headerLower.includes('item') && headerLower.includes('y')) {
-                            // Similar logic for y positions
-                            if (headerLower === 'y position') {
-                                dataType = 'y';
-                            } else {
+                            } else if (headerLower.includes('item') && headerLower.includes('y')) {
                                 const match = headerLower.match(/item\s+(\d+)\s+y/i);
                                 if (match) {
                                     const itemNum = parseInt(match[1]) - 1;
@@ -1438,53 +1505,71 @@ document.addEventListener('DOMContentLoaded', function() {
                                         dataType = headerLower;
                                     }
                                 }
-                            }
-                        } else if (headerLower === 'offset (ms)') {
-                            dataType = 'offset';
-                        } else if (headerLower === 'color' || headerLower === 'group color') {
-                            dataType = 'color';
-                        } else if (headerLower.includes('item') && headerLower.includes('color')) {
-                            const match = headerLower.match(/item\s+(\d+)\s+color/i);
-                            if (match) {
-                                const itemNum = parseInt(match[1]) - 1;
-                                dataType = `item${itemNum}_color`;
+                            } else if (headerLower === 'offset (ms)') {
+                                dataType = 'offset';
+                            } else if (headerLower === 'color' || headerLower === 'group color') {
+                                dataType = 'color';
+                            } else if (headerLower.includes('item') && headerLower.includes('color')) {
+                                const match = headerLower.match(/item\s+(\d+)\s+color/i);
+                                if (match) {
+                                    const itemNum = parseInt(match[1]) - 1;
+                                    dataType = `item${itemNum}_color`;
+                                } else {
+                                    dataType = headerLower;
+                                }
+                            } else if (headerLower === 'size (px)' || headerLower === 'group size (px)') {
+                                dataType = 'size';
+                            } else if (headerLower.includes('item') && headerLower.includes('size')) {
+                                const match = headerLower.match(/item\s+(\d+)\s+size/i);
+                                if (match) {
+                                    const itemNum = parseInt(match[1]) - 1;
+                                    dataType = `item${itemNum}_size`;
+                                } else {
+                                    dataType = headerLower;
+                                }
                             } else {
-                                dataType = headerLower;
+                                // Unknown header, use as is
+                                dataType = headerLower.replace(/\s+/g, '_');
                             }
-                        } else if (headerLower === 'size (px)' || headerLower === 'group size (px)') {
-                            dataType = 'size';
-                        } else if (headerLower.includes('item') && headerLower.includes('size')) {
-                            const match = headerLower.match(/item\s+(\d+)\s+size/i);
-                            if (match) {
-                                const itemNum = parseInt(match[1]) - 1;
-                                dataType = `item${itemNum}_size`;
-                            } else {
-                                dataType = headerLower;
-                            }
-                        } else {
-                            // Use the header as the data type for unknown columns
-                            dataType = headerLower.replace(/\s+/g, '_');
+                            
+                            mapping[dataType] = processedValue;
+                            hasValidMapping = true;
                         }
-                        
-                        mapping[dataType] = processedValue;
-                        hasValidMapping = true;
                     });
                     
-                    if (hasValidMapping) {
+                    // Store the mapping if we have valid data
+                    if (hasValidMapping || newStimuliList.includes(stimulus)) {
                         importedMappings[stimulus] = mapping;
                         validRowCount++;
                     }
                 }
                 
+                // Update the stimuli text area if new stimuli were found
+                if (newStimuliList.length > 0) {
+                    // Add new stimuli with proper structure detection
+                    const updatedStimuliText = addNewStimuliToInput(currentStimuliInput, newStimuliList);
+                    
+                    // Update the stimuli textarea
+                    const stimuliTextArea = document.getElementById('stimuli-text');
+                    stimuliTextArea.value = updatedStimuliText;
+                    lastStimuliText = updatedStimuliText; // Update the last known value
+                }
+                
                 // Update stimuliResponses with imported data
                 if (validRowCount > 0) {
-                    stimuliResponses = importedMappings;
+                    // Merge with existing responses rather than replacing completely
+                    Object.keys(importedMappings).forEach(key => {
+                        stimuliResponses[key] = importedMappings[key];
+                    });
+                    
                     hasCustomMappings = true;
                     
-                    // Update the UI
-                    const stimuliInput = document.getElementById('stimuli-text').value;
-                    const parsedStimuli = parseStimuli(stimuliInput);
-                    generateMappingTable(parsedStimuli);
+                    // Parse the updated stimuli input to get the full current set including new items
+                    const updatedStimuliInput = document.getElementById('stimuli-text').value;
+                    const updatedParsedStimuli = parseStimuli(updatedStimuliInput);
+                    
+                    // Regenerate the entire mapping table with the updated stimuli set
+                    generateMappingTable(updatedParsedStimuli);
                     
                     // Update button text to indicate custom mappings are set
                     srMappingBtn.textContent = "Custom S-R Mappings (Set)";
@@ -1492,9 +1577,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Save state with imported mappings
                     saveCurrentState();
                     
-                    alert(`Successfully imported ${validRowCount} mapping(s).`);
+                    // Show success message with details
+                    const newStimuliMsg = newStimuliList.length > 0 ? 
+                        `Added ${newStimuliList.length} new stimuli. ` : '';
+                    alert(`${newStimuliMsg}Successfully imported ${validRowCount} mapping(s).`);
+                } else if (newStimuliList.length > 0) {
+                    // Only new stimuli were added but no mappings
+                    // We still need to regenerate the mapping table with the updated stimuli
+                    const updatedStimuliInput = document.getElementById('stimuli-text').value;
+                    const updatedParsedStimuli = parseStimuli(updatedStimuliInput);
+                    generateMappingTable(updatedParsedStimuli);
+                    
+                    saveCurrentState();
+                    alert(`Added ${newStimuliList.length} new stimuli.`);
                 } else {
-                    throw new Error('No valid mappings found in the CSV');
+                    throw new Error('No valid mappings or new stimuli found in the CSV');
                 }
                 
             } catch (error) {
@@ -1508,43 +1605,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         reader.readAsText(file);
-    }
-    
-    // Helper function to parse CSV line accounting for quoted fields
-    function parseCSVLine(line) {
-        const result = [];
-        let inQuotes = false;
-        let currentValue = '';
-        
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            
-            if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
-                // Toggle quote mode
-                if (inQuotes && i < line.length - 1 && line[i+1] === '"') {
-                    // Double quotes inside quoted string = escaped quote
-                    currentValue += '"';
-                    i++; // Skip next quote
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === ',' && !inQuotes) {
-                // End of field
-                result.push(currentValue);
-                currentValue = '';
-            } else {
-                currentValue += char;
-            }
-        }
-        
-        // Add the last field
-        result.push(currentValue);
-        return result;
-    }
-
-    // Add event listeners for export and import buttons if they exist
-    if (exportMappingsBtn) {
-        exportMappingsBtn.addEventListener('click', exportMappingsToCSV);
     }
 
     if (importMappingsBtn && csvFileInput) {

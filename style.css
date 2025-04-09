@@ -411,3 +411,47 @@ close-btn:hover,
 .button-group #save-mappings-btn {
     flex: 1.5;
 }
+
+.split-container {
+    display: flex;
+    width: 100%;
+    gap: 20px;
+}
+
+.left-panel {
+    flex: 1;
+    min-width: 600px;
+}
+
+.right-panel {
+    width: 300px;
+    border-left: 1px solid #ccc;
+    padding-left: 20px;
+}
+
+#study-window {
+    height: 100vh;
+    overflow-y: auto;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+#add-to-study-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#add-to-study-btn:hover {
+    background-color: #45a049;
+}

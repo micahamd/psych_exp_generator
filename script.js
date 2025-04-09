@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add this with your other state variables
     let isStudyMode = false;
 
+    // Add a variable to store all study data
+    let studyData = [];
+
     // Function to get current configuration as JSON
     function getCurrentConfiguration() {
         return {
@@ -191,22 +194,58 @@ document.addEventListener('DOMContentLoaded', function() {
         clearAllTimers();
         document.removeEventListener('keydown', handleKeyPress);
         
-        // Save data if enabled for this configuration
-        if (saveData && experimentData.length > 0) {
-            downloadExperimentData();
-        }
-        
         const messageElement = document.getElementById('completion-message');
         const statsElement = document.getElementById('completion-stats');
+        
+        // If save data is enabled, store the current configuration's data
+        if (saveData && experimentData.length > 0) {
+            if (isStudyMode) {
+                // Add this configuration's data to the study data array
+                studyData.push({
+                    configurationIndex: currentStudyIndex,
+                    configurationName: studyConfigurations[currentStudyIndex].name || `Configuration ${currentStudyIndex + 1}`,
+                    data: experimentData
+                });
+            } else {
+                // Single task mode - download data immediately
+                downloadExperimentData();
+            }
+        }
         
         if (isStudyMode) {
             if (currentStudyIndex < studyConfigurations.length - 1) {
                 messageElement.textContent = `Configuration ${currentStudyIndex + 1} Complete`;
                 statsElement.classList.add('hidden');
             } else {
+                // Study completion screen
                 messageElement.textContent = 'Study Complete!';
                 statsElement.classList.remove('hidden');
-                statsElement.textContent = `Completed ${studyConfigurations.length} configurations`;
+                
+                // Show study completion stats
+                let statsHtml = `
+                    <div class="study-completion-stats">
+                        <h3>Study Summary:</h3>
+                        <p>Completed ${studyConfigurations.length} configurations</p>
+                    `;
+                
+                if (saveData && studyData.length > 0) {
+                    statsHtml += `
+                        <div class="download-section">
+                            <button id="download-study-data" class="download-btn">
+                                Download Study Data
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                statsHtml += '</div>';
+                statsElement.innerHTML = statsHtml;
+                
+                // Add event listener for the download button
+                const downloadBtn = document.getElementById('download-study-data');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', downloadStudyData);
+                }
             }
         } else {
             messageElement.textContent = 'Task Complete!';
@@ -964,11 +1003,65 @@ document.addEventListener('DOMContentLoaded', function() {
         document.removeEventListener('keydown', handleKeyPress);
         clearAllTimers();
         
-        // Download data if save option is enabled and we have data
-        // Remove the cycle summary information - just download the raw trial data
+        const messageElement = document.getElementById('completion-message');
+        const statsElement = document.getElementById('completion-stats');
+        
+        // If save data is enabled, store the current configuration's data
         if (saveData && experimentData.length > 0) {
-            downloadExperimentData();
+            if (isStudyMode) {
+                // Add this configuration's data to the study data array
+                studyData.push({
+                    configurationIndex: currentStudyIndex,
+                    configurationName: studyConfigurations[currentStudyIndex].name || `Configuration ${currentStudyIndex + 1}`,
+                    data: experimentData
+                });
+            } else {
+                // Single task mode - download data immediately
+                downloadExperimentData();
+            }
         }
+        
+        if (isStudyMode) {
+            if (currentStudyIndex < studyConfigurations.length - 1) {
+                messageElement.textContent = `Configuration ${currentStudyIndex + 1} Complete`;
+                statsElement.classList.add('hidden');
+            } else {
+                // Study completion screen
+                messageElement.textContent = 'Study Complete!';
+                statsElement.classList.remove('hidden');
+                
+                // Show study completion stats
+                let statsHtml = `
+                    <div class="study-completion-stats">
+                        <h3>Study Summary:</h3>
+                        <p>Completed ${studyConfigurations.length} configurations</p>
+                    `;
+                
+                if (saveData && studyData.length > 0) {
+                    statsHtml += `
+                        <div class="download-section">
+                            <button id="download-study-data" class="download-btn">
+                                Download Study Data
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                statsHtml += '</div>';
+                statsElement.innerHTML = statsHtml;
+                
+                // Add event listener for the download button
+                const downloadBtn = document.getElementById('download-study-data');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', downloadStudyData);
+                }
+            }
+        } else {
+            messageElement.textContent = 'Task Complete!';
+            statsElement.classList.add('hidden');
+        }
+        
+        completionScreen.classList.remove('hidden');
     }
 
     // Function to download experiment data as JSON
@@ -1002,6 +1095,34 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadLink.click();
     }
 
+    // Add function to download study data
+    function downloadStudyData() {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `study_data_${timestamp}.json`;
+        
+        const studyDataObject = {
+            studyMetadata: {
+                completionTime: new Date().toISOString(),
+                numberOfConfigurations: studyConfigurations.length,
+                configurationDetails: studyConfigurations.map(config => ({
+                    name: config.name || 'Unnamed Configuration',
+                    // Add any other relevant configuration metadata
+                }))
+            },
+            configurationData: studyData
+        };
+        
+        const dataStr = JSON.stringify(studyDataObject, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
     // Clear all timers and elements
     function clearAllTimers() {
         if (stimulusTimer) {
@@ -1022,31 +1143,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // OK button click
     okBtn.addEventListener('click', function() {
-        console.log('OK button clicked');
-        console.log('isStudyMode:', isStudyMode);
-        console.log('currentStudyIndex:', currentStudyIndex);
-        console.log('studyConfigurations.length:', studyConfigurations.length);
-
         if (isStudyMode && currentStudyIndex < studyConfigurations.length - 1) {
-            console.log('Continuing to next configuration');
-            // In study mode and more configurations to run
+            // Continue to next configuration
             completionScreen.classList.add('hidden');
             currentStudyIndex++;
             
-            // Reset necessary state for next configuration
+            // Reset configuration-specific state
             currentTrial = 0;
             experimentRunning = false;
             stimuliUsed = [];
+            experimentData = []; // Reset experiment data for next configuration
             clearAllTimers();
             
             // Load and start next configuration
-            const nextConfig = studyConfigurations[currentStudyIndex].config;  // Make sure to access .config
-            console.log('Loading next configuration:', nextConfig);
-            loadConfiguration(nextConfig);
+            loadConfiguration(studyConfigurations[currentStudyIndex].config);
             startExperiment();
         } else {
-            console.log('Terminating experiment/study');
-            // Either in single task mode or finished all study configurations
+            // Study or task complete - reset everything
             completionScreen.classList.add('hidden');
             introScreen.classList.remove('hidden');
             
@@ -1056,9 +1169,10 @@ document.addEventListener('DOMContentLoaded', function() {
             stimuliUsed = [];
             currentStudyIndex = 0;
             isStudyMode = false;
+            experimentData = [];
+            studyData = []; // Reset study data
             clearAllTimers();
             
-            // Save current state
             saveCurrentState();
         }
     });

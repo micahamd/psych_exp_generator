@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const mappingTbody = document.getElementById('mapping-tbody');
     const saveMappingsBtn = document.getElementById('save-mappings-btn');
     const closeModalBtn = document.querySelector('.close-btn');
+    // Add new button references
+    const exportMappingsBtn = document.getElementById('export-mappings-btn');
+    const importMappingsBtn = document.getElementById('import-mappings-btn');
+    const csvFileInput = document.getElementById('csv-file-input');
     
     // Experiment variables
     let trialInterval;
@@ -1260,5 +1264,300 @@ document.addEventListener('DOMContentLoaded', function() {
         feedbackText.classList.add('hidden');
         // Restore stimulus text visibility if it was reduced
         stimulusText.style.opacity = '1';
+    }
+
+    // Export mappings to CSV file
+    function exportMappingsToCSV() {
+        const mappingRows = mappingTbody.querySelectorAll('tr');
+        const headers = [];
+        const csvRows = [];
+        
+        // Get all header cells from the table
+        const headerCells = document.querySelectorAll('#mapping-table thead th');
+        headerCells.forEach(cell => {
+            headers.push(cell.textContent);
+        });
+        
+        // Add headers as first row
+        csvRows.push(headers.join(','));
+        
+        // Process each mapping row
+        mappingRows.forEach(row => {
+            const csvRow = [];
+            const stimulusText = row.getAttribute('data-stimulus');
+            csvRow.push('"' + stimulusText.replace(/"/g, '""') + '"'); // Escape quotes
+            
+            // Get all inputs in the row
+            const inputs = row.querySelectorAll('input');
+            
+            // Track input index to map to correct header
+            let inputIndex = 0;
+            
+            // Process each header after the stimulus column
+            for (let i = 1; i < headers.length; i++) {
+                if (inputIndex < inputs.length) {
+                    const input = inputs[inputIndex];
+                    const value = input.value.trim();
+                    
+                    // Add the value, properly escaped if it contains commas or quotes
+                    if (value.includes(',') || value.includes('"')) {
+                        csvRow.push('"' + value.replace(/"/g, '""') + '"');
+                    } else {
+                        csvRow.push(value);
+                    }
+                    
+                    inputIndex++;
+                } else {
+                    // Add empty cell if we don't have an input for this column
+                    csvRow.push('');
+                }
+            }
+            
+            // Add the row to our CSV data
+            csvRows.push(csvRow.join(','));
+        });
+        
+        // Create blob and download
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `sr-mappings-${timestamp}.csv`;
+        
+        // Set up download
+        if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, filename);
+        } else {
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+
+    // Import mappings from CSV file
+    function importMappingsFromCSV(file) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const contents = e.target.result;
+                const lines = contents.split(/\r\n|\n/);
+                
+                if (lines.length < 2) {
+                    throw new Error('CSV file has insufficient data');
+                }
+                
+                // Parse header row
+                const headers = parseCSVLine(lines[0]);
+                if (headers.length < 2 || headers[0].toLowerCase() !== 'stimulus') {
+                    throw new Error('Invalid CSV format: First column must be "Stimulus"');
+                }
+                
+                // Create column mapping
+                const columnIndices = {};
+                headers.forEach((header, index) => {
+                    columnIndices[header.toLowerCase()] = index;
+                });
+                
+                // Process data rows
+                const importedMappings = {};
+                let validRowCount = 0;
+                
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue; // Skip empty lines
+                    
+                    const values = parseCSVLine(lines[i]);
+                    if (values.length < headers.length) continue; // Skip invalid rows
+                    
+                    const stimulus = values[0].trim();
+                    if (!stimulus) continue; // Skip rows without stimulus
+                    
+                    const mapping = {};
+                    let hasValidMapping = false;
+                    
+                    // Process each column
+                    headers.forEach((header, index) => {
+                        if (index === 0) return; // Skip stimulus column
+                        
+                        const value = values[index].trim();
+                        if (!value) return; // Skip empty values
+                        
+                        // Convert numeric values
+                        let processedValue;
+                        if (/^\-?\d+$/.test(value)) {
+                            processedValue = parseInt(value);
+                        } else {
+                            processedValue = value;
+                        }
+                        
+                        // Determine the data type based on header
+                        const headerLower = header.toLowerCase();
+                        let dataType;
+                        
+                        if (headerLower === 'correct response key') {
+                            dataType = 'key';
+                        } else if (headerLower.includes('x position') || headerLower.includes('item') && headerLower.includes('x')) {
+                            // Handle both standard and concurrent item positions
+                            if (headerLower === 'x position') {
+                                dataType = 'x';
+                            } else {
+                                // Extract item identifier
+                                const match = headerLower.match(/item\s+(\d+)\s+x/i);
+                                if (match) {
+                                    const itemNum = parseInt(match[1]) - 1; // Convert to 0-based index
+                                    dataType = `item${itemNum}_x`;
+                                } else {
+                                    // Try to extract item name
+                                    const nameMatch = headerLower.match(/(.+)_x$/i);
+                                    if (nameMatch) {
+                                        dataType = `${nameMatch[1]}_x`;
+                                    } else {
+                                        dataType = headerLower;
+                                    }
+                                }
+                            }
+                        } else if (headerLower.includes('y position') || headerLower.includes('item') && headerLower.includes('y')) {
+                            // Similar logic for y positions
+                            if (headerLower === 'y position') {
+                                dataType = 'y';
+                            } else {
+                                const match = headerLower.match(/item\s+(\d+)\s+y/i);
+                                if (match) {
+                                    const itemNum = parseInt(match[1]) - 1;
+                                    dataType = `item${itemNum}_y`;
+                                } else {
+                                    const nameMatch = headerLower.match(/(.+)_y$/i);
+                                    if (nameMatch) {
+                                        dataType = `${nameMatch[1]}_y`;
+                                    } else {
+                                        dataType = headerLower;
+                                    }
+                                }
+                            }
+                        } else if (headerLower === 'offset (ms)') {
+                            dataType = 'offset';
+                        } else if (headerLower === 'color' || headerLower === 'group color') {
+                            dataType = 'color';
+                        } else if (headerLower.includes('item') && headerLower.includes('color')) {
+                            const match = headerLower.match(/item\s+(\d+)\s+color/i);
+                            if (match) {
+                                const itemNum = parseInt(match[1]) - 1;
+                                dataType = `item${itemNum}_color`;
+                            } else {
+                                dataType = headerLower;
+                            }
+                        } else if (headerLower === 'size (px)' || headerLower === 'group size (px)') {
+                            dataType = 'size';
+                        } else if (headerLower.includes('item') && headerLower.includes('size')) {
+                            const match = headerLower.match(/item\s+(\d+)\s+size/i);
+                            if (match) {
+                                const itemNum = parseInt(match[1]) - 1;
+                                dataType = `item${itemNum}_size`;
+                            } else {
+                                dataType = headerLower;
+                            }
+                        } else {
+                            // Use the header as the data type for unknown columns
+                            dataType = headerLower.replace(/\s+/g, '_');
+                        }
+                        
+                        mapping[dataType] = processedValue;
+                        hasValidMapping = true;
+                    });
+                    
+                    if (hasValidMapping) {
+                        importedMappings[stimulus] = mapping;
+                        validRowCount++;
+                    }
+                }
+                
+                // Update stimuliResponses with imported data
+                if (validRowCount > 0) {
+                    stimuliResponses = importedMappings;
+                    hasCustomMappings = true;
+                    
+                    // Update the UI
+                    const stimuliInput = document.getElementById('stimuli-text').value;
+                    const parsedStimuli = parseStimuli(stimuliInput);
+                    generateMappingTable(parsedStimuli);
+                    
+                    // Update button text to indicate custom mappings are set
+                    srMappingBtn.textContent = "Custom S-R Mappings (Set)";
+                    
+                    // Save state with imported mappings
+                    saveCurrentState();
+                    
+                    alert(`Successfully imported ${validRowCount} mapping(s).`);
+                } else {
+                    throw new Error('No valid mappings found in the CSV');
+                }
+                
+            } catch (error) {
+                alert(`Error importing mappings: ${error.message}`);
+                console.error('Import error:', error);
+            }
+        };
+        
+        reader.onerror = function() {
+            alert('Error reading the file');
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    // Helper function to parse CSV line accounting for quoted fields
+    function parseCSVLine(line) {
+        const result = [];
+        let inQuotes = false;
+        let currentValue = '';
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
+                // Toggle quote mode
+                if (inQuotes && i < line.length - 1 && line[i+1] === '"') {
+                    // Double quotes inside quoted string = escaped quote
+                    currentValue += '"';
+                    i++; // Skip next quote
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                // End of field
+                result.push(currentValue);
+                currentValue = '';
+            } else {
+                currentValue += char;
+            }
+        }
+        
+        // Add the last field
+        result.push(currentValue);
+        return result;
+    }
+
+    // Add event listeners for export and import buttons if they exist
+    if (exportMappingsBtn) {
+        exportMappingsBtn.addEventListener('click', exportMappingsToCSV);
+    }
+
+    if (importMappingsBtn && csvFileInput) {
+        importMappingsBtn.addEventListener('click', function() {
+            csvFileInput.click(); // Trigger file input dialog
+        });
+        
+        csvFileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                importMappingsFromCSV(this.files[0]);
+                // Clear the input so the same file can be selected again
+                this.value = '';
+            }
+        });
     }
 });

@@ -257,7 +257,13 @@
                 </table>
             </div>
             
-            <button type="button" id="save-mappings-btn">Save Mappings</button>
+            <div class="button-group">
+                <button type="button" id="save-mappings-btn">Save Mappings</button>
+                <button type="button" id="export-mappings-btn" class="secondary-btn">Export Mappings</button>
+                <button type="button" id="import-mappings-btn" class="secondary-btn">Import Mappings</button>
+                <!-- Hidden file input for importing CSV -->
+                <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+            </div>
         </div>
     </div>
     

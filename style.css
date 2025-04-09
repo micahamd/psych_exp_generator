@@ -386,3 +386,28 @@ close-btn:hover,
     right: 5px;
     pointer-events: none;
 }
+
+/* Button group for the mapping modal */
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.button-group button {
+    margin: 0;
+}
+
+/* Adjust size and appearance of secondary buttons in the group */
+.button-group .secondary-btn {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    text-align: center;
+    min-width: 120px;
+}
+
+/* Make primary button more prominent */
+.button-group #save-mappings-btn {
+    flex: 1.5;
+}

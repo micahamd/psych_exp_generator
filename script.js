@@ -578,6 +578,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Corrected handleKeyPress function
     function handleKeyPress(e) {
+        // Skip all keypresses during cycle feedback display
+        if (feedbackText.textContent.includes("Starting new cycle") && 
+            !feedbackText.classList.contains('hidden')) {
+            return;
+        }
+
         if (!experimentRunning) return;
         const keyPressed = (e.code === 'Space') ? 'SPACE' : e.key.toUpperCase();
 
@@ -730,7 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log("Threshold met or not required. Ending experiment.");
                     endExperiment();
                 } else {
-                    // Threshold not met - start a new cycle
+                    // Threshold not met - show cycle message and start a new cycle automatically
                     console.log("Threshold not met. Starting new cycle.");
                     showCycleMessage();
                 }
@@ -738,28 +744,36 @@ document.addEventListener('DOMContentLoaded', function() {
         }, trialInterval);
     }
 
-    // Fix for showCycleMessage
+    // Updated showCycleMessage to display for fixed duration without requiring keypress
     function showCycleMessage() {
         // Show message that we're starting a new cycle
         feedbackText.textContent = `Correct: ${currentCycleCorrect}/${cycleThreshold} - Starting new cycle`;
         feedbackText.style.color = '#2196F3'; // Blue color for cycle message
         feedbackText.classList.remove('hidden');
         
+        // Clear stimulus text to prevent overlap
+        stimulusText.classList.add('hidden');
+        
         console.log(`Cycle completed. Correct responses: ${currentCycleCorrect}/${cycleThreshold}`);
         
-        // Reset for new cycle
+        // Automatically hide message and start new cycle after fixed duration
         setTimeout(() => {
+            // Hide message
+            feedbackText.classList.add('hidden');
+            
+            // Reset for new cycle
             currentTrial = 0;
             sequenceIndex = 0;
             currentCycleCorrect = 0;
+            
             // Reset stimulus usage if randomizing
             if (randomizeStimuli) {
                 stimuliUsed = [];
             }
-            // Hide message and start new cycle
-            feedbackText.classList.add('hidden');
+            
+            // Start new cycle automatically
             startTrial();
-        }, 2000); // Show message for 2 seconds
+        }, 2000); // Show message for fixed 2 seconds
     }
     
     // Correct endExperiment

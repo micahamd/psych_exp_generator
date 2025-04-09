@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let studyConfigurations = [];
     let currentStudyIndex = 0;
 
+    // Add this with your other state variables
+    let isStudyMode = false;
+
     // Function to get current configuration as JSON
     function getCurrentConfiguration() {
         return {
@@ -133,18 +136,21 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Begin Study button click handler
-    document.getElementById('begin-study-btn').addEventListener('click', () => {
-        console.log('Begin Study clicked');
-        console.log('Current configurations:', studyConfigurations);
-        
+    document.getElementById('begin-study-btn').addEventListener('click', function() {
         if (studyConfigurations.length === 0) {
             alert('Please add at least one configuration to the study.');
             return;
         }
         
+        isStudyMode = true;  // Make sure this is set
+        console.log('Beginning study mode:', isStudyMode);
         currentStudyIndex = 0;
-        console.log('Starting configuration:', currentStudyIndex);
-        startNextConfiguration();
+        
+        // Load first configuration
+        const firstConfig = studyConfigurations[0].config;  // Make sure to access .config
+        console.log('Loading first configuration:', firstConfig);
+        loadConfiguration(firstConfig);
+        startExperiment();
     });
 
     // Function to start the next configuration in the study
@@ -180,18 +186,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Then redefine endExperiment with study progression functionality
     function endExperiment() {
-        // Call original functionality
-        originalEndExperiment();
+        experimentRunning = false;
+        experimentContainer.classList.add('hidden');
+        clearAllTimers();
+        document.removeEventListener('keydown', handleKeyPress);
         
-        // Progress to next configuration if in study mode
-        if (studyConfigurations.length > 0) {
-            currentStudyIndex++;
-            setTimeout(startNextConfiguration, 1000); // Short delay before next configuration
+        // Save data if enabled for this configuration
+        if (saveData && experimentData.length > 0) {
+            downloadExperimentData();
         }
+        
+        const messageElement = document.getElementById('completion-message');
+        const statsElement = document.getElementById('completion-stats');
+        
+        if (isStudyMode) {
+            if (currentStudyIndex < studyConfigurations.length - 1) {
+                messageElement.textContent = `Configuration ${currentStudyIndex + 1} Complete`;
+                statsElement.classList.add('hidden');
+            } else {
+                messageElement.textContent = 'Study Complete!';
+                statsElement.classList.remove('hidden');
+                statsElement.textContent = `Completed ${studyConfigurations.length} configurations`;
+            }
+        } else {
+            messageElement.textContent = 'Task Complete!';
+            statsElement.classList.add('hidden');
+        }
+        
+        completionScreen.classList.remove('hidden');
     }
 
     // Function to load a configuration into the form
     function loadConfiguration(config) {
+        console.log('Loading configuration:', config);
+        
         // Load all saved values back into the form
         for (const [key, value] of Object.entries(config)) {
             const element = document.getElementById(key);
@@ -207,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Restore stimulus-response mappings if they exist
         if (config.stimuliResponses) {
             stimuliResponses = config.stimuliResponses;
+            hasCustomMappings = Object.keys(stimuliResponses).length > 0;
         }
     }
     
@@ -993,17 +1022,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // OK button click
     okBtn.addEventListener('click', function() {
-        completionScreen.classList.add('hidden');
-        introScreen.classList.remove('hidden');
-        
-        // Reset experiment-specific variables but keep configurations
-        currentTrial = 0;
-        experimentRunning = false;
-        stimuliUsed = [];
-        clearAllTimers();
-        
-        // Save current state
-        saveCurrentState();
+        console.log('OK button clicked');
+        console.log('isStudyMode:', isStudyMode);
+        console.log('currentStudyIndex:', currentStudyIndex);
+        console.log('studyConfigurations.length:', studyConfigurations.length);
+
+        if (isStudyMode && currentStudyIndex < studyConfigurations.length - 1) {
+            console.log('Continuing to next configuration');
+            // In study mode and more configurations to run
+            completionScreen.classList.add('hidden');
+            currentStudyIndex++;
+            
+            // Reset necessary state for next configuration
+            currentTrial = 0;
+            experimentRunning = false;
+            stimuliUsed = [];
+            clearAllTimers();
+            
+            // Load and start next configuration
+            const nextConfig = studyConfigurations[currentStudyIndex].config;  // Make sure to access .config
+            console.log('Loading next configuration:', nextConfig);
+            loadConfiguration(nextConfig);
+            startExperiment();
+        } else {
+            console.log('Terminating experiment/study');
+            // Either in single task mode or finished all study configurations
+            completionScreen.classList.add('hidden');
+            introScreen.classList.remove('hidden');
+            
+            // Reset all state variables
+            currentTrial = 0;
+            experimentRunning = false;
+            stimuliUsed = [];
+            currentStudyIndex = 0;
+            isStudyMode = false;
+            clearAllTimers();
+            
+            // Save current state
+            saveCurrentState();
+        }
     });
     
     // Add event listener for S-R mapping button

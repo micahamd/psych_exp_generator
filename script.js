@@ -1236,7 +1236,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Missing feedback functions - these need to be implemented
+    // Update feedback functions to ensure visibility
     function showFeedback(isCorrect) {
         if (isCorrect) {
             feedbackText.textContent = "Correct";
@@ -1245,10 +1245,20 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackText.textContent = "X";
             feedbackText.style.color = "#F44336"; // Red color
         }
+        
+        // Make sure feedback is centered and visible
+        feedbackText.style.transform = `translate(-50%, -50%)`; // Keep feedback at center
         feedbackText.classList.remove('hidden');
+        
+        // Hide stimulus text temporarily for clearer feedback (if showing feedback on incorrect responses)
+        if (!isCorrect) {
+            stimulusText.style.opacity = '0.2'; // Reduce opacity rather than hide completely
+        }
     }
     
     function hideFeedback() {
         feedbackText.classList.add('hidden');
+        // Restore stimulus text visibility if it was reduced
+        stimulusText.style.opacity = '1';
     }
 });

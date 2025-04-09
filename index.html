@@ -12,6 +12,27 @@
         <form id="experiment-form">
             <div class="form-group form-row">
                 <div class="form-column">
+                    <label for="canvas-background">Canvas Background:</label>
+                    <div class="color-select-container">
+                        <select id="canvas-background" required>
+                            <option value="black" selected>Black</option>
+                            <option value="white">White</option>
+                            <option value="grey">Grey</option>
+                            <option value="red">Red</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="yellow">Yellow</option>
+                            <option value="purple">Purple</option>
+                            <option value="orange">Orange</option>
+                            <option value="pink">Pink</option>
+                            <option value="cyan">Cyan</option>
+                            <option value="brown">Brown</option>
+                        </select>
+                        <span class="color-preview-large" id="canvas-background-preview" style="background-color: black;"></span>
+                    </div>
+                    <p class="helper-text">Background color of the canvas area surrounding the experiment screen.</p>
+                </div>
+                <div class="form-column">
                     <label for="trial-interval">Trial interval (milliseconds):</label>
                     <input type="number" id="trial-interval" min="1" required value="200">
                     <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>

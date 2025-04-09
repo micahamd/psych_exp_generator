@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let fixationInterval;
     let stimulusOffset;
     let trialBackground;
+    let canvasBackground; // New variable for canvas background
     let showFixation;
     let fixationColor;
     let trialCount;
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.fixationInterval) document.getElementById('fixation-interval').value = savedState.fixationInterval;
             if (savedState.stimulusOffset) document.getElementById('stimulus-offset').value = savedState.stimulusOffset;
             if (savedState.trialBackground) document.getElementById('trial-background').value = savedState.trialBackground;
+            if (savedState.canvasBackground) document.getElementById('canvas-background').value = savedState.canvasBackground;
             if (savedState.fixation) document.getElementById('fixation').value = savedState.fixation;
             if (savedState.fixationColor) document.getElementById('fixation-color').value = savedState.fixationColor;
             if (savedState.trialCount) document.getElementById('trial-count').value = savedState.trialCount;
@@ -102,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         // Get form values
+        canvasBackground = document.getElementById('canvas-background').value;
         trialInterval = parseInt(document.getElementById('trial-interval').value);
         fixationInterval = parseInt(document.getElementById('fixation-interval').value);
         stimulusOffset = parseInt(document.getElementById('stimulus-offset').value);
@@ -160,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to save current state to localStorage
     function saveCurrentState() {
         const currentState = {
+            canvasBackground: document.getElementById('canvas-background').value,
             trialInterval: parseInt(document.getElementById('trial-interval').value),
             fixationInterval: parseInt(document.getElementById('fixation-interval').value),
             stimulusOffset: parseInt(document.getElementById('stimulus-offset').value),
@@ -319,7 +323,8 @@ document.addEventListener('DOMContentLoaded', function() {
         introScreen.classList.add('hidden');
         experimentContainer.classList.remove('hidden');
         
-        // Set background color
+        // Set background colors
+        experimentContainer.style.backgroundColor = canvasBackground;
         experimentScreen.style.backgroundColor = trialBackground;
         
         // Set fixation color
@@ -714,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
         
-        // Add download button to completion screen
+        // Create download button
         const downloadBtn = document.createElement('button');
         downloadBtn.textContent = 'Download Data';
         downloadBtn.className = 'secondary-btn';
@@ -1128,7 +1133,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to set up color previews
     function setupColorPreviews() {
         // For each color select element
-        const colorSelects = ['trial-background', 'fixation-color', 'stimulus-color'];
+        const colorSelects = ['canvas-background', 'trial-background', 'fixation-color', 'stimulus-color'];
         
         colorSelects.forEach(id => {
             const select = document.getElementById(id);

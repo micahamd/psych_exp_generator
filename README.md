@@ -13,43 +13,49 @@ The project consists of three main files:
 ## Features
 
 - Customizable trial parameters:
+  - Canvas background: Color of the full-screen canvas behind the experiment area
   - Trial interval: The duration of the inter-trial interval in milliseconds
-  - Trial background color: Choose between white, black, or grey
+  - Trial background color: Choose from a range of colors for the experiment screen
   - Fixation point: Option to show or hide a central fixation cross
   - Fixation interval: The duration (in milliseconds) that the fixation appears
-  - Fixation color: Color of the fixation cross (white, grey, or black)
+  - Fixation color: Color of the fixation cross (multiple color options available)
   - Fixation and Stimulus Location: Control the position of stimuli and fixation relative to screen center
   - Stimulus offset: Controls how long the stimulus remains visible (0 = until response)
   - Trial count: Set the number of trials (between 1 and 999)
   - Stimuli - Text: Comma-separated list of text stimuli to display during trials
      * Support for stimulus sequences using square brackets notation
+     * Support for concurrent stimulus presentation using round brackets
   - Stimulus Text Size: Font size of stimuli (12px to 120px)
-  - Stimulus Text Color: Color of the stimulus text (white, black, or grey)
+  - Stimulus Text Color: Color of the stimulus text (multiple color options available)
   - Randomize stimulus sequence: Option to present stimuli in random or sequential order
   - Response key: Customize the key used to progress through trials (defaults to SPACEBAR)
-  - Custom Stimulus-Response Mappings: Assign different response keys to specific stimuli
-  - Response feedback: Option to provide visual feedback after responses specific stimuli
-    * Customizable feedback text for correct and incorrect responses
-    * Configurable feedback duration correct and incorrect responses
+  - Additional response keys: Specify multiple valid response keys
+  - Custom Stimulus-Response Mappings: Assign different response keys and properties to specific stimuli
+  - Response feedback: Option to provide visual feedback after responses
     * Visual indication with green (correct) and red (incorrect) colors
+    * Configurable feedback duration
   - Data collection: Option to save experiment data in JSON format
     * Records trial information, responses, accuracy, and timing
     * Automatic download when experiment completes
-- Fixed-size experiment display (800x600 pixels) centered on a black background
+    * Manual download button on completion screen
+- Visual color preview for all color selection options
+- Fixed-size experiment display (800x600 pixels) centered on a customizable background
 - Stimulus presentation: Fixation → Text Stimulus → Response → Inter-trial interval
 - Helper text explanations for all parameters
 - Fully customizable text appearance
-- Large text stimuli (42px) for better visibility
+- Large text stimuli (42px default) for better visibility
+- State persistence across sessions using localStorage
 
 ## How to Use
 
 1. Open `index.html` in a web browser
 2. Configure your experiment parameters:
+   - **Canvas Background**: Choose the color of the full-screen canvas behind the experiment
    - **Trial interval**: Set the duration (in milliseconds) of the blank screen between trials
    - **Trial background**: Choose the background color for the experiment screen
    - **Fixation**: Choose whether to display a fixation cross in the center of the screen
    - **Fixation interval**: Set how long (in milliseconds) the fixation cross appears
-   - **Fixation color**: Select the color of the fixation cross (white, grey, or black)
+   - **Fixation color**: Select the color of the fixation cross
    - **Fixation and Stimulus Location**: Position stimuli and fixation relative to center (X,Y coordinates in pixels)
       * [0,0] represents the screen center
       * Negative X values move left, positive X values move right
@@ -58,13 +64,14 @@ The project consists of three main files:
    - **Trial count**: Set how many trials the experiment should run
    - **Stimuli - Text**: Enter a comma-separated list of text stimuli to be presented
      * For stimulus sequences, use square brackets: `[apple, corn], speed, [bull, mind, rap]`
+     * For concurrent stimuli, use round brackets: `(apple, corn), speed, (red, blue, green)`
    - **Stimulus Text Size**: Select the font size for your stimuli
    - **Stimulus Text Color**: Choose the color of the stimulus text
    - **Randomize stimulus sequence**: Check to randomize the order of stimuli or uncheck for sequential presentation
    - **Response key**: Set the default key that advances to the next trial (leave blank for SPACEBAR)
-   - **Custom S-R Mappings**: Click to set specific response keys for individual stimuli
+   - **Additional Responses**: Enter comma-separated list of keys that can also advance trials
+   - **Custom S-R Mappings**: Click to set specific response keys and properties for individual stimuli
    - **Provide Feedback**: Check to enable response feedback
-   - **Feedback Text**: Enter text for correct and incorrect responses, separated by comma
    - **Feedback Duration**: Set how long (in milliseconds) feedback appears on screen
    - **Save Data**: Check to enable data collection and download results at the end of the experiment
 3. Click the "BEGIN" button to start the experiment
@@ -79,6 +86,43 @@ The project consists of three main files:
    - There's a blank interval between trials with the duration specified
    - After all trials are complete, a "Task complete!" message will appear
 5. Click "OK" on the completion screen to return to the parameter configuration screen
+   - If data collection was enabled, a "Download Data" button will also be available
+
+## Color Customization
+
+The experiment offers extensive color customization options:
+
+1. **Canvas Background**: Controls the color of the full-screen canvas behind the experiment area
+   - Useful for creating different ambient lighting conditions
+   - Default is black for reduced visual distraction
+
+2. **Trial Background**: Controls the color of the rectangular experiment area (800x600px)
+   - Default is grey, providing neutral contrast
+   - Can be changed to match experimental requirements
+
+3. **Fixation Color**: Controls the color of the fixation cross
+   - Default is white for good visibility on grey background
+   - Can be adjusted to suit the trial background
+
+4. **Stimulus Text Color**: Controls the color of stimulus text
+   - Default is white for good visibility
+   - Can be customized for specific experimental paradigms
+
+All color options include:
+- White
+- Black
+- Grey
+- Red
+- Green
+- Blue
+- Yellow
+- Purple
+- Orange
+- Pink
+- Cyan
+- Brown
+
+Each color option includes a visual preview next to the dropdown, showing the selected color for immediate feedback.
 
 ## Stimulus Presentations
 
@@ -142,6 +186,8 @@ This allows for creating complex spatial arrangements of stimuli for:
    - Next trial begins
    - Process repeats for the specified number of trials
 3. **Completion Phase**: "Task complete!" message is displayed with an OK button
+   - If data collection was enabled, a "Download Data" button is also shown
+   - Data is automatically downloaded as a JSON file
 4. **Reset Phase**: Clicking OK returns to the setup phase
 
 ## Stimulus Selection
@@ -169,8 +215,12 @@ The experiment builder allows you to define specific properties for each stimulu
    - Custom offset time (how long the stimulus remains visible)
    - Custom text color
    - Custom font size (in pixels)
-4. Empty fields will automatically use the values set in the main form
-5. Click "Save Mappings" to apply your custom mappings
+4. For concurrent stimuli, you can additionally set:
+   - Individual X and Y positions for each item
+   - Individual colors for each item
+   - Individual sizes for each item
+5. Empty fields will automatically use the values set in the main form
+6. Click "Save Mappings" to apply your custom mappings
 
 When custom mappings are set:
 - The specified key will be considered the correct response for that specific stimulus
@@ -228,11 +278,10 @@ This persistence allows for efficient iteration when developing and testing expe
 ## Feedback System
 
 When the feedback option is enabled, participants receive immediate visual feedback after their responses:
-- When the correct key is pressed (as specified in the response key setting), the "correct" feedback text will appear in green
-- When any other key is pressed, the "incorrect" feedback text will appear in red
+- When the correct key is pressed (as specified in the response key setting), "Correct" will appear in green
+- When any other key is pressed, "X" will appear in red
 - Feedback remains visible for the specified duration before advancing to the next stimulus or trial
-- Default feedback values are "Correct" for correct responses and "X" for incorrect responses
-- Only the correct response will advance the trial; incorrect responses just display feedback
+- Only the correct response or additional responses will advance the trial
 
 ## Position Control
 
@@ -250,7 +299,7 @@ The experiment allows you to control the position of both the fixation cross and
 
 This feature is useful for creating offset display paradigms, peripheral attention tasks, or visual field experiments.
 
-Note that the position settings affect both the fixation cross and stimuli. If fixation is disabled, only the stimulus position will be affected.
+Note that the position settings affect both the fixation cross and stimuli by default. If fixation is disabled, only the stimulus position will be affected.
 
 ## Data Collection
 
@@ -264,7 +313,7 @@ When the "Save Data" option is enabled, the experiment collects the following da
 6. **Accurate**: Whether the response was correct (1) or incorrect (0)
 7. **ResponseTime_ms**: The time taken to respond (in milliseconds)
 
-When the experiment completes, a JSON file containing this data is automatically downloaded. A download button is also provided on the completion screen for manual download if needed.
+When the experiment completes, a JSON file containing this data is automatically downloaded. A "Download Data" button is also provided on the completion screen for manual download if needed.
 
 ### Data Format Example:
 
@@ -287,11 +336,20 @@ When the experiment completes, a JSON file containing this data is automatically
     "Response": "SPACE",
     "Accurate": 1,
     "ResponseTime_ms": 782
+  },
+  {
+    "Timestamp": "13:45:26_15:06:2023",
+    "Trial Number": 3,
+    "Stimulus": "(apple, corn)",
+    "Stimulus_Offset": 250,
+    "Response": "A",
+    "Accurate": 0,
+    "ResponseTime_ms": 631
   }
 ]
 ```
 
-This data can be imported into statistical software or spreadsheets for further analysis.
+This data can be imported into statistical software or spreadsheets for further analysis. For sequential stimuli, each item in the sequence is recorded separately when a response is made.
 
 ## Technical Implementation
 
@@ -300,19 +358,21 @@ The experiment is built using standard web technologies:
 - CSS3 for styling
 - JavaScript for logic and interactivity
 
-No external libraries or frameworks are used, making it easy to run in any modern browser without additional dependencies.
+No external libraries or frameworks are used, making it easy to run in any modern browser without additional dependencies. Data is saved in the browser's localStorage for persistence between sessions.
 
 ## Troubleshooting
 
 If you encounter issues with screens not displaying properly:
 - Make sure all three files (HTML, CSS, JS) are in the same directory
 - Ensure the browser supports all the JavaScript features used
-- Check that the CSS class "hidden" is properly toggled on the different screens
+- Check that localStorage is enabled in your browser for state persistence
+- Ensure your browser allows file downloads for the data collection feature
 
 ## Future Development Ideas
 
 - Add timing precision improvements
 - Include more customization options for experiment appearance
 - Add more trial types and experimental paradigms
-- Implement data collection and export functionality
 - Add support for visual stimuli presentation (images, shapes)
+- Implement network data submission options
+- Add conditional branching based on participant responses

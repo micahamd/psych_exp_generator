@@ -63,6 +63,132 @@ document.addEventListener('DOMContentLoaded', function() {
     let experimentData = [];
     let currentResponse = '';
     let responseStartTime = null;
+
+    // Add new variables for study management
+    let studyConfigurations = [];
+    let currentStudyIndex = 0;
+
+    // Function to get current configuration as JSON
+    function getCurrentConfiguration() {
+        return {
+            id: Date.now(), // unique identifier for this configuration
+            name: `Task ${studyConfigurations.length + 1}`,
+            config: {
+                canvasBackground: document.getElementById('canvas-background').value,
+                trialInterval: parseInt(document.getElementById('trial-interval').value),
+                fixationInterval: parseInt(document.getElementById('fixation-interval').value),
+                stimulusOffset: parseInt(document.getElementById('stimulus-offset').value),
+                trialBackground: document.getElementById('trial-background').value,
+                fixation: document.getElementById('fixation').value,
+                fixationColor: document.getElementById('fixation-color').value,
+                trialCount: parseInt(document.getElementById('trial-count').value),
+                cycleThreshold: parseInt(document.getElementById('cycle-threshold').value),
+                stimuliText: document.getElementById('stimuli-text').value,
+                randomizeStimuli: document.getElementById('randomize-stimuli').checked,
+                stimulusSize: document.getElementById('stimulus-size').value,
+                stimulusColor: document.getElementById('stimulus-color').value,
+                responseKey: document.getElementById('response-key').value.trim(),
+                additionalResponses: document.getElementById('additional-responses').value.trim(),
+                provideFeedback: document.getElementById('provide-feedback').checked,
+                feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
+                saveData: document.getElementById('save-data').checked,
+                stimuliResponses: stimuliResponses
+            }
+        };
+    }
+
+    // Function to display configuration in study window
+    function displayConfiguration(config) {
+        const studyWindow = document.getElementById('study-window');
+        const configElement = document.createElement('div');
+        configElement.className = 'study-config-item';
+        configElement.dataset.configId = config.id;
+        
+        configElement.innerHTML = `
+            <div class="config-header">
+                <span>${config.name}</span>
+                <button class="remove-config-btn">×</button>
+            </div>
+            <div class="config-details">
+                <small>Trials: ${config.config.trialCount}</small>
+                <small>Stimuli: ${config.config.stimuliText.substring(0, 30)}...</small>
+            </div>
+        `;
+        
+        // Add remove button functionality
+        configElement.querySelector('.remove-config-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            studyConfigurations = studyConfigurations.filter(c => c.id !== config.id);
+            configElement.remove();
+        });
+        
+        studyWindow.appendChild(configElement);
+    }
+
+    // Add to Study button click handler
+    document.getElementById('add-to-study-btn').addEventListener('click', () => {
+        const config = getCurrentConfiguration();
+        studyConfigurations.push(config);
+        displayConfiguration(config);
+    });
+
+    // Begin Study button click handler
+    document.getElementById('begin-study-btn').addEventListener('click', () => {
+        if (studyConfigurations.length === 0) {
+            alert('Please add at least one configuration to the study.');
+            return;
+        }
+        
+        currentStudyIndex = 0;
+        startNextConfiguration();
+    });
+
+    // Function to start the next configuration in the study
+    function startNextConfiguration() {
+        if (currentStudyIndex >= studyConfigurations.length) {
+            // All configurations completed
+            alert('Study completed!');
+            return;
+        }
+        
+        const config = studyConfigurations[currentStudyIndex];
+        
+        // Load configuration into form
+        loadConfiguration(config.config);
+        
+        // Start the experiment
+        beginExperiment();
+    }
+
+    // Modify existing endExperiment function to handle study progression
+    const originalEndExperiment = endExperiment;
+    function endExperiment() {
+        originalEndExperiment();
+        
+        // Progress to next configuration if in study mode
+        if (studyConfigurations.length > 0) {
+            currentStudyIndex++;
+            setTimeout(startNextConfiguration, 1000); // Short delay before next configuration
+        }
+    }
+
+    // Function to load a configuration into the form
+    function loadConfiguration(config) {
+        // Load all saved values back into the form
+        Object.entries(config).forEach(([key, value]) => {
+            const element = document.getElementById(key);
+            if (element) {
+                if (element.type === 'checkbox') {
+                    element.checked = value;
+                } else {
+                    element.value = value;
+                }
+            }
+        });
+        
+        // Restore stimulus-response mappings
+        stimuliResponses = config.stimuliResponses;
+    }
     
     // Load saved state from localStorage if available
     try {

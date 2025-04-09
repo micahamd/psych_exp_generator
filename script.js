@@ -680,10 +680,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format timestamp as HH:MM:SS_DD:MM:YYYY
         const timestamp = formatDateTime(now);
         
+        // Calculate the absolute trial number (including past cycles)
+        const absoluteTrialNumber = currentTrial + 1; // +1 because currentTrial is 0-indexed
+        
         // Create data object
         const trialData = {
             Timestamp: timestamp,
-            "Trial Number": currentTrial + 1, // +1 because currentTrial is 0-indexed
+            "Trial Number": absoluteTrialNumber,
             Stimulus: stimulus,
             Stimulus_Offset: stimulusOffset,
             Response: response,
@@ -767,23 +770,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.removeEventListener('keydown', handleKeyPress);
         clearAllTimers();
         
-        // Add cycle information to data if using threshold
-        if (cycleThreshold > 0 && experimentData.length > 0) {
-            // Find how many cycles were completed
-            const cycleCount = Math.ceil(experimentData.length / trialCount);
-            
-            // Add cycle information to data summary
-            const cycleSummary = {
-                "Summary": true,
-                "Total Cycles": cycleCount,
-                "Threshold Required": cycleThreshold,
-                "Final Cycle Correct": currentCycleCorrect
-            };
-            
-            experimentData.push(cycleSummary);
-        }
-        
         // Download data if save option is enabled and we have data
+        // Remove the cycle summary information - just download the raw trial data
         if (saveData && experimentData.length > 0) {
             downloadExperimentData();
         }
@@ -1232,5 +1220,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 saveCurrentState();
             });
         });
+    }
+
+    // Missing feedback functions - these need to be implemented
+    function showFeedback(isCorrect) {
+        if (isCorrect) {
+            feedbackText.textContent = "Correct";
+            feedbackText.style.color = "#4CAF50"; // Green color
+        } else {
+            feedbackText.textContent = "X";
+            feedbackText.style.color = "#F44336"; // Red color
+        }
+        feedbackText.classList.remove('hidden');
+    }
+    
+    function hideFeedback() {
+        feedbackText.classList.add('hidden');
     }
 });

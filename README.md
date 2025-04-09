@@ -21,7 +21,11 @@ The project consists of three main files:
   - Fixation color: Color of the fixation cross (multiple color options available)
   - Fixation and Stimulus Location: Control the position of stimuli and fixation relative to screen center
   - Stimulus offset: Controls how long the stimulus remains visible (0 = until response)
-  - Trial count: Set the number of trials (between 1 and 999)
+  - Trial count: Set the number of trials in each cycle of the experiment
+  - Cycle Trials until Threshold: Require participants to achieve a certain number of correct responses
+    * When set to 0 (default), the experiment ends after a single cycle
+    * When set to a value > 0, participants must achieve that many correct responses to complete the experiment
+    * If threshold is not met, experiment will cycle through trials again until threshold is achieved
   - Stimuli - Text: Comma-separated list of text stimuli to display during trials
      * Support for stimulus sequences using square brackets notation
      * Support for concurrent stimulus presentation using round brackets
@@ -61,7 +65,8 @@ The project consists of three main files:
       * Negative X values move left, positive X values move right
       * Negative Y values move up, positive Y values move down
    - **Stimulus offset**: Set how long (in milliseconds) stimuli remain visible (0 = until response)
-   - **Trial count**: Set how many trials the experiment should run
+   - **Trial count**: Set how many trials the experiment should run in each cycle
+   - **Cycle Trials until Threshold**: Set minimum correct responses required to end the experiment (0 = single cycle)
    - **Stimuli - Text**: Enter a comma-separated list of text stimuli to be presented
      * For stimulus sequences, use square brackets: `[apple, corn], speed, [bull, mind, rap]`
      * For concurrent stimuli, use round brackets: `(apple, corn), speed, (red, blue, green)`
@@ -183,12 +188,15 @@ This allows for creating complex spatial arrangements of stimuli for:
    - User presses response key (required to advance even if stimulus is no longer visible)
    - If feedback is enabled, the feedback text appears for the specified duration
    - Stimulus disappears for the trial interval (blank screen)
-   - Next trial begins
-   - Process repeats for the specified number of trials
-3. **Completion Phase**: "Task complete!" message is displayed with an OK button
+   - Process repeats for the specified number of trials in the cycle
+3. **Cycle Check Phase** (if threshold is set):
+   - After completing all trials in a cycle, correct responses are counted
+   - If correct responses meet or exceed the threshold, the experiment ends
+   - If threshold is not met, a message appears and a new cycle begins
+4. **Completion Phase**: "Task complete!" message is displayed with an OK button
    - If data collection was enabled, a "Download Data" button is also shown
    - Data is automatically downloaded as a JSON file
-4. **Reset Phase**: Clicking OK returns to the setup phase
+5. **Reset Phase**: Clicking OK returns to the setup phase
 
 ## Stimulus Selection
 
@@ -313,6 +321,19 @@ When the "Save Data" option is enabled, the experiment collects the following da
 6. **Accurate**: Whether the response was correct (1) or incorrect (0)
 7. **ResponseTime_ms**: The time taken to respond (in milliseconds)
 
+If using the Cycle Trials until Threshold feature, an additional summary object is added to the data:
+
+```json
+{
+  "Summary": true,
+  "Total Cycles": 3,
+  "Threshold Required": 5,
+  "Final Cycle Correct": 6
+}
+```
+
+This summary shows how many cycles were needed to reach the threshold and the final cycle's performance.
+
 When the experiment completes, a JSON file containing this data is automatically downloaded. A "Download Data" button is also provided on the completion screen for manual download if needed.
 
 ### Data Format Example:
@@ -376,3 +397,4 @@ If you encounter issues with screens not displaying properly:
 - Add support for visual stimuli presentation (images, shapes)
 - Implement network data submission options
 - Add conditional branching based on participant responses
+- Responding to criteria

@@ -116,10 +116,17 @@
                 <p class="helper-text">How long the stimulus remains visible (0 = until response, any other value = milliseconds before disappearing).</p>
             </div>
             
-            <div class="form-group">
-                <label for="trial-count">Trial count (1-999):</label>
-                <input type="number" id="trial-count" min="1" max="999" required value="4">
-                <p class="helper-text">Total number of trials in the experiment. Each trial presents one stimulus.</p>
+            <div class="form-group form-row">
+                <div class="form-column">
+                    <label for="trial-count">Trial count (1-999):</label>
+                    <input type="number" id="trial-count" min="1" max="999" required value="4">
+                    <p class="helper-text">Total number of trials in each cycle of the experiment.</p>
+                </div>
+                <div class="form-column">
+                    <label for="cycle-threshold">Cycle Trials until Threshold:</label>
+                    <input type="number" id="cycle-threshold" min="0" required value="0">
+                    <p class="helper-text">Minimum correct responses required to end the experiment (0 = no threshold).</p>
+                </div>
             </div>
             
             <div class="form-group stimulus-group">

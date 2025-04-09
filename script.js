@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let showFixation;
     let fixationColor;
     let trialCount;
+    let cycleThreshold = 0; // Add new variable for cycle threshold
+    let currentCycleCorrect = 0; // Track correct responses in current cycle
     let stimuli;
     let stimuliIndex;
     let randomizeStimuli;
@@ -70,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.fixation) document.getElementById('fixation').value = savedState.fixation;
             if (savedState.fixationColor) document.getElementById('fixation-color').value = savedState.fixationColor;
             if (savedState.trialCount) document.getElementById('trial-count').value = savedState.trialCount;
+            if (savedState.cycleThreshold !== undefined) document.getElementById('cycle-threshold').value = savedState.cycleThreshold;
             if (savedState.stimuliText) document.getElementById('stimuli-text').value = savedState.stimuliText;
             if (savedState.randomizeStimuli !== undefined) document.getElementById('randomize-stimuli').checked = savedState.randomizeStimuli;
             if (savedState.stimulusSize) document.getElementById('stimulus-size').value = savedState.stimulusSize;
@@ -112,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showFixation = document.getElementById('fixation').value === 'yes';
         fixationColor = document.getElementById('fixation-color').value;
         trialCount = parseInt(document.getElementById('trial-count').value);
+        cycleThreshold = parseInt(document.getElementById('cycle-threshold').value);
         randomizeStimuli = document.getElementById('randomize-stimuli').checked;
         stimulusSize = parseInt(document.getElementById('stimulus-size').value);
         stimulusColor = document.getElementById('stimulus-color').value;
@@ -120,6 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
         positionX = parseInt(document.getElementById('position-x').value) || 0;
         positionY = parseInt(document.getElementById('position-y').value) || 0;
         saveData = document.getElementById('save-data').checked;
+        
+        // Validate threshold is not greater than trial count
+        if (cycleThreshold > trialCount && cycleThreshold !== 0) {
+            alert('Cycle Trials threshold cannot exceed Trial count');
+            return;
+        }
         
         // Parse stimuli
         const stimuliInput = document.getElementById('stimuli-text').value;
@@ -149,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         stimuliUsed = [];
         sequenceIndex = 0;
         currentTrial = 0;
+        currentCycleCorrect = 0; // Reset correct count for new cycle
         
         // Reset experiment data
         experimentData = [];
@@ -171,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fixation: document.getElementById('fixation').value,
             fixationColor: document.getElementById('fixation-color').value,
             trialCount: parseInt(document.getElementById('trial-count').value),
+            cycleThreshold: parseInt(document.getElementById('cycle-threshold').value),
             stimuliText: document.getElementById('stimuli-text').value,
             randomizeStimuli: document.getElementById('randomize-stimuli').checked,
             stimulusSize: document.getElementById('stimulus-size').value,
@@ -555,6 +567,15 @@ document.addEventListener('DOMContentLoaded', function() {
         concurrentElements.forEach(el => el.remove());
     }
 
+    // Add function to record correct response
+    function recordCorrectResponse() {
+        // Only increment if using cycle threshold
+        if (cycleThreshold > 0) {
+            currentCycleCorrect++;
+            console.log(`Correct response recorded. Current count: ${currentCycleCorrect}/${cycleThreshold}`);
+        }
+    }
+
     // Corrected handleKeyPress function
     function handleKeyPress(e) {
         if (!experimentRunning) return;
@@ -593,6 +614,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } else {
                 isCorrect = (keyPressed === responseKey.toUpperCase());
+            }
+
+            // Record correct response if the key is correct (regardless of being an additional response)
+            if (isCorrect) {
+                recordCorrectResponse();
             }
 
             // If correct or it's an additional response key
@@ -635,7 +661,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     showFeedback(false);
                     feedbackTimer = setTimeout(() => {
                         hideFeedback();
+                        // Important fix: Advance the trial after incorrect feedback too
+                        advanceTrial();
                     }, feedbackDuration);
+                } else if (isEndOfSequence) {
+                    // Critical fix: If no feedback, still advance trial on incorrect responses
+                    advanceTrial();
                 }
             }
         }
@@ -676,21 +707,58 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${seconds}_${day}:${month}:${year}`;
     }
     
-    // Clean up advanceTrial
+    // Modify advanceTrial to check threshold at cycle end
     function advanceTrial() {
         clearAllTimers();
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
         setTimeout(() => {
             currentTrial++;
+            console.log(`Advancing to trial ${currentTrial}/${trialCount}`);
+            
             if (currentTrial < trialCount) {
+                // Continue current cycle
                 startTrial();
             } else {
-                endExperiment();
+                console.log(`Cycle complete. Checking threshold: ${currentCycleCorrect}/${cycleThreshold}`);
+                // End of cycle - check if threshold is reached
+                if (cycleThreshold === 0 || currentCycleCorrect >= cycleThreshold) {
+                    // Threshold met or not using threshold - end experiment
+                    console.log("Threshold met or not required. Ending experiment.");
+                    endExperiment();
+                } else {
+                    // Threshold not met - start a new cycle
+                    console.log("Threshold not met. Starting new cycle.");
+                    showCycleMessage();
+                }
             }
         }, trialInterval);
     }
 
+    // Fix for showCycleMessage
+    function showCycleMessage() {
+        // Show message that we're starting a new cycle
+        feedbackText.textContent = `Correct: ${currentCycleCorrect}/${cycleThreshold} - Starting new cycle`;
+        feedbackText.style.color = '#2196F3'; // Blue color for cycle message
+        feedbackText.classList.remove('hidden');
+        
+        console.log(`Cycle completed. Correct responses: ${currentCycleCorrect}/${cycleThreshold}`);
+        
+        // Reset for new cycle
+        setTimeout(() => {
+            currentTrial = 0;
+            sequenceIndex = 0;
+            currentCycleCorrect = 0;
+            // Reset stimulus usage if randomizing
+            if (randomizeStimuli) {
+                stimuliUsed = [];
+            }
+            // Hide message and start new cycle
+            feedbackText.classList.add('hidden');
+            startTrial();
+        }, 2000); // Show message for 2 seconds
+    }
+    
     // Correct endExperiment
     function endExperiment() {
         experimentRunning = false;
@@ -698,6 +766,22 @@ document.addEventListener('DOMContentLoaded', function() {
         completionScreen.classList.remove('hidden');
         document.removeEventListener('keydown', handleKeyPress);
         clearAllTimers();
+        
+        // Add cycle information to data if using threshold
+        if (cycleThreshold > 0 && experimentData.length > 0) {
+            // Find how many cycles were completed
+            const cycleCount = Math.ceil(experimentData.length / trialCount);
+            
+            // Add cycle information to data summary
+            const cycleSummary = {
+                "Summary": true,
+                "Total Cycles": cycleCount,
+                "Threshold Required": cycleThreshold,
+                "Final Cycle Correct": currentCycleCorrect
+            };
+            
+            experimentData.push(cycleSummary);
+        }
         
         // Download data if save option is enabled and we have data
         if (saveData && experimentData.length > 0) {

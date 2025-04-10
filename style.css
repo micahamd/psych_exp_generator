@@ -297,12 +297,9 @@ close-btn:hover,
     z-index: 2; /* Ensure feedback appears on top */
     text-align: center;
     max-width: 80%;
-    /* color is set dynamically in JS */
-    
-    /* New styles for feedback visibility */
     padding: 10px 20px;
     border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.85); /* Semi-transparent white background */
+    background-color: rgb(255, 255, 255); /* Changed from rgba to rgb for full opacity */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 
@@ -430,15 +427,32 @@ close-btn:hover,
 }
 
 #study-window {
-    max-height: 400px; /* Maintain vertical scroll */
+    max-height: 400px;
+    min-height: 200px; /* Add minimum height */
+    height: 400px; /* Add default height */
     overflow-y: auto;
-    width: 100%; /* Take full width of container */
-    min-width: 600px; /* Increased from 400px */
+    width: 100%;
+    min-width: 600px;
     padding: 15px;
     border: 1px solid #ddd;
     border-radius: 4px;
     margin: 20px 0;
     background: #f9f9f9;
+    resize: vertical; /* Allow vertical resizing */
+    position: relative; /* Required for resize handle positioning */
+}
+
+/* Add resize handle visual cue */
+#study-window::after {
+    content: "";
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 12px;
+    height: 12px;
+    background: #ccc;
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+    cursor: ns-resize;
 }
 
 .button-group {

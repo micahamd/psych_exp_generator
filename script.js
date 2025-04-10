@@ -1121,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isStudyMode) {
             if (currentStudyIndex < studyConfigurations.length - 1) {
-                messageElement.textContent = `Configuration ${currentStudyIndex + 1} Complete`;
+                messageElement.textContent = `Block ${currentStudyIndex + 1} Complete`;
                 statsElement.classList.add('hidden');
             } else {
                 // Study completion screen
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 let statsHtml = `
                     <div class="study-completion-stats">
                         <h3>Study Summary:</h3>
-                        <p>Completed ${studyConfigurations.length} configurations</p>
+                        <p>Completed ${studyConfigurations.length} blocks</p>
                     `;
                 
                 if (saveData && studyData.length > 0) {
@@ -1675,7 +1675,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Hide stimulus text temporarily for clearer feedback (if showing feedback on incorrect responses)
         if (!isCorrect) {
-            stimulusText.style.opacity = '0.2'; // Reduce opacity rather than hide completely
+            stimulusText.style.opacity = '0.9'; // Reduce opacity rather than hide completely
         }
     }
     

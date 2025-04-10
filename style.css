@@ -484,11 +484,45 @@ close-btn:hover,
     background: #f0f0f0;
 }
 
+.block-name-input {
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    width: 70%;
+    padding: 2px 5px;
+    margin-right: 5px;
+}
+
+.block-name-input:hover, .block-name-input:focus {
+    background: #fff;
+    border: 1px solid #ddd;
+    outline: none;
+}
+
+.block-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.move-up-btn, .move-down-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0 5px;
+    font-size: 14px;
+}
+
+.move-up-btn:hover, .move-down-btn:hover {
+    color: #2196F3;
+}
+
 .config-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 5px;
+    width: 100%;
 }
 
 .remove-config-btn {

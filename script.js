@@ -112,14 +112,27 @@ document.addEventListener('DOMContentLoaded', function() {
         
         configElement.innerHTML = `
             <div class="config-header">
-                <span>${config.name}</span>
-                <button class="remove-config-btn">×</button>
+                <input type="text" class="block-name-input" value="${config.name || 'Block ' + (studyConfigurations.length)}">
+                <div class="block-controls">
+                    <button class="move-up-btn" title="Move Up">↑</button>
+                    <button class="move-down-btn" title="Move Down">↓</button>
+                    <button class="remove-config-btn" title="Remove">×</button>
+                </div>
             </div>
             <div class="config-details">
-                <small>Trials: ${config.config.trialCount}</small>
+                <small>Block: ${config.config.trialCount} trials</small>
                 <small>Stimuli: ${config.config.stimuliText.substring(0, 30)}...</small>
             </div>
         `;
+        
+        // Add name change handler
+        const nameInput = configElement.querySelector('.block-name-input');
+        nameInput.addEventListener('change', (e) => {
+            const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
+            if (configIndex !== -1) {
+                studyConfigurations[configIndex].name = e.target.value;
+            }
+        });
         
         // Add remove button functionality
         configElement.querySelector('.remove-config-btn').addEventListener('click', (e) => {
@@ -128,12 +141,39 @@ document.addEventListener('DOMContentLoaded', function() {
             configElement.remove();
         });
         
+        // Add move up functionality
+        configElement.querySelector('.move-up-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = Array.from(studyWindow.children).indexOf(configElement);
+            if (currentIndex > 0) {
+                studyWindow.insertBefore(configElement, studyWindow.children[currentIndex - 1]);
+                // Update configurations array
+                const temp = studyConfigurations[currentIndex];
+                studyConfigurations[currentIndex] = studyConfigurations[currentIndex - 1];
+                studyConfigurations[currentIndex - 1] = temp;
+            }
+        });
+        
+        // Add move down functionality
+        configElement.querySelector('.move-down-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = Array.from(studyWindow.children).indexOf(configElement);
+            if (currentIndex < studyWindow.children.length - 1) {
+                studyWindow.insertBefore(configElement.nextElementSibling, configElement);
+                // Update configurations array
+                const temp = studyConfigurations[currentIndex];
+                studyConfigurations[currentIndex] = studyConfigurations[currentIndex + 1];
+                studyConfigurations[currentIndex + 1] = temp;
+            }
+        });
+        
         studyWindow.appendChild(configElement);
     }
 
     // Add to Study button click handler
     document.getElementById('add-to-study-btn').addEventListener('click', () => {
         const config = getCurrentConfiguration();
+        config.name = `Block ${studyConfigurations.length + 1}`;
         studyConfigurations.push(config);
         displayConfiguration(config);
     });

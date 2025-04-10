@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="text" 
                        class="block-name-input" 
                        value="${config.name || 'Block ' + (studyConfigurations.length)}"
+                       placeholder="Enter block name"
                        title="Click to edit block name">
                 <div class="block-controls">
                     <button class="move-up-btn" title="Move Up">↑</button>
@@ -125,64 +126,106 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="config-details">
                 <small>Block: ${config.config.trialCount} trials</small>
                 <small>Stimuli: ${config.config.stimuliText.substring(0, 30)}...</small>
+                <small>Feedback: ${config.config.provideFeedback ? 'Yes' : 'No'}</small>
+                <small>Save Data: ${config.config.saveData ? 'Yes' : 'No'}</small>
+                ${config.config.provideFeedback ? 
+                    `<small>Feedback Duration: ${config.config.feedbackDuration}ms</small>` : ''}
             </div>
         `;
         
-        // Enhanced name change handler
+        // Name input handlers
         const nameInput = configElement.querySelector('.block-name-input');
-        
-        // Handle both blur and enter key events
-        nameInput.addEventListener('blur', updateBlockName);
-        nameInput.addEventListener('keypress', (e) => {
+        nameInput.addEventListener('blur', function() {
+            updateBlockName(this);
+        });
+        nameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                nameInput.blur();
+                this.blur();
             }
         });
         
-        function updateBlockName() {
-            const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
-            if (configIndex !== -1) {
-                const newName = nameInput.value.trim() || `Block ${configIndex + 1}`;
-                nameInput.value = newName;
-                studyConfigurations[configIndex].name = newName;
-            }
-        }
-        
-        // Add remove button functionality
-        configElement.querySelector('.remove-config-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            studyConfigurations = studyConfigurations.filter(c => c.id !== config.id);
-            configElement.remove();
-        });
-        
-        // Add move up functionality
-        configElement.querySelector('.move-up-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
+        // Move up button handler
+        const moveUpBtn = configElement.querySelector('.move-up-btn');
+        moveUpBtn.addEventListener('click', function() {
             const currentIndex = Array.from(studyWindow.children).indexOf(configElement);
             if (currentIndex > 0) {
-                studyWindow.insertBefore(configElement, studyWindow.children[currentIndex - 1]);
-                // Update configurations array
+                // Update the array
                 const temp = studyConfigurations[currentIndex];
                 studyConfigurations[currentIndex] = studyConfigurations[currentIndex - 1];
                 studyConfigurations[currentIndex - 1] = temp;
+                
+                // Update the DOM
+                studyWindow.insertBefore(configElement, studyWindow.children[currentIndex - 1]);
+                
+                // Update move buttons visibility
+                updateMoveButtonsVisibility();
             }
         });
         
-        // Add move down functionality
-        configElement.querySelector('.move-down-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
+        // Move down button handler
+        const moveDownBtn = configElement.querySelector('.move-down-btn');
+        moveDownBtn.addEventListener('click', function() {
             const currentIndex = Array.from(studyWindow.children).indexOf(configElement);
             if (currentIndex < studyWindow.children.length - 1) {
-                studyWindow.insertBefore(configElement.nextElementSibling, configElement);
-                // Update configurations array
+                // Update the array
                 const temp = studyConfigurations[currentIndex];
                 studyConfigurations[currentIndex] = studyConfigurations[currentIndex + 1];
                 studyConfigurations[currentIndex + 1] = temp;
+                
+                // Update the DOM
+                if (studyWindow.children[currentIndex + 2]) {
+                    studyWindow.insertBefore(configElement, studyWindow.children[currentIndex + 2]);
+                } else {
+                    studyWindow.appendChild(configElement);
+                }
+                
+                // Update move buttons visibility
+                updateMoveButtonsVisibility();
             }
         });
         
+        // Remove button handler
+        const removeBtn = configElement.querySelector('.remove-config-btn');
+        removeBtn.addEventListener('click', function() {
+            const currentIndex = Array.from(studyWindow.children).indexOf(configElement);
+            studyConfigurations.splice(currentIndex, 1);
+            configElement.remove();
+            updateMoveButtonsVisibility();
+        });
+        
         studyWindow.appendChild(configElement);
+        updateMoveButtonsVisibility();
+        
+        function updateBlockName(input) {
+            const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
+            if (configIndex !== -1) {
+                const newName = input.value.trim() || `Block ${configIndex + 1}`;
+                input.value = newName;
+                studyConfigurations[configIndex].name = newName;
+            }
+        }
+    }
+
+    // Function to update visibility of move buttons
+    function updateMoveButtonsVisibility() {
+        const studyWindow = document.getElementById('study-window');
+        const configs = Array.from(studyWindow.children);
+        
+        configs.forEach((config, index) => {
+            const moveUpBtn = config.querySelector('.move-up-btn');
+            const moveDownBtn = config.querySelector('.move-down-btn');
+            
+            // First item can't move up
+            if (moveUpBtn) {
+                moveUpBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            
+            // Last item can't move down
+            if (moveDownBtn) {
+                moveDownBtn.style.visibility = index === configs.length - 1 ? 'hidden' : 'visible';
+            }
+        });
     }
 
     // Add to Study button click handler

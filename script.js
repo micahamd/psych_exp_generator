@@ -112,7 +112,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         configElement.innerHTML = `
             <div class="config-header">
-                <input type="text" class="block-name-input" value="${config.name || 'Block ' + (studyConfigurations.length)}">
+                <input type="text" 
+                       class="block-name-input" 
+                       value="${config.name || 'Block ' + (studyConfigurations.length)}"
+                       title="Click to edit block name">
                 <div class="block-controls">
                     <button class="move-up-btn" title="Move Up">↑</button>
                     <button class="move-down-btn" title="Move Down">↓</button>
@@ -125,14 +128,26 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Add name change handler
+        // Enhanced name change handler
         const nameInput = configElement.querySelector('.block-name-input');
-        nameInput.addEventListener('change', (e) => {
-            const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
-            if (configIndex !== -1) {
-                studyConfigurations[configIndex].name = e.target.value;
+        
+        // Handle both blur and enter key events
+        nameInput.addEventListener('blur', updateBlockName);
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                nameInput.blur();
             }
         });
+        
+        function updateBlockName() {
+            const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
+            if (configIndex !== -1) {
+                const newName = nameInput.value.trim() || `Block ${configIndex + 1}`;
+                nameInput.value = newName;
+                studyConfigurations[configIndex].name = newName;
+            }
+        }
         
         // Add remove button functionality
         configElement.querySelector('.remove-config-btn').addEventListener('click', (e) => {

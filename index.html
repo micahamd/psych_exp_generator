@@ -11,6 +11,15 @@
         <div class="split-container">
             <div class="left-panel">
                 <h1>Psychology Experiment Builder</h1>
+                <div class="form-switch-container">
+                    <span class="switch-label">Survey</span>
+                    <label class="switch">
+                        <input type="checkbox" id="form-type-switch" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="switch-label">Experiment - Text only</span>
+                </div>
+                
                 <form id="experiment-form">
                     <div class="form-group form-row">
                         <div class="form-column">
@@ -293,6 +302,23 @@
         <div id="completion-stats" class="hidden"></div>
         <button id="ok-btn">OK</button>
     </div>
+
+    <form id="survey-form" class="hidden">
+        <div class="form-group">
+            <label for="question-text">Question Text:</label>
+            <textarea id="question-text" rows="3" required>Enter your question here</textarea>
+        </div>
+        <div class="form-group">
+            <label for="answer-type">Answer Type:</label>
+            <input type="text" id="answer-type" value="text" required>
+        </div>
+        <div class="form-group">
+            <div class="checkbox-container">
+                <input type="checkbox" id="survey-save-data">
+                <label for="survey-save-data">Save Data</label>
+            </div>
+        </div>
+    </form>
 
     <script src="script.js"></script>
 </body>

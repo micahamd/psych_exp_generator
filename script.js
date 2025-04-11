@@ -14,11 +14,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const mappingTbody = document.getElementById('mapping-tbody');
     const saveMappingsBtn = document.getElementById('save-mappings-btn');
     const closeModalBtn = document.querySelector('.close-btn');
-    // Add new button references
     const exportMappingsBtn = document.getElementById('export-mappings-btn');
     const importMappingsBtn = document.getElementById('import-mappings-btn');
     const csvFileInput = document.getElementById('csv-file-input');
-    
+   
+    // Introduced Form Switching
+    document.getElementById('form-type-switch').addEventListener('change', function(e) {
+        isExperimentMode = e.target.checked;
+        toggleFormMode(isExperimentMode);
+    });
+
     // Experiment variables
     let trialInterval;
     let fixationInterval;
@@ -50,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let sequenceIndex = 0;
     let stimuliResponses = {}; // Object to store stimulus-response mappings and positions
     let hasCustomMappings = false; // Flag to check if custom mappings are in use
-
+   
     // Add new flag to track zero-offset concurrent stimuli
     let hasConcurrentWithZeroOffset = false;
 
@@ -68,11 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let studyConfigurations = [];
     let currentStudyIndex = 0;
 
-    // Add this with your other state variables
-    let isStudyMode = false;
-
-    // Add a variable to store all study data
-    let studyData = [];
+    let isStudyMode = false;      // Add with other state variables
+    let studyData = []; // Add a variable to store all study data
+    let isExperimentMode = true; // true = experiment, false = survey
 
     // Function to get current configuration as JSON
     function getCurrentConfiguration() {
@@ -101,6 +104,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 stimuliResponses: stimuliResponses
             }
         };
+    }
+
+    // Include the Toggle Form Function
+    function toggleFormMode(isExperiment) {
+        // Save current state before switching
+        saveCurrentState();
+        
+        const experimentForm = document.getElementById('experiment-form');
+        const surveyForm = document.getElementById('survey-form');
+        
+        if (isExperiment) {
+            experimentForm.classList.remove('hidden');
+            surveyForm.classList.add('hidden');
+            console.log('Switching to Experiment mode');
+        } else {
+            experimentForm.classList.add('hidden');
+            surveyForm.classList.remove('hidden');
+            console.log('Switching to Survey mode');
+        }
+        
+        // Update state persistence to include form type
+        savedState.isExperimentMode = isExperiment;
+        if (!isExperiment) {
+            // Save survey-specific state
+            savedState.surveyState = {
+                questionText: document.getElementById('question-text').value,
+                answerType: document.getElementById('answer-type').value,
+                saveData: document.getElementById('survey-save-data').checked
+            };
+        }
+        localStorage.setItem('experimentBuilderState', JSON.stringify(savedState));
     }
 
     // Function to display configuration in study window
@@ -381,6 +415,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedStateJSON = localStorage.getItem('experimentBuilderState');
         if (savedStateJSON) {
             savedState = JSON.parse(savedStateJSON);
+
+            if (savedState.isExperimentMode !== undefined) {
+                isExperimentMode = savedState.isExperimentMode;
+                document.getElementById('form-type-switch').checked = isExperimentMode;
+                toggleFormMode(isExperimentMode);
+
+                // Load survey state if it exists
+                if (savedState.surveyState) {
+                    document.getElementById('question-text').value = savedState.surveyState.questionText || '';
+                    document.getElementById('answer-type').value = savedState.surveyState.answerType || 'text';
+                    document.getElementById('survey-save-data').checked = savedState.surveyState.saveData || false;
+                }
+            }            
             
             // Populate form with saved values
             if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
@@ -403,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.positionX !== undefined) document.getElementById('position-x').value = savedState.positionX;
             if (savedState.positionY !== undefined) document.getElementById('position-y').value = savedState.positionY;
             if (savedState.saveData !== undefined) document.getElementById('save-data').checked = savedState.saveData;
+            if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
             
             // Restore S-R mappings
             if (savedState.stimuliResponses) {

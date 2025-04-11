@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isStudyMode = false;      // Add with other state variables
     let studyData = []; // Add a variable to store all study data
     let isExperimentMode = true; // true = experiment, false = survey
+    let currentExperimentConfig = null; // Store the current experiment configuration
 
     // Function to get current configuration as JSON
     function getCurrentConfiguration() {
@@ -1069,7 +1070,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('begin-btn').click();
         } else {
             // Handle experiment configuration (default)
-            console.log('Starting experiment configuration');
+            console.log('Starting experiment configuration:', config);
 
             // Switch to experiment mode if needed
             if (!isExperimentMode) {
@@ -1078,9 +1079,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleFormMode(true);
             }
 
-            // Load experiment configuration
-            loadConfiguration(config.config);
-            startExperiment();
+            // Load experiment configuration and get the parsed stimuli
+            const parsedStimuli = loadConfiguration(config.config);
+
+            // Update the UI to reflect the loaded configuration
+            // This ensures the UI matches the configuration that's about to run
+            document.getElementById('canvas-background').value = config.config.canvasBackground || '#f0f0f0';
+            document.getElementById('trial-interval').value = config.config.trialInterval || 1000;
+            document.getElementById('fixation-interval').value = config.config.fixationInterval || 500;
+            document.getElementById('stimulus-offset').value = config.config.stimulusOffset || 0;
+            document.getElementById('trial-background').value = config.config.trialBackground || 'white';
+            document.getElementById('fixation').value = config.config.fixation || 'yes';
+            document.getElementById('fixation-color').value = config.config.fixationColor || 'black';
+            document.getElementById('trial-count').value = config.config.trialCount || 10;
+            document.getElementById('cycle-threshold').value = config.config.cycleThreshold !== undefined ? config.config.cycleThreshold : 0;
+            document.getElementById('stimuli-text').value = config.config.stimuliText || '';
+            document.getElementById('randomize-stimuli').checked = config.config.randomizeStimuli !== undefined ? config.config.randomizeStimuli : false;
+            document.getElementById('stimulus-size').value = config.config.stimulusSize || 24;
+            document.getElementById('stimulus-color').value = config.config.stimulusColor || 'black';
+            document.getElementById('response-key').value = config.config.responseKey || '';
+            document.getElementById('additional-responses').value = config.config.additionalResponses || '';
+            document.getElementById('provide-feedback').checked = config.config.provideFeedback !== undefined ? config.config.provideFeedback : true;
+            document.getElementById('feedback-duration').value = config.config.feedbackDuration || 500;
+            document.getElementById('save-data').checked = config.config.saveData !== undefined ? config.config.saveData : false;
+
+            // Store the current configuration for reference during the experiment
+            currentExperimentConfig = config.config;
+
+            // Start the experiment with this configuration
+            startExperiment(parsedStimuli);
         }
     }
 
@@ -1158,6 +1185,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadConfiguration(config) {
         console.log('Loading configuration:', config);
 
+        // Reset stimuliResponses to avoid carrying over mappings from previous configurations
+        stimuliResponses = {};
+        hasCustomMappings = false;
+
+        // Set global variables from the configuration
+        if (config.canvasBackground) canvasBackground = config.canvasBackground;
+        if (config.trialInterval) trialInterval = parseInt(config.trialInterval);
+        if (config.fixationInterval) fixationInterval = parseInt(config.fixationInterval);
+        if (config.stimulusOffset) stimulusOffset = parseInt(config.stimulusOffset);
+        if (config.trialBackground) trialBackground = config.trialBackground;
+        if (config.fixation) showFixation = config.fixation === 'yes';
+        if (config.fixationColor) fixationColor = config.fixationColor;
+        if (config.trialCount) trialCount = parseInt(config.trialCount);
+        if (config.cycleThreshold !== undefined) cycleThreshold = parseInt(config.cycleThreshold);
+        if (config.randomizeStimuli !== undefined) randomizeStimuli = config.randomizeStimuli;
+        if (config.stimulusSize) stimulusSize = config.stimulusSize;
+        if (config.stimulusColor) stimulusColor = config.stimulusColor;
+        if (config.responseKey) responseKey = config.responseKey;
+        if (config.additionalResponses) additionalResponses = config.additionalResponses;
+        if (config.provideFeedback !== undefined) provideFeedback = config.provideFeedback;
+        if (config.feedbackDuration) feedbackDuration = parseInt(config.feedbackDuration);
+        if (config.saveData !== undefined) saveData = config.saveData;
+
         // Load all saved values back into the form
         for (const [key, value] of Object.entries(config)) {
             const element = document.getElementById(key);
@@ -1174,7 +1224,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (config.stimuliResponses) {
             stimuliResponses = config.stimuliResponses;
             hasCustomMappings = Object.keys(stimuliResponses).length > 0;
+
+            // Update the S-R mapping button text
+            const srMappingBtn = document.getElementById('sr-mapping-btn');
+            if (srMappingBtn) {
+                srMappingBtn.textContent = hasCustomMappings ? "Custom S-R Mappings (Set)" : "Custom S-R Mappings";
+            }
         }
+
+        // Parse stimuli text to update the stimuli array
+        let parsedStimuliArray = [];
+        if (config.stimuliText) {
+            // Parse the stimuli text to get the stimuli array
+            parsedStimuliArray = parseStimuli(config.stimuliText);
+        }
+
+        // Return the parsed stimuli for use in startExperiment
+        return parsedStimuliArray;
     }
 
     // Add event listener for answer type change (for the first question)
@@ -1416,8 +1482,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Save current state before starting experiment
         saveCurrentState();
 
-        // Start experiment
-        startExperiment();
+        // Start experiment with no pre-parsed stimuli (will parse from form)
+        startExperiment(null);
     });
 
     // Function to save current state to localStorage
@@ -1598,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Start the experiment
-    function startExperiment() {
+    function startExperiment(parsedStimuliArray) {
         // Hide intro screen and show experiment container
         introScreen.classList.add('hidden');
         experimentContainer.classList.remove('hidden');
@@ -1620,6 +1686,16 @@ document.addEventListener('DOMContentLoaded', function() {
         fixationPoint.classList.add('hidden');
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
+
+        // If we have parsed stimuli from a study configuration, use those
+        if (parsedStimuliArray && Array.isArray(parsedStimuliArray)) {
+            // Use the parsed stimuli from the study configuration
+            stimuli = parsedStimuliArray;
+        } else {
+            // Otherwise parse the stimuli from the form
+            const stimuliText = document.getElementById('stimuli-text').value;
+            stimuli = parseStimuli(stimuliText);
+        }
 
         // Start first trial
         experimentRunning = true;

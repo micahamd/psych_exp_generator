@@ -167,6 +167,7 @@ psychology-experiment-builder/
 ## Future Development
 
 Planned Features:
+- Survey Form integration
 - Enhanced timing precision
 - Visual stimulus support (images/shapes)
 - Network data submission

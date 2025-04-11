@@ -19,7 +19,7 @@
                     </label>
                     <span class="switch-label">Experiment - Text only</span>
                 </div>
-                
+
                 <form id="experiment-form">
                     <div class="form-group form-row">
                         <div class="form-column">
@@ -70,7 +70,7 @@
                             <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
                         </div>
                     </div>
-                    
+
                     <div class="form-group form-row">
                         <div class="form-column">
                             <label for="fixation">Fixation:</label>
@@ -107,7 +107,7 @@
                             <p class="helper-text">Color of the fixation cross that appears in the center of the screen.</p>
                         </div>
                     </div>
-                    
+
                     <div class="form-group form-row">
                         <div class="form-column">
                             <label for="position-x">Fixation and Stimulus Location X:</label>
@@ -120,13 +120,13 @@
                             <p class="helper-text">Vertical position relative to center (negative = up, positive = down)</p>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="stimulus-offset">Stimulus offset (milliseconds):</label>
                         <input type="number" id="stimulus-offset" min="0" required value="0">
                         <p class="helper-text">How long the stimulus remains visible (0 = until response, any other value = milliseconds before disappearing).</p>
                     </div>
-                    
+
                     <div class="form-group form-row">
                         <div class="form-column">
                             <label for="trial-count">Trial count (1-999):</label>
@@ -139,7 +139,7 @@
                             <p class="helper-text">Minimum correct responses required to end the experiment (0 = no threshold).</p>
                         </div>
                     </div>
-                    
+
                     <div class="form-group stimulus-group">
                         <label for="stimuli-text">Stimuli - Text (comma separated):</label>
                         <div class="checkbox-container">
@@ -151,10 +151,10 @@
                         <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed</p>
                         <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed</p>
                         <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
-                        
+
                         <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
                         <p class="helper-text">Map accurate responses to specific stimuli.</p>
-                        
+
                         <div class="form-row">
                             <div class="form-column">
                                 <label for="stimulus-size">Stimulus Text Size:</label>
@@ -197,7 +197,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-group form-row">
                         <div class="form-column">
                             <label for="response-key">Response key (leave blank for SPACEBAR):</label>
@@ -210,7 +210,7 @@
                             <p class="helper-text">Other keys that can advance trials (comma-separated). These are always accepted.</p>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Response Feedback:</label>
                         <div class="form-row">
@@ -228,7 +228,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <div class="checkbox-container">
                             <input type="checkbox" id="save-data">
@@ -237,7 +237,7 @@
                         <p class="helper-text">When checked, experiment data will be saved and available for download when the experiment completes.</p>
                     </div>
                 </form>
-                
+
                 <form id="survey-form" class="hidden">
                     <div class="survey-container">
                         <div class="form-group">
@@ -246,13 +246,19 @@
                         </div>
                         <div class="form-group">
                             <label for="answer-type">Answer Type:</label>
-                            <input type="text" id="answer-type" value="text" required>
+                            <select id="answer-type" required>
+                                <option value="text" selected>Text (single line)</option>
+                                <option value="textarea">Text (multi-line)</option>
+                                <option value="radio">Multiple Choice</option>
+                            </select>
+                            <p class="helper-text">Select the type of answer input to display to participants.</p>
                         </div>
                         <div class="form-group">
                             <div class="checkbox-container">
                                 <input type="checkbox" id="survey-save-data">
                                 <label for="survey-save-data">Save Data</label>
                             </div>
+                            <p class="helper-text">When checked, survey responses will be saved and available for download.</p>
                         </div>
                     </div>
                 </form>
@@ -270,7 +276,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- S-R Mapping Modal -->
     <div id="sr-mapping-modal" class="modal hidden">
         <div class="modal-content">
@@ -278,7 +284,7 @@
             <h2>Custom Stimulus-Response Mappings</h2>
             <p>Customize properties for each stimulus or sequence:</p>
             <p class="helper-text">Empty fields will use the values from the main form. The dialog is resizable - drag from the bottom-right corner.</p>
-            
+
             <div class="mapping-table-container">
                 <table id="mapping-table">
                     <thead>
@@ -297,7 +303,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
             <div class="button-group">
                 <button type="button" id="save-mappings-btn">Save Mappings</button>
                 <button type="button" id="export-mappings-btn" class="secondary-btn">Export Mappings</button>
@@ -307,7 +313,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="experiment-container" class="hidden">
         <div id="experiment-screen">
             <div id="fixation-point">+</div>
@@ -315,7 +321,7 @@
             <div id="feedback-text" class="hidden"></div>
         </div>
     </div>
-    
+
     <div id="completion-screen" class="container hidden">
         <h2 id="completion-message"></h2>
         <div id="completion-stats" class="hidden">

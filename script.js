@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportMappingsBtn = document.getElementById('export-mappings-btn');
     const importMappingsBtn = document.getElementById('import-mappings-btn');
     const csvFileInput = document.getElementById('csv-file-input');
-   
+
     // Introduced Form Switching
     document.getElementById('form-type-switch').addEventListener('change', function(e) {
         isExperimentMode = e.target.checked;
@@ -30,24 +30,44 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('experiment-form').requestSubmit();
         } else {
             // For survey mode, handle survey test
-            const surveyForm = document.getElementById('survey-form');
             const questionText = document.getElementById('question-text').value;
             const answerType = document.getElementById('answer-type').value;
             const saveData = document.getElementById('survey-save-data').checked;
-            
+
             if (!questionText.trim()) {
                 alert('Please enter a question');
                 return;
             }
-            
+
             // Save current state before starting
             saveCurrentState();
-            
+
             // Hide intro screen and show survey test interface
             introScreen.classList.add('hidden');
+            experimentContainer.classList.remove('hidden');
             experimentScreen.classList.remove('hidden');
-            
-            // We'll implement the actual survey display logic later
+
+            // Set background colors for survey mode
+            experimentContainer.style.backgroundColor = '#f5f5f5';
+            experimentScreen.style.backgroundColor = 'white';
+
+            // Hide fixation point and feedback text
+            fixationPoint.classList.add('hidden');
+            feedbackText.classList.add('hidden');
+
+            // Display the question in the stimulus text area
+            stimulusText.textContent = questionText;
+            stimulusText.style.fontSize = '32px';
+            stimulusText.style.color = 'black';
+            stimulusText.style.transform = 'translate(-50%, -50%)';
+            stimulusText.classList.remove('hidden');
+
+            // Create and display answer input based on answer type
+            displaySurveyAnswerInput(answerType);
+
+            // Add event listener for survey completion
+            document.addEventListener('keydown', handleSurveyKeyPress);
+
             console.log('Starting survey test with:', {
                 questionText,
                 answerType,
@@ -87,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let sequenceIndex = 0;
     let stimuliResponses = {}; // Object to store stimulus-response mappings and positions
     let hasCustomMappings = false; // Flag to check if custom mappings are in use
-   
+
     // Add new flag to track zero-offset concurrent stimuli
     let hasConcurrentWithZeroOffset = false;
 
@@ -98,7 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add new variables for data collection
     let saveData = false;
     let experimentData = [];
-    let currentResponse = '';
     let responseStartTime = null;
 
     // Add new variables for study management
@@ -111,41 +130,57 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to get current configuration as JSON
     function getCurrentConfiguration() {
-        return {
-            id: Date.now(), // unique identifier for this configuration
-            name: `Task ${studyConfigurations.length + 1}`,
-            config: {
-                canvasBackground: document.getElementById('canvas-background').value,
-                trialInterval: parseInt(document.getElementById('trial-interval').value),
-                fixationInterval: parseInt(document.getElementById('fixation-interval').value),
-                stimulusOffset: parseInt(document.getElementById('stimulus-offset').value),
-                trialBackground: document.getElementById('trial-background').value,
-                fixation: document.getElementById('fixation').value,
-                fixationColor: document.getElementById('fixation-color').value,
-                trialCount: parseInt(document.getElementById('trial-count').value),
-                cycleThreshold: parseInt(document.getElementById('cycle-threshold').value),
-                stimuliText: document.getElementById('stimuli-text').value,
-                randomizeStimuli: document.getElementById('randomize-stimuli').checked,
-                stimulusSize: document.getElementById('stimulus-size').value,
-                stimulusColor: document.getElementById('stimulus-color').value,
-                responseKey: document.getElementById('response-key').value.trim(),
-                additionalResponses: document.getElementById('additional-responses').value.trim(),
-                provideFeedback: document.getElementById('provide-feedback').checked,
-                feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
-                saveData: document.getElementById('save-data').checked,
-                stimuliResponses: stimuliResponses
-            }
-        };
+        if (isExperimentMode) {
+            // Experiment mode configuration
+            return {
+                id: Date.now(), // unique identifier for this configuration
+                name: `Experiment ${studyConfigurations.length + 1}`,
+                type: 'experiment',
+                config: {
+                    canvasBackground: document.getElementById('canvas-background').value,
+                    trialInterval: parseInt(document.getElementById('trial-interval').value),
+                    fixationInterval: parseInt(document.getElementById('fixation-interval').value),
+                    stimulusOffset: parseInt(document.getElementById('stimulus-offset').value),
+                    trialBackground: document.getElementById('trial-background').value,
+                    fixation: document.getElementById('fixation').value,
+                    fixationColor: document.getElementById('fixation-color').value,
+                    trialCount: parseInt(document.getElementById('trial-count').value),
+                    cycleThreshold: parseInt(document.getElementById('cycle-threshold').value),
+                    stimuliText: document.getElementById('stimuli-text').value,
+                    randomizeStimuli: document.getElementById('randomize-stimuli').checked,
+                    stimulusSize: document.getElementById('stimulus-size').value,
+                    stimulusColor: document.getElementById('stimulus-color').value,
+                    responseKey: document.getElementById('response-key').value.trim(),
+                    additionalResponses: document.getElementById('additional-responses').value.trim(),
+                    provideFeedback: document.getElementById('provide-feedback').checked,
+                    feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
+                    saveData: document.getElementById('save-data').checked,
+                    stimuliResponses: stimuliResponses
+                }
+            };
+        } else {
+            // Survey mode configuration
+            return {
+                id: Date.now(),
+                name: `Survey ${studyConfigurations.length + 1}`,
+                type: 'survey',
+                config: {
+                    questionText: document.getElementById('question-text').value,
+                    answerType: document.getElementById('answer-type').value,
+                    saveData: document.getElementById('survey-save-data').checked
+                }
+            };
+        }
     }
 
     // Include the Toggle Form Function
     function toggleFormMode(isExperiment) {
         // Save current state before switching
         saveCurrentState();
-        
+
         const experimentForm = document.getElementById('experiment-form');
         const surveyForm = document.getElementById('survey-form');
-        
+
         if (isExperiment) {
             experimentForm.classList.remove('hidden');
             surveyForm.classList.add('hidden');
@@ -155,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
             surveyForm.classList.remove('hidden');
             console.log('Switching to Survey mode');
         }
-        
+
         // Update state persistence to include form type
         savedState.isExperimentMode = isExperiment;
         if (!isExperiment) {
@@ -167,6 +202,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         }
         localStorage.setItem('experimentBuilderState', JSON.stringify(savedState));
+
+        console.log('State saved:', isExperiment ? 'Experiment mode' : 'Survey mode');
     }
 
     // Function to display configuration in study window
@@ -175,11 +212,35 @@ document.addEventListener('DOMContentLoaded', function() {
         const configElement = document.createElement('div');
         configElement.className = 'study-config-item';
         configElement.dataset.configId = config.id;
-        
+
+        // Different display for experiment vs survey blocks
+        let detailsHTML = '';
+
+        if (config.type === 'survey') {
+            // Survey block details
+            detailsHTML = `
+                <small>Type: Survey</small>
+                <small>Question: ${config.config.questionText.substring(0, 30)}${config.config.questionText.length > 30 ? '...' : ''}</small>
+                <small>Answer Type: ${config.config.answerType}</small>
+                <small>Save Data: ${config.config.saveData ? 'Yes' : 'No'}</small>
+            `;
+        } else {
+            // Experiment block details (default)
+            detailsHTML = `
+                <small>Type: Experiment</small>
+                <small>Block: ${config.config.trialCount} trials</small>
+                <small>Stimuli: ${config.config.stimuliText.substring(0, 30)}${config.config.stimuliText.length > 30 ? '...' : ''}</small>
+                <small>Feedback: ${config.config.provideFeedback ? 'Yes' : 'No'}</small>
+                <small>Save Data: ${config.config.saveData ? 'Yes' : 'No'}</small>
+                ${config.config.provideFeedback ?
+                    `<small>Feedback Duration: ${config.config.feedbackDuration}ms</small>` : ''}
+            `;
+        }
+
         configElement.innerHTML = `
             <div class="config-header">
-                <input type="text" 
-                       class="block-name-input" 
+                <input type="text"
+                       class="block-name-input"
                        value="${config.name || 'Block ' + (studyConfigurations.length)}"
                        placeholder="Enter block name"
                        title="Click to edit block name">
@@ -190,15 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
             <div class="config-details">
-                <small>Block: ${config.config.trialCount} trials</small>
-                <small>Stimuli: ${config.config.stimuliText.substring(0, 30)}...</small>
-                <small>Feedback: ${config.config.provideFeedback ? 'Yes' : 'No'}</small>
-                <small>Save Data: ${config.config.saveData ? 'Yes' : 'No'}</small>
-                ${config.config.provideFeedback ? 
-                    `<small>Feedback Duration: ${config.config.feedbackDuration}ms</small>` : ''}
+                ${detailsHTML}
             </div>
         `;
-        
+
         // Name input handlers
         const nameInput = configElement.querySelector('.block-name-input');
         nameInput.addEventListener('blur', function() {
@@ -210,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.blur();
             }
         });
-        
+
         // Move up button handler
         const moveUpBtn = configElement.querySelector('.move-up-btn');
         moveUpBtn.addEventListener('click', function() {
@@ -220,15 +276,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const temp = studyConfigurations[currentIndex];
                 studyConfigurations[currentIndex] = studyConfigurations[currentIndex - 1];
                 studyConfigurations[currentIndex - 1] = temp;
-                
+
                 // Update the DOM
                 studyWindow.insertBefore(configElement, studyWindow.children[currentIndex - 1]);
-                
+
                 // Update move buttons visibility
                 updateMoveButtonsVisibility();
             }
         });
-        
+
         // Move down button handler
         const moveDownBtn = configElement.querySelector('.move-down-btn');
         moveDownBtn.addEventListener('click', function() {
@@ -238,19 +294,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const temp = studyConfigurations[currentIndex];
                 studyConfigurations[currentIndex] = studyConfigurations[currentIndex + 1];
                 studyConfigurations[currentIndex + 1] = temp;
-                
+
                 // Update the DOM
                 if (studyWindow.children[currentIndex + 2]) {
                     studyWindow.insertBefore(configElement, studyWindow.children[currentIndex + 2]);
                 } else {
                     studyWindow.appendChild(configElement);
                 }
-                
+
                 // Update move buttons visibility
                 updateMoveButtonsVisibility();
             }
         });
-        
+
         // Remove button handler
         const removeBtn = configElement.querySelector('.remove-config-btn');
         removeBtn.addEventListener('click', function() {
@@ -259,10 +315,10 @@ document.addEventListener('DOMContentLoaded', function() {
             configElement.remove();
             updateMoveButtonsVisibility();
         });
-        
+
         studyWindow.appendChild(configElement);
         updateMoveButtonsVisibility();
-        
+
         function updateBlockName(input) {
             const configIndex = studyConfigurations.findIndex(c => c.id === config.id);
             if (configIndex !== -1) {
@@ -277,16 +333,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMoveButtonsVisibility() {
         const studyWindow = document.getElementById('study-window');
         const configs = Array.from(studyWindow.children);
-        
+
         configs.forEach((config, index) => {
             const moveUpBtn = config.querySelector('.move-up-btn');
             const moveDownBtn = config.querySelector('.move-down-btn');
-            
+
             // First item can't move up
             if (moveUpBtn) {
                 moveUpBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
             }
-            
+
             // Last item can't move down
             if (moveDownBtn) {
                 moveDownBtn.style.visibility = index === configs.length - 1 ? 'hidden' : 'visible';
@@ -308,59 +364,71 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Please add at least one configuration to the study.');
             return;
         }
-        
+
         isStudyMode = true;  // Make sure this is set
         console.log('Beginning study mode:', isStudyMode);
         currentStudyIndex = 0;
-        
-        // Load first configuration
-        const firstConfig = studyConfigurations[0].config;  // Make sure to access .config
-        console.log('Loading first configuration:', firstConfig);
-        loadConfiguration(firstConfig);
-        startExperiment();
+
+        // Start the first configuration in the study
+        startStudyConfiguration(currentStudyIndex);
     });
 
-    // Function to start the next configuration in the study
-    function startNextConfiguration() {
-        if (currentStudyIndex >= studyConfigurations.length) {
+    // Function to start a specific configuration in the study
+    function startStudyConfiguration(configIndex) {
+        if (configIndex >= studyConfigurations.length) {
             // All configurations completed
             alert('Study completed!');
             return;
         }
-        
-        const config = studyConfigurations[currentStudyIndex];
-        
-        // Load configuration into form
-        loadConfiguration(config.config);
-        
-        // Start the experiment using the correct function name
-        startExperiment();  // Changed from beginExperiment to startExperiment
+
+        const config = studyConfigurations[configIndex];
+        console.log('Starting configuration:', config);
+
+        if (config.type === 'survey') {
+            // Handle survey configuration
+            console.log('Starting survey configuration');
+
+            // Switch to survey mode if needed
+            if (isExperimentMode) {
+                isExperimentMode = false;
+                document.getElementById('form-type-switch').checked = false;
+                toggleFormMode(false);
+            }
+
+            // Load survey configuration
+            document.getElementById('question-text').value = config.config.questionText;
+            document.getElementById('answer-type').value = config.config.answerType;
+            document.getElementById('survey-save-data').checked = config.config.saveData;
+
+            // Trigger the survey test
+            document.getElementById('begin-btn').click();
+        } else {
+            // Handle experiment configuration (default)
+            console.log('Starting experiment configuration');
+
+            // Switch to experiment mode if needed
+            if (!isExperimentMode) {
+                isExperimentMode = true;
+                document.getElementById('form-type-switch').checked = true;
+                toggleFormMode(true);
+            }
+
+            // Load experiment configuration
+            loadConfiguration(config.config);
+            startExperiment();
+        }
     }
 
-    // First, store the original endExperiment function
-    const originalEndExperiment = window.endExperiment || function() {
-        experimentRunning = false;
-        experimentContainer.classList.add('hidden');
-        completionScreen.classList.remove('hidden');
-        document.removeEventListener('keydown', handleKeyPress);
-        clearAllTimers();
-        
-        // Download data if save option is enabled and we have data
-        if (saveData && experimentData.length > 0) {
-            downloadExperimentData();
-        }
-    };
-
-    // Then redefine endExperiment with study progression functionality
+    // Function to handle the end of an experiment
     function endExperiment() {
         experimentRunning = false;
         experimentContainer.classList.add('hidden');
         clearAllTimers();
         document.removeEventListener('keydown', handleKeyPress);
-        
+
         const messageElement = document.getElementById('completion-message');
         const statsElement = document.getElementById('completion-stats');
-        
+
         // If save data is enabled, store the current configuration's data
         if (saveData && experimentData.length > 0) {
             if (isStudyMode) {
@@ -375,7 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 downloadExperimentData();
             }
         }
-        
+
         if (isStudyMode) {
             if (currentStudyIndex < studyConfigurations.length - 1) {
                 messageElement.textContent = `Configuration ${currentStudyIndex + 1} Complete`;
@@ -384,14 +452,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Study completion screen
                 messageElement.textContent = 'Study Complete!';
                 statsElement.classList.remove('hidden');
-                
+
                 // Show study completion stats
                 let statsHtml = `
                     <div class="study-completion-stats">
                         <h3>Study Summary:</h3>
                         <p>Completed ${studyConfigurations.length} configurations</p>
                     `;
-                
+
                 if (saveData && studyData.length > 0) {
                     statsHtml += `
                         <div class="download-section">
@@ -401,10 +469,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     `;
                 }
-                
+
                 statsHtml += '</div>';
                 statsElement.innerHTML = statsHtml;
-                
+
                 // Add event listener for the download button
                 const downloadBtn = document.getElementById('download-study-data');
                 if (downloadBtn) {
@@ -415,14 +483,16 @@ document.addEventListener('DOMContentLoaded', function() {
             messageElement.textContent = 'Task Complete!';
             statsElement.classList.add('hidden');
         }
-        
+
         completionScreen.classList.remove('hidden');
     }
+
+    // This is a placeholder comment to maintain line numbers
 
     // Function to load a configuration into the form
     function loadConfiguration(config) {
         console.log('Loading configuration:', config);
-        
+
         // Load all saved values back into the form
         for (const [key, value] of Object.entries(config)) {
             const element = document.getElementById(key);
@@ -434,14 +504,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
+
         // Restore stimulus-response mappings if they exist
         if (config.stimuliResponses) {
             stimuliResponses = config.stimuliResponses;
             hasCustomMappings = Object.keys(stimuliResponses).length > 0;
         }
     }
-    
+
     // Load saved state from localStorage if available
     try {
         const savedStateJSON = localStorage.getItem('experimentBuilderState');
@@ -459,8 +529,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('answer-type').value = savedState.surveyState.answerType || 'text';
                     document.getElementById('survey-save-data').checked = savedState.surveyState.saveData || false;
                 }
-            }            
-            
+            }
+
             // Populate form with saved values
             if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
             if (savedState.fixationInterval) document.getElementById('fixation-interval').value = savedState.fixationInterval;
@@ -483,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.positionY !== undefined) document.getElementById('position-y').value = savedState.positionY;
             if (savedState.saveData !== undefined) document.getElementById('save-data').checked = savedState.saveData;
             if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
-            
+
             // Restore S-R mappings
             if (savedState.stimuliResponses) {
                 stimuliResponses = savedState.stimuliResponses;
@@ -492,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     srMappingBtn.textContent = "Custom S-R Mappings (Set)";
                 }
             }
-            
+
             // Remember last stimuli text to track changes
             lastStimuliText = document.getElementById('stimuli-text').value;
         }
@@ -500,11 +570,11 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("Error loading saved state:", e);
         // If there's an error, we'll just use the default values
     }
-    
+
     // Form submission event listener
     experimentForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Get form values
         canvasBackground = document.getElementById('canvas-background').value;
         trialInterval = parseInt(document.getElementById('trial-interval').value);
@@ -523,49 +593,49 @@ document.addEventListener('DOMContentLoaded', function() {
         positionX = parseInt(document.getElementById('position-x').value) || 0;
         positionY = parseInt(document.getElementById('position-y').value) || 0;
         saveData = document.getElementById('save-data').checked;
-        
+
         // Validate threshold is not greater than trial count
         if (cycleThreshold > trialCount && cycleThreshold !== 0) {
             alert('Cycle Trials threshold cannot exceed Trial count');
             return;
         }
-        
+
         // Parse stimuli
         const stimuliInput = document.getElementById('stimuli-text').value;
         stimuli = parseStimuli(stimuliInput);
-        
+
         if (stimuli.length === 0) {
             alert('Please enter at least one stimulus');
             return;
         }
-        
+
         responseKey = document.getElementById('response-key').value.trim() || 'Space';
-        
+
         // Parse additional responses
         const additionalResponsesInput = document.getElementById('additional-responses').value.trim();
-        additionalResponses = additionalResponsesInput ? 
-            additionalResponsesInput.split(',').map(r => r.trim().toUpperCase()) : 
+        additionalResponses = additionalResponsesInput ?
+            additionalResponsesInput.split(',').map(r => r.trim().toUpperCase()) :
             ['A']; // Default to 'A' if empty
-        
+
         // Validate inputs
         if (trialCount < 1 || trialCount > 999) {
             alert('Trial count must be between 1 and 999');
             return;
         }
-        
+
         // Initialize variables
         stimuliIndex = 0;
         stimuliUsed = [];
         sequenceIndex = 0;
         currentTrial = 0;
         currentCycleCorrect = 0; // Reset correct count for new cycle
-        
+
         // Reset experiment data
         experimentData = [];
-        
+
         // Save current state before starting experiment
         saveCurrentState();
-        
+
         // Start experiment
         startExperiment();
     });
@@ -595,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
             saveData: document.getElementById('save-data').checked,
             stimuliResponses: stimuliResponses
         };
-        
+
         localStorage.setItem('experimentBuilderState', JSON.stringify(currentState));
         savedState = currentState;
     }
@@ -608,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentItem = '';
         let currentSequence = [];
         let currentConcurrent = [];
-        
+
         // Helper function to add an item to the result
         function addItem() {
             const trimmed = currentItem.trim();
@@ -624,11 +694,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             currentItem = '';
         }
-        
+
         // Process each character in the input
         for (let i = 0; i < input.length; i++) {
             const char = input[i];
-            
+
             if (char === '[') {
                 inSequence = true;
                 // If there was text before the bracket, ignore it
@@ -676,15 +746,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
+
         // Add any remaining item
         addItem();
-        
+
         // If no valid stimuli were found, create a default stimulus
         if (result.length === 0) {
             result.push(["default"]);
         }
-        
+
         return result;
     }
 
@@ -700,17 +770,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Default case (shouldn't happen)
         return String(stimulusItem);
     }
-    
+
     // Generate default positions for concurrent stimuli
     function generateConcurrentPositions(stimuliCount) {
         const positions = [];
-        
+
         // Skip if only one stimulus (will use center position)
         if (stimuliCount <= 1) return [[0, 0]];
-        
+
         // Distance from center in pixels
         const distance = 150;
-        
+
         if (stimuliCount === 2) {
             // Place horizontally left and right
             positions.push([-distance, 0]);
@@ -724,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 positions.push([Math.round(x), Math.round(y)]);
             }
         }
-        
+
         return positions;
     }
 
@@ -733,46 +803,46 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide intro screen and show experiment container
         introScreen.classList.add('hidden');
         experimentContainer.classList.remove('hidden');
-        
+
         // Set background colors
         experimentContainer.style.backgroundColor = canvasBackground;
         experimentScreen.style.backgroundColor = trialBackground;
-        
+
         // Set fixation color
         fixationPoint.style.color = fixationColor;
-        
+
         // Apply the position offset correctly - the transform needs to maintain
         // the initial -50% centering while adding the user's desired offset
         fixationPoint.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
         stimulusText.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
         feedbackText.style.transform = `translate(-50%, -50%)`; // Keep feedback at center
-        
+
         // Hide all elements initially
         fixationPoint.classList.add('hidden');
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
-        
+
         // Start first trial
         experimentRunning = true;
-        
+
         // Listen for key press
         document.addEventListener('keydown', handleKeyPress);
-        
+
         // Begin the trial sequence
         startTrial();
     }
-    
+
     // Start a new trial
     function startTrial() {
         // Reset sequence index for the new trial
         sequenceIndex = 0;
-        
+
         // Show fixation if enabled
         if (showFixation) {
             fixationPoint.classList.remove('hidden');
             stimulusText.classList.add('hidden');
             feedbackText.classList.add('hidden');
-            
+
             // After fixation interval, show stimulus
             setTimeout(showStimulus, fixationInterval);
         } else {
@@ -780,7 +850,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showStimulus();
         }
     }
-    
+
     // Get the next stimulus sequence
     function getNextStimulusSequence() {
         if (randomizeStimuli) {
@@ -788,22 +858,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stimuliUsed.length >= stimuli.length) {
                 stimuliUsed = [];
             }
-            
+
             // Find an unused stimulus sequence
             let availableStimuli = stimuli.filter(function(_, index) {
                 return !stimuliUsed.includes(index);
             });
-            
+
             if (availableStimuli.length > 0) {
                 // Select a random stimulus from available ones
                 const randomIndex = Math.floor(Math.random() * availableStimuli.length);
                 const selectedSequence = availableStimuli[randomIndex];
-                
+
                 // Find the original index of this sequence to mark as used
-                const originalIndex = stimuli.findIndex(seq => 
+                const originalIndex = stimuli.findIndex(seq =>
                     JSON.stringify(seq) === JSON.stringify(selectedSequence));
                 stimuliUsed.push(originalIndex);
-                
+
                 return selectedSequence;
             } else {
                 // This shouldn't happen, but just in case
@@ -816,64 +886,64 @@ document.addEventListener('DOMContentLoaded', function() {
             return selectedSequence;
         }
     }
-    
+
     // Show the stimulus for this trial
     function showStimulus() {
         // Reset all concurrent elements to ensure clean state
         clearConcurrentStimuli();
-        
+
         // Get sequence if needed
         if (sequenceIndex === 0) {
             currentSequence = getNextStimulusSequence();
         }
-        
+
         // Check if we're handling a concurrent stimulus group
         const isConcurrent = typeof currentSequence === 'object' && currentSequence.type === 'concurrent';
-        
+
         // For concurrent stimuli, we want to preserve the flag status
         if (!isConcurrent) {
             clearAllTimers();
         }
-        
+
         fixationPoint.classList.add('hidden');
         feedbackText.classList.add('hidden');
-        
+
         if (isConcurrent) {
             displayConcurrentStimuli(currentSequence);
         } else {
             const currentStimulus = currentSequence[sequenceIndex];
             stimulusText.textContent = currentStimulus;
-            
+
             // Check for custom settings for this stimulus
             const stimulusDisplay = Array.isArray(currentSequence) && currentSequence.length > 1
                 ? `[${currentSequence.join(', ')}]`
                 : currentSequence[0];
-                
+
             const mapping = stimuliResponses[stimulusDisplay] || {};
-            
+
             // Apply custom or default stimulus size
             const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
             stimulusText.style.fontSize = `${customSize}px`;
-            
+
             // Apply custom or default stimulus color
             const customColor = mapping.color || stimulusColor;
             stimulusText.style.color = customColor;
-            
+
             // Apply custom position if available, otherwise use global position
             const customX = mapping.x !== undefined ? mapping.x : positionX;
             const customY = mapping.y !== undefined ? mapping.y : positionY;
             stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
-            
+
             // Also update fixation position if we're at the start of a sequence
             if (sequenceIndex === 0 && showFixation) {
                 fixationPoint.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
             }
-            
+
             stimulusText.classList.remove('hidden');
 
             // Use custom offset if available, otherwise use global offset
             const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
-            
+
             if (customOffset > 0) {
                 stimulusTimer = setTimeout(() => {
                     stimulusText.classList.add('hidden');
@@ -888,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, customOffset);
             }
         }
-        
+
         // Record stimulus start time for timing data
         responseStartTime = new Date();
     }
@@ -898,55 +968,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const stimuli = currentSequence.stimuli;
         const stimulusDisplay = `(${stimuli.join(', ')})`;
         const mapping = stimuliResponses[stimulusDisplay] || {};
-        
+
         // Get default positions for the stimuli
         const defaultPositions = generateConcurrentPositions(stimuli.length);
-        
+
         // Create DOM elements for each stimulus
         for (let i = 0; i < stimuli.length; i++) {
             const stimulus = stimuli[i];
             const stimElement = document.createElement('div');
             stimElement.className = 'concurrent-stimulus';
             stimElement.textContent = stimulus;
-            
+
             // Apply styling
             stimElement.style.position = 'absolute';
             stimElement.style.top = '50%';
             stimElement.style.left = '50%';
-            
+
             // Get custom position if available
             const posKey = stimulus.toLowerCase().replace(/\s+/g, '_');
-            const customX = mapping[`${posKey}_x`] !== undefined ? 
+            const customX = mapping[`${posKey}_x`] !== undefined ?
                 mapping[`${posKey}_x`] : defaultPositions[i][0];
-            const customY = mapping[`${posKey}_y`] !== undefined ? 
+            const customY = mapping[`${posKey}_y`] !== undefined ?
                 mapping[`${posKey}_y`] : defaultPositions[i][1];
-            
+
             // Apply global offset plus specific offset for this item
             const totalX = (positionX || 0) + customX;
             const totalY = (positionY || 0) + customY;
-            
+
             stimElement.style.transform = `translate(calc(-50% + ${totalX}px), calc(-50% + ${totalY}px))`;
-            
+
             // Apply custom or default color and size
             const customColor = mapping[`${posKey}_color`] || mapping.color || stimulusColor;
-            const customSize = mapping[`${posKey}_size`] !== undefined ? 
+            const customSize = mapping[`${posKey}_size`] !== undefined ?
                 mapping[`${posKey}_size`] : (mapping.size !== undefined ? mapping.size : stimulusSize);
-            
+
             stimElement.style.color = customColor;
             stimElement.style.fontSize = `${customSize}px`;
             stimElement.style.fontFamily = 'Consolas, monospace';
             stimElement.style.zIndex = '1';
             stimElement.style.textAlign = 'center';
-            
+
             // Add to experiment screen
             experimentScreen.appendChild(stimElement);
         }
-        
+
         // Update fixation position to match global position
         if (showFixation) {
             fixationPoint.style.transform = `translate(calc(-50% + ${positionX}px), calc(-50% + ${positionY}px))`;
         }
-        
+
         // Always set flag to true - concurrent stimuli always wait for response
         hasConcurrentWithZeroOffset = true;
     }
@@ -969,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Corrected handleKeyPress function
     function handleKeyPress(e) {
         // Skip all keypresses during cycle feedback display
-        if (feedbackText.textContent.includes("Starting new cycle") && 
+        if (feedbackText.textContent.includes("Starting new cycle") &&
             !feedbackText.classList.contains('hidden')) {
             return;
         }
@@ -981,13 +1051,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
 
             // Determine if we're at the last item in a sequence
-            const isEndOfSequence = 
-                Array.isArray(currentSequence) ? 
-                (sequenceIndex === currentSequence.length - 1) : 
+            const isEndOfSequence =
+                Array.isArray(currentSequence) ?
+                (sequenceIndex === currentSequence.length - 1) :
                 true; // For concurrent stimuli, always consider it the end
 
             // Get stimulus display key
-            const stimulusDisplay = 
+            const stimulusDisplay =
                 typeof currentSequence === 'object' && currentSequence.type === 'concurrent' ?
                 `(${currentSequence.stimuli.join(', ')})` :
                 (Array.isArray(currentSequence) && currentSequence.length > 1 ?
@@ -997,10 +1067,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Determine if the key pressed is correct
             let isCorrect = false;
             let isAdditionalResponse = false;
-            
+
             // Check if the pressed key is in additionalResponses
             isAdditionalResponse = additionalResponses.includes(keyPressed);
-            
+
             if (hasCustomMappings) {
                 const mappingInfo = stimuliResponses[stimulusDisplay];
                 if (mappingInfo && mappingInfo.key) {
@@ -1025,24 +1095,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (saveData) {
                         saveTrialData(currentSequence[sequenceIndex], keyPressed, isCorrect);
                     }
-                    
+
                     sequenceIndex++;
                     showStimulus();
                 }
                 else if (isEndOfSequence) {
                     // At the end of a sequence or for concurrent stimuli
-                    
+
                     // Explicitly clear concurrent stimuli on valid key press
                     if (hasConcurrentWithZeroOffset) {
                         clearConcurrentStimuli();
                         hasConcurrentWithZeroOffset = false;
                     }
-                    
+
                     // Save data if option is enabled
                     if (saveData) {
                         saveTrialData(stimulusDisplay, keyPressed, isCorrect);
                     }
-                    
+
                     if (provideFeedback) {
                         showFeedback(isCorrect);
                         feedbackTimer = setTimeout(() => {
@@ -1059,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (saveData && isEndOfSequence) {
                         saveTrialData(stimulusDisplay, keyPressed, false);
                     }
-                    
+
                     showFeedback(false);
                     feedbackTimer = setTimeout(() => {
                         hideFeedback();
@@ -1073,18 +1143,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-    
+
     // Function to save trial data
     function saveTrialData(stimulus, response, accurate) {
         const now = new Date();
         const responseTime = now - responseStartTime; // Calculate response time in ms
-        
+
         // Format timestamp as HH:MM:SS_DD:MM:YYYY
         const timestamp = formatDateTime(now);
-        
+
         // Calculate the absolute trial number (including past cycles)
         const absoluteTrialNumber = currentTrial + 1; // +1 because currentTrial is 0-indexed
-        
+
         // Create data object
         const trialData = {
             Timestamp: timestamp,
@@ -1095,11 +1165,11 @@ document.addEventListener('DOMContentLoaded', function() {
             Accurate: accurate ? 1 : 0,
             ResponseTime_ms: responseTime
         };
-        
+
         // Add to experiment data array
         experimentData.push(trialData);
     }
-    
+
     // Helper function to format date as HH:MM:SS_DD:MM:YYYY
     function formatDateTime(date) {
         const hours = String(date.getHours()).padStart(2, '0');
@@ -1108,10 +1178,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
         const year = date.getFullYear();
-        
+
         return `${hours}:${minutes}:${seconds}_${day}:${month}:${year}`;
     }
-    
+
     // Modify advanceTrial to check threshold at cycle end
     function advanceTrial() {
         clearAllTimers();
@@ -1121,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             currentTrial++;
             console.log(`Advancing to trial ${currentTrial}/${trialCount}`);
-            
+
             if (currentTrial < trialCount) {
                 // Continue current cycle
                 startTrial();
@@ -1147,32 +1217,32 @@ document.addEventListener('DOMContentLoaded', function() {
         feedbackText.textContent = `Correct: ${currentCycleCorrect}/${cycleThreshold} - Starting new cycle`;
         feedbackText.style.color = '#2196F3'; // Blue color for cycle message
         feedbackText.classList.remove('hidden');
-        
+
         // Clear stimulus text to prevent overlap
         stimulusText.classList.add('hidden');
-        
+
         console.log(`Cycle completed. Correct responses: ${currentCycleCorrect}/${cycleThreshold}`);
-        
+
         // Automatically hide message and start new cycle after fixed duration
         setTimeout(() => {
             // Hide message
             feedbackText.classList.add('hidden');
-            
+
             // Reset for new cycle
             currentTrial = 0;
             sequenceIndex = 0;
             currentCycleCorrect = 0;
-            
+
             // Reset stimulus usage if randomizing
             if (randomizeStimuli) {
                 stimuliUsed = [];
             }
-            
+
             // Start new cycle automatically
             startTrial();
         }, 2000); // Show message for fixed 2 seconds
     }
-    
+
     // Correct endExperiment
     function endExperiment() {
         experimentRunning = false;
@@ -1180,10 +1250,10 @@ document.addEventListener('DOMContentLoaded', function() {
         completionScreen.classList.remove('hidden');
         document.removeEventListener('keydown', handleKeyPress);
         clearAllTimers();
-        
+
         const messageElement = document.getElementById('completion-message');
         const statsElement = document.getElementById('completion-stats');
-        
+
         // If save data is enabled, store the current configuration's data
         if (saveData && experimentData.length > 0) {
             if (isStudyMode) {
@@ -1198,7 +1268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 downloadExperimentData();
             }
         }
-        
+
         if (isStudyMode) {
             if (currentStudyIndex < studyConfigurations.length - 1) {
                 messageElement.textContent = `Block ${currentStudyIndex + 1} Complete`;
@@ -1207,14 +1277,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Study completion screen
                 messageElement.textContent = 'Study Complete!';
                 statsElement.classList.remove('hidden');
-                
+
                 // Show study completion stats
                 let statsHtml = `
                     <div class="study-completion-stats">
                         <h3>Study Summary:</h3>
                         <p>Completed ${studyConfigurations.length} blocks</p>
                     `;
-                
+
                 if (saveData && studyData.length > 0) {
                     statsHtml += `
                         <div class="download-section">
@@ -1224,10 +1294,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     `;
                 }
-                
+
                 statsHtml += '</div>';
                 statsElement.innerHTML = statsHtml;
-                
+
                 // Add event listener for the download button
                 const downloadBtn = document.getElementById('download-study-data');
                 if (downloadBtn) {
@@ -1238,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', function() {
             messageElement.textContent = 'Task Complete!';
             statsElement.classList.add('hidden');
         }
-        
+
         completionScreen.classList.remove('hidden');
     }
 
@@ -1246,29 +1316,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function downloadExperimentData() {
         const dataStr = JSON.stringify(experimentData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
+
         // Create timestamp for filename
         const timestamp = formatDateTime(new Date()).replace(/:/g, '-').replace(/_/g, '_');
         const filename = `experiment_data_${timestamp}.json`;
-        
+
         // Create download link
         const downloadLink = document.createElement('a');
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
-        
+
         // Create download button
         const downloadBtn = document.createElement('button');
         downloadBtn.textContent = 'Download Data';
         downloadBtn.className = 'secondary-btn';
         downloadBtn.style.marginTop = '20px';
-        
+
         downloadBtn.addEventListener('click', function() {
             downloadLink.click();
         });
-        
+
         // Add button to completion screen
         completionScreen.insertBefore(downloadBtn, okBtn);
-        
+
         // Auto download
         downloadLink.click();
     }
@@ -1277,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function downloadStudyData() {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `study_data_${timestamp}.json`;
-        
+
         const studyDataObject = {
             studyMetadata: {
                 completionTime: new Date().toISOString(),
@@ -1289,10 +1359,10 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             configurationData: studyData
         };
-        
+
         const dataStr = JSON.stringify(studyDataObject, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
+
         const downloadLink = document.createElement('a');
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
@@ -1307,40 +1377,39 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(stimulusTimer);
             stimulusTimer = null;
         }
-        
+
         if (feedbackTimer) {
             clearTimeout(feedbackTimer);
             feedbackTimer = null;
         }
-        
+
         // Only clear concurrent stimuli when explicitly called for
         if (!hasConcurrentWithZeroOffset) {
             clearConcurrentStimuli();
         }
     }
-    
+
     // OK button click
     okBtn.addEventListener('click', function() {
         if (isStudyMode && currentStudyIndex < studyConfigurations.length - 1) {
             // Continue to next configuration
             completionScreen.classList.add('hidden');
             currentStudyIndex++;
-            
+
             // Reset configuration-specific state
             currentTrial = 0;
             experimentRunning = false;
             stimuliUsed = [];
             experimentData = []; // Reset experiment data for next configuration
             clearAllTimers();
-            
-            // Load and start next configuration
-            loadConfiguration(studyConfigurations[currentStudyIndex].config);
-            startExperiment();
+
+            // Start the next configuration in the study
+            startStudyConfiguration(currentStudyIndex);
         } else {
             // Study or task complete - reset everything
             completionScreen.classList.add('hidden');
             introScreen.classList.remove('hidden');
-            
+
             // Reset all state variables
             currentTrial = 0;
             experimentRunning = false;
@@ -1350,29 +1419,29 @@ document.addEventListener('DOMContentLoaded', function() {
             experimentData = [];
             studyData = []; // Reset study data
             clearAllTimers();
-            
+
             saveCurrentState();
         }
     });
-    
+
     // Add event listener for S-R mapping button
     srMappingBtn.addEventListener('click', function() {
         // Parse current stimuli to generate mapping table
         const stimuliInput = document.getElementById('stimuli-text').value;
-        
+
         // Check if stimuli have changed
         const stimuliChanged = (stimuliInput !== lastStimuliText);
-        
+
         // If stimuli changed, we need to regenerate mappings
         if (stimuliChanged) {
             lastStimuliText = stimuliInput;
-            
+
             // If stimuli changed, clear old mappings that no longer apply
             const newParsedStimuli = parseStimuli(stimuliInput);
             const newStimuliKeys = newParsedStimuli.map(seq => {
                 return getFormattedStimulusKey(seq);
             });
-            
+
             // Create a new stimuliResponses with only valid keys
             const updatedResponses = {};
             for (const key of newStimuliKeys) {
@@ -1380,49 +1449,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     updatedResponses[key] = stimuliResponses[key];
                 }
             }
-            
+
             // Update with new mappings object
             stimuliResponses = updatedResponses;
         }
-        
+
         const parsedStimuli = parseStimuli(stimuliInput);
-        
+
         // Generate table rows
         generateMappingTable(parsedStimuli);
-        
+
         // Show modal
         srMappingModal.classList.remove('hidden');
     });
-    
+
     // Close modal when clicking X
     closeModalBtn.addEventListener('click', function() {
         srMappingModal.classList.add('hidden');
     });
-    
+
     // Close modal when clicking outside
     window.addEventListener('click', function(e) {
         if (e.target === srMappingModal) {
             srMappingModal.classList.add('hidden');
         }
     });
-    
+
     // Save mappings button
     saveMappingsBtn.addEventListener('click', function() {
         const mappingRows = mappingTbody.querySelectorAll('tr');
-        
+
         stimuliResponses = {};
         hasCustomMappings = false;
-        
+
         mappingRows.forEach(row => {
             const stimulusText = row.getAttribute('data-stimulus');
             const customMapping = {};
-            
+
             // Get all input values based on data-type attribute
             row.querySelectorAll('input').forEach(input => {
                 const dataType = input.getAttribute('data-type');
                 const defaultValue = input.getAttribute('data-default');
                 const value = input.value.trim();
-                
+
                 if (value && value !== defaultValue) {
                     // Check if it's a number type
                     if (input.type === 'number') {
@@ -1432,30 +1501,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
-            
+
             // Only save if there's at least one custom setting
             if (Object.keys(customMapping).length > 0) {
                 stimuliResponses[stimulusText] = customMapping;
                 hasCustomMappings = true;
             }
         });
-        
+
         // Close the modal
         srMappingModal.classList.add('hidden');
-        
+
         // Visual feedback that mappings were saved
-        srMappingBtn.textContent = hasCustomMappings ? 
+        srMappingBtn.textContent = hasCustomMappings ?
             "Custom S-R Mappings (Set)" : "Custom S-R Mappings";
-            
+
         // Save state with updated mappings
         saveCurrentState();
     });
-    
+
     // Generate mapping table with columns for concurrent stimuli
     function generateMappingTable(parsedStimuli) {
         // Clear existing rows
         mappingTbody.innerHTML = '';
-        
+
         // Get default values from current form settings
         const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
         const defaultSize = document.getElementById('stimulus-size').value;
@@ -1463,19 +1532,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultOffset = document.getElementById('stimulus-offset').value;
         const defaultX = document.getElementById('position-x').value || '0';
         const defaultY = document.getElementById('position-y').value || '0';
-        
+
         // Update header columns first to match the inputs we'll create
         updateMappingTableHeader(parsedStimuli);
-        
+
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusItem => {
             const row = document.createElement('tr');
-            
+
             // Determine the type of stimulus and create formatted key
             let storedStimulus;
             let isConcurrent = false;
             let concurrentStimuli = [];
-            
+
             if (Array.isArray(stimulusItem)) {
                 // Sequential stimulus
                 storedStimulus = stimulusItem.length > 1 ?
@@ -1504,10 +1573,10 @@ document.addEventListener('DOMContentLoaded', function() {
             responseInput.setAttribute('data-default', defaultResponseKey);
             responseCell.appendChild(responseInput);
             row.appendChild(responseCell);
-            
+
             if (!isConcurrent) {
                 // Regular stimulus - add normal position columns
-                
+
                 // X position cell
                 const xPosCell = document.createElement('td');
                 const xPosInput = document.createElement('input');
@@ -1517,7 +1586,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 xPosInput.setAttribute('data-default', defaultX);
                 xPosCell.appendChild(xPosInput);
                 row.appendChild(xPosCell);
-                
+
                 // Y position cell
                 const yPosCell = document.createElement('td');
                 const yPosInput = document.createElement('input');
@@ -1529,16 +1598,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.appendChild(yPosCell);
             } else {
                 // Concurrent stimulus - add position columns for each stimulus
-                
+
                 // Calculate default positions
                 const defaultPositions = generateConcurrentPositions(concurrentStimuli.length);
-                
+
                 // Create position fields for each item
                 concurrentStimuli.forEach((stim, index) => {
                     const posKey = stim.toLowerCase().replace(/\s+/g, '_');
                     const defaultPosX = defaultPositions[index][0];
                     const defaultPosY = defaultPositions[index][1];
-                    
+
                     // X position cell
                     const xPosCell = document.createElement('td');
                     const xPosInput = document.createElement('input');
@@ -1549,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     xPosInput.title = `${stim} X Position`;
                     xPosCell.appendChild(xPosInput);
                     row.appendChild(xPosCell);
-                    
+
                     // Y position cell
                     const yPosCell = document.createElement('td');
                     const yPosInput = document.createElement('input');
@@ -1562,7 +1631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.appendChild(yPosCell);
                 });
             }
-            
+
             // Offset cell
             const offsetCell = document.createElement('td');
             const offsetInput = document.createElement('input');
@@ -1572,7 +1641,7 @@ document.addEventListener('DOMContentLoaded', function() {
             offsetInput.setAttribute('data-default', defaultOffset);
             offsetCell.appendChild(offsetInput);
             row.appendChild(offsetCell);
-            
+
             // Color cell - Universal color for all stimuli in the group
             const colorCell = document.createElement('td');
             const colorInput = document.createElement('input');
@@ -1582,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', function() {
             colorInput.setAttribute('data-default', defaultColor);
             colorCell.appendChild(colorInput);
             row.appendChild(colorCell);
-            
+
             // Size cell - Universal size for all stimuli in the group
             const sizeCell = document.createElement('td');
             const sizeInput = document.createElement('input');
@@ -1592,12 +1661,12 @@ document.addEventListener('DOMContentLoaded', function() {
             sizeInput.setAttribute('data-default', defaultSize);
             sizeCell.appendChild(sizeInput);
             row.appendChild(sizeCell);
-            
+
             // Individual color and size for concurrent stimuli
             if (isConcurrent) {
                 concurrentStimuli.forEach(stim => {
                     const posKey = stim.toLowerCase().replace(/\s+/g, '_');
-                    
+
                     // Individual color
                     const colorCell = document.createElement('td');
                     const colorInput = document.createElement('input');
@@ -1608,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     colorInput.title = `${stim} Color`;
                     colorCell.appendChild(colorInput);
                     row.appendChild(colorCell);
-                    
+
                     // Individual size
                     const sizeCell = document.createElement('td');
                     const sizeInput = document.createElement('input');
@@ -1621,11 +1690,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.appendChild(sizeCell);
                 });
             }
-            
+
             // Set values if mapping exists
             if (stimuliResponses[storedStimulus]) {
                 const mapping = stimuliResponses[storedStimulus];
-                
+
                 // Set each input based on data-type attribute
                 row.querySelectorAll('input').forEach(input => {
                     const dataType = input.getAttribute('data-type');
@@ -1634,24 +1703,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
+
             mappingTbody.appendChild(row);
         });
     }
-    
+
     // Update the mapping table header to include columns for concurrent stimuli
     function updateMappingTableHeader(parsedStimuli) {
         const headerRow = document.querySelector('#mapping-table thead tr');
-        
+
         // Clear existing headers, keeping just the first two columns (Stimulus and Response Key)
         while (headerRow.children.length > 2) {
             headerRow.removeChild(headerRow.lastElementChild);
         }
-        
+
         // Check for concurrent stimuli to determine additional headers
         let hasConcurrent = false;
         let maxConcurrentCount = 0;
-        
+
         parsedStimuli.forEach(item => {
             if (typeof item === 'object' && item.type === 'concurrent') {
                 hasConcurrent = true;
@@ -1659,7 +1728,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxConcurrentCount = Math.max(maxConcurrentCount, item.stimuli.length);
             }
         });
-        
+
         if (!hasConcurrent) {
             // Add standard headers for regular stimuli
             const standardHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
@@ -1674,12 +1743,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const xHeader = document.createElement('th');
                 xHeader.textContent = `Item ${i+1} X`;
                 headerRow.appendChild(xHeader);
-                
+
                 const yHeader = document.createElement('th');
                 yHeader.textContent = `Item ${i+1} Y`;
                 headerRow.appendChild(yHeader);
             }
-            
+
             // Add common property headers
             const commonHeaders = ['Offset (ms)', 'Group Color', 'Group Size (px)'];
             commonHeaders.forEach(header => {
@@ -1687,20 +1756,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 th.textContent = header;
                 headerRow.appendChild(th);
             });
-            
+
             // Add individual property headers for each possible item
             for (let i = 0; i < maxConcurrentCount; i++) {
                 const colorHeader = document.createElement('th');
                 colorHeader.textContent = `Item ${i+1} Color`;
                 headerRow.appendChild(colorHeader);
-                
+
                 const sizeHeader = document.createElement('th');
                 sizeHeader.textContent = `Item ${i+1} Size`;
                 headerRow.appendChild(sizeHeader);
             }
         }
     }
-    
+
     // Listen for changes to stimuli text and update last known value
     document.getElementById('stimuli-text').addEventListener('change', function() {
         const newValue = this.value;
@@ -1709,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // We don't clear mappings immediately, only when opening the mapping dialog
         }
     });
-    
+
     // Add event listener for all form inputs to save state when changed
     const formInputs = document.querySelectorAll('#experiment-form input, #experiment-form select, #experiment-form textarea');
     formInputs.forEach(input => {
@@ -1723,14 +1792,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupColorPreviews() {
         // For each color select element
         const colorSelects = ['canvas-background', 'trial-background', 'fixation-color', 'stimulus-color'];
-        
+
         colorSelects.forEach(id => {
             const select = document.getElementById(id);
             const preview = document.getElementById(`${id}-preview`);
-            
+
             // Set initial color preview
             if (preview) preview.style.backgroundColor = select.value;
-            
+
             // Update preview when selection changes
             select.addEventListener('change', function() {
                 if (preview) preview.style.backgroundColor = this.value;
@@ -1748,21 +1817,234 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackText.textContent = "X";
             feedbackText.style.color = "#F44336"; // Red color
         }
-        
+
         // Make sure feedback is centered and visible
         feedbackText.style.transform = `translate(-50%, -50%)`; // Keep feedback at center
         feedbackText.classList.remove('hidden');
-        
+
         // Hide stimulus text temporarily for clearer feedback (if showing feedback on incorrect responses)
         if (!isCorrect) {
             stimulusText.style.opacity = '0.9'; // Reduce opacity rather than hide completely
         }
     }
-    
+
     function hideFeedback() {
         feedbackText.classList.add('hidden');
         // Restore stimulus text visibility if it was reduced
         stimulusText.style.opacity = '1';
+    }
+
+    // Function to display survey answer input based on answer type
+    function displaySurveyAnswerInput(answerType) {
+        // Remove any existing answer input
+        const existingInput = document.getElementById('survey-answer-input');
+        if (existingInput) {
+            existingInput.remove();
+        }
+
+        // Create a container for the answer input
+        const answerContainer = document.createElement('div');
+        answerContainer.id = 'survey-answer-input';
+        answerContainer.style.position = 'absolute';
+        answerContainer.style.top = '60%';
+        answerContainer.style.left = '50%';
+        answerContainer.style.transform = 'translateX(-50%)';
+        answerContainer.style.width = '80%';
+        answerContainer.style.maxWidth = '500px';
+        answerContainer.style.textAlign = 'center';
+        answerContainer.style.zIndex = '2';
+
+        // Create input based on answer type
+        let inputElement;
+
+        switch(answerType.toLowerCase()) {
+            case 'text':
+                inputElement = document.createElement('input');
+                inputElement.type = 'text';
+                inputElement.placeholder = 'Type your answer here...';
+                inputElement.style.width = '100%';
+                inputElement.style.padding = '10px';
+                inputElement.style.fontSize = '18px';
+                inputElement.style.borderRadius = '4px';
+                inputElement.style.border = '1px solid #ccc';
+                break;
+
+            case 'textarea':
+                inputElement = document.createElement('textarea');
+                inputElement.placeholder = 'Type your answer here...';
+                inputElement.rows = 4;
+                inputElement.style.width = '100%';
+                inputElement.style.padding = '10px';
+                inputElement.style.fontSize = '18px';
+                inputElement.style.borderRadius = '4px';
+                inputElement.style.border = '1px solid #ccc';
+                break;
+
+            case 'radio':
+                // Create a fieldset for radio options
+                inputElement = document.createElement('fieldset');
+                inputElement.style.border = 'none';
+                inputElement.style.padding = '10px';
+                inputElement.style.margin = '0';
+                inputElement.style.textAlign = 'left';
+
+                // Add some sample options
+                const options = ['Option 1', 'Option 2', 'Option 3'];
+                options.forEach((option, index) => {
+                    const container = document.createElement('div');
+                    container.style.margin = '10px 0';
+
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'survey-radio';
+                    radio.id = `survey-radio-${index}`;
+                    radio.value = option;
+                    radio.style.marginRight = '10px';
+
+                    const label = document.createElement('label');
+                    label.htmlFor = `survey-radio-${index}`;
+                    label.textContent = option;
+                    label.style.fontSize = '18px';
+
+                    container.appendChild(radio);
+                    container.appendChild(label);
+                    inputElement.appendChild(container);
+                });
+                break;
+
+            default:
+                // Default to text input
+                inputElement = document.createElement('input');
+                inputElement.type = 'text';
+                inputElement.placeholder = 'Type your answer here...';
+                inputElement.style.width = '100%';
+                inputElement.style.padding = '10px';
+                inputElement.style.fontSize = '18px';
+                inputElement.style.borderRadius = '4px';
+                inputElement.style.border = '1px solid #ccc';
+        }
+
+        // Add the input to the container
+        answerContainer.appendChild(inputElement);
+
+        // Add a submit button
+        const submitButton = document.createElement('button');
+        submitButton.textContent = 'Submit';
+        submitButton.style.marginTop = '15px';
+        submitButton.style.padding = '10px 20px';
+        submitButton.style.fontSize = '16px';
+        submitButton.style.backgroundColor = '#4CAF50';
+        submitButton.style.color = 'white';
+        submitButton.style.border = 'none';
+        submitButton.style.borderRadius = '4px';
+        submitButton.style.cursor = 'pointer';
+
+        // Add event listener to the submit button
+        submitButton.addEventListener('click', completeSurvey);
+
+        answerContainer.appendChild(submitButton);
+
+        // Add the container to the experiment screen
+        experimentScreen.appendChild(answerContainer);
+
+        // Focus on the input element if it's a text input or textarea
+        if (inputElement.tagName === 'INPUT' || inputElement.tagName === 'TEXTAREA') {
+            inputElement.focus();
+        }
+    }
+
+    // Function to handle key press events in survey mode
+    function handleSurveyKeyPress(e) {
+        // If Enter key is pressed, complete the survey
+        if (e.key === 'Enter') {
+            completeSurvey();
+        }
+    }
+
+    // Function to complete the survey and return to the intro screen
+    function completeSurvey() {
+        // Get the answer input
+        const answerInput = document.getElementById('survey-answer-input');
+        let answer = '';
+
+        if (answerInput) {
+            // Get the input element based on the answer type
+            const inputElement = answerInput.querySelector('input[type="text"], textarea');
+            const radioElements = answerInput.querySelectorAll('input[type="radio"]');
+
+            if (inputElement) {
+                answer = inputElement.value;
+            } else if (radioElements.length > 0) {
+                // Find the selected radio button
+                radioElements.forEach(radio => {
+                    if (radio.checked) {
+                        answer = radio.value;
+                    }
+                });
+            }
+
+            // Save the survey data if enabled
+            const saveData = document.getElementById('survey-save-data').checked;
+            if (saveData) {
+                saveSurveyData(answer);
+            }
+
+            // Remove the answer input
+            answerInput.remove();
+        }
+
+        // Remove the keydown event listener
+        document.removeEventListener('keydown', handleSurveyKeyPress);
+
+        // Reset the stimulus text
+        stimulusText.classList.add('hidden');
+
+        console.log('Survey completed with answer:', answer);
+
+        if (isStudyMode) {
+            // In study mode, proceed to the next configuration
+            experimentContainer.classList.add('hidden');
+            completionScreen.classList.remove('hidden');
+            document.getElementById('completion-message').textContent = `Survey ${currentStudyIndex + 1} Complete`;
+            document.getElementById('completion-stats').classList.add('hidden');
+
+            // When OK is clicked, it will advance to the next configuration
+        } else {
+            // In regular mode, return to the intro screen
+            experimentContainer.classList.add('hidden');
+            introScreen.classList.remove('hidden');
+        }
+    }
+
+    // Function to save survey data
+    function saveSurveyData(answer) {
+        const now = new Date();
+        const timestamp = formatDateTime(now);
+
+        const surveyData = {
+            Timestamp: timestamp,
+            Question: document.getElementById('question-text').value,
+            Answer: answer,
+            AnswerType: document.getElementById('answer-type').value
+        };
+
+        // Create a JSON blob and trigger download
+        const dataStr = JSON.stringify([surveyData], null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+        // Create timestamp for filename
+        const fileTimestamp = timestamp.replace(/:/g, '-').replace(/_/g, '_');
+        const filename = `survey_data_${fileTimestamp}.json`;
+
+        // Create download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = filename;
+
+        // Trigger download
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
     }
 
     // Export mappings to CSV file - modified to include default values
@@ -1770,28 +2052,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const mappingRows = mappingTbody.querySelectorAll('tr');
         const headers = [];
         const csvRows = [];
-        
+
         // Get all header cells from the table
         const headerCells = document.querySelectorAll('#mapping-table thead th');
         headerCells.forEach(cell => {
             headers.push(cell.textContent);
         });
-        
+
         // Add headers as first row
         csvRows.push(headers.join(','));
-        
+
         // Process each mapping row
         mappingRows.forEach(row => {
             const csvRow = [];
             const stimulusText = row.getAttribute('data-stimulus');
             csvRow.push('"' + stimulusText.replace(/"/g, '""') + '"'); // Escape quotes
-            
+
             // Get all inputs in the row
             const inputs = row.querySelectorAll('input');
-            
+
             // Track input index to map to correct header
             let inputIndex = 0;
-            
+
             // Process each header after the stimulus column
             for (let i = 1; i < headers.length; i++) {
                 if (inputIndex < inputs.length) {
@@ -1801,34 +2083,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!value) {
                         value = input.placeholder || input.getAttribute('data-default') || '';
                     }
-                    
+
                     // Add the value, properly escaped if it contains commas or quotes
                     if (value.includes(',') || value.includes('"')) {
                         csvRow.push('"' + value.replace(/"/g, '""') + '"');
                     } else {
                         csvRow.push(value);
                     }
-                    
+
                     inputIndex++;
                 } else {
                     // Add empty cell if we don't have an input for this column
                     csvRow.push('');
                 }
             }
-            
+
             // Add the row to our CSV data
             csvRows.push(csvRow.join(','));
         });
-        
+
         // Create blob and download
         const csvString = csvRows.join('\n');
         const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        
+
         // Create filename with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `sr-mappings-${timestamp}.csv`;
-        
+
         // Set up download
         if (navigator.msSaveBlob) { // IE 10+
             navigator.msSaveBlob(blob, filename);
@@ -1846,7 +2128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function detectStimulusStructure(stimulusText) {
         // Trim whitespace
         stimulusText = stimulusText.trim();
-        
+
         // Check if it's a sequential stimulus (enclosed in square brackets)
         if (stimulusText.startsWith('[') && stimulusText.endsWith(']')) {
             return {
@@ -1855,7 +2137,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 valid: true
             };
         }
-        
+
         // Check if it's a concurrent stimulus (enclosed in parentheses)
         if (stimulusText.startsWith('(') && stimulusText.endsWith(')')) {
             return {
@@ -1864,21 +2146,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 valid: true
             };
         }
-        
+
         // It's a single stimulus
         return {
             type: 'single',
             text: stimulusText,
-            valid: !stimulusText.includes('[') && !stimulusText.includes(']') && 
+            valid: !stimulusText.includes('[') && !stimulusText.includes(']') &&
                   !stimulusText.includes('(') && !stimulusText.includes(')')
         };
     }
-    
+
     // Helper function to properly add new stimuli to the text input
     function addNewStimuliToInput(currentInput, newStimuli) {
         let updatedInput = currentInput.trim();
         let newValidStimuli = [];
-        
+
         // Process each new stimulus
         newStimuli.forEach(stimulus => {
             const structure = detectStimulusStructure(stimulus);
@@ -1886,7 +2168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 newValidStimuli.push(structure.text);
             }
         });
-        
+
         // Add all valid new stimuli to the input
         if (newValidStimuli.length > 0) {
             if (updatedInput) {
@@ -1895,65 +2177,65 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatedInput = newValidStimuli.join(', ');
             }
         }
-        
+
         return updatedInput;
     }
 
     // Enhanced import function to handle the S-R mapping import
     function importMappingsFromCSV(file) {
         const reader = new FileReader();
-        
+
         reader.onload = function(e) {
             try {
                 const contents = e.target.result;
                 const lines = contents.split(/\r\n|\n/);
-                
+
                 if (lines.length < 2) {
                     throw new Error('CSV file has insufficient data');
                 }
-                
+
                 // Parse header row
                 const headers = parseCSVLine(lines[0]);
                 if (headers.length < 2 || headers[0].toLowerCase() !== 'stimulus') {
                     throw new Error('Invalid CSV format: First column must be "Stimulus"');
                 }
-                
+
                 // Get current stimuli to identify new ones
                 const currentStimuliInput = document.getElementById('stimuli-text').value;
                 const currentParsedStimuli = parseStimuli(currentStimuliInput);
                 const currentStimuliKeys = currentParsedStimuli.map(seq => getFormattedStimulusKey(seq));
-                
+
                 // Process data rows to find new stimuli
                 const importedMappings = {};
                 const newStimuliList = [];
                 let validRowCount = 0;
-                
+
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue; // Skip empty lines
-                    
+
                     const values = parseCSVLine(lines[i]);
                     if (values.length < 1) continue; // Skip invalid rows
-                    
+
                     const stimulus = values[0].trim();
                     if (!stimulus) continue; // Skip rows without stimulus
-                    
+
                     // Check if this is a new stimulus not in the current list
                     if (!currentStimuliKeys.includes(stimulus)) {
                         newStimuliList.push(stimulus);
                     }
-                    
+
                     // Create mapping for this stimulus regardless of whether it's new
                     const mapping = {};
                     let hasValidMapping = false;
-                    
+
                     // Process each column
                     headers.forEach((header, index) => {
                         if (index === 0) return; // Skip stimulus column
-                        
+
                         if (index < values.length) {
                             const value = values[index].trim();
                             if (!value) return; // Skip empty values
-                            
+
                             // Convert numeric values
                             let processedValue;
                             if (/^\-?\d+$/.test(value)) {
@@ -1961,11 +2243,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else {
                                 processedValue = value;
                             }
-                            
+
                             // Determine the correct data type based on header
                             const headerLower = header.toLowerCase();
                             let dataType;
-                            
+
                             if (headerLower === 'correct response key') {
                                 dataType = 'key';
                             } else if (headerLower === 'x position') {
@@ -2026,54 +2308,54 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Unknown header, use as is
                                 dataType = headerLower.replace(/\s+/g, '_');
                             }
-                            
+
                             mapping[dataType] = processedValue;
                             hasValidMapping = true;
                         }
                     });
-                    
+
                     // Store the mapping if we have valid data
                     if (hasValidMapping || newStimuliList.includes(stimulus)) {
                         importedMappings[stimulus] = mapping;
                         validRowCount++;
                     }
                 }
-                
+
                 // Update the stimuli text area if new stimuli were found
                 if (newStimuliList.length > 0) {
                     // Add new stimuli with proper structure detection
                     const updatedStimuliText = addNewStimuliToInput(currentStimuliInput, newStimuliList);
-                    
+
                     // Update the stimuli textarea
                     const stimuliTextArea = document.getElementById('stimuli-text');
                     stimuliTextArea.value = updatedStimuliText;
                     lastStimuliText = updatedStimuliText; // Update the last known value
                 }
-                
+
                 // Update stimuliResponses with imported data
                 if (validRowCount > 0) {
                     // Merge with existing responses rather than replacing completely
                     Object.keys(importedMappings).forEach(key => {
                         stimuliResponses[key] = importedMappings[key];
                     });
-                    
+
                     hasCustomMappings = true;
-                    
+
                     // Parse the updated stimuli input to get the full current set including new items
                     const updatedStimuliInput = document.getElementById('stimuli-text').value;
                     const updatedParsedStimuli = parseStimuli(updatedStimuliInput);
-                    
+
                     // Regenerate the entire mapping table with the updated stimuli set
                     generateMappingTable(updatedParsedStimuli);
-                    
+
                     // Update button text to indicate custom mappings are set
                     srMappingBtn.textContent = "Custom S-R Mappings (Set)";
-                    
+
                     // Save state with imported mappings
                     saveCurrentState();
-                    
+
                     // Show success message with details
-                    const newStimuliMsg = newStimuliList.length > 0 ? 
+                    const newStimuliMsg = newStimuliList.length > 0 ?
                         `Added ${newStimuliList.length} new stimuli. ` : '';
                     alert(`${newStimuliMsg}Successfully imported ${validRowCount} mapping(s).`);
                 } else if (newStimuliList.length > 0) {
@@ -2082,23 +2364,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     const updatedStimuliInput = document.getElementById('stimuli-text').value;
                     const updatedParsedStimuli = parseStimuli(updatedStimuliInput);
                     generateMappingTable(updatedParsedStimuli);
-                    
+
                     saveCurrentState();
                     alert(`Added ${newStimuliList.length} new stimuli.`);
                 } else {
                     throw new Error('No valid mappings or new stimuli found in the CSV');
                 }
-                
+
             } catch (error) {
                 alert(`Error importing mappings: ${error.message}`);
                 console.error('Import error:', error);
             }
         };
-        
+
         reader.onerror = function() {
             alert('Error reading the file');
         };
-        
+
         reader.readAsText(file);
     }
 
@@ -2108,10 +2390,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const result = [];
         let cell = '';
         let inQuote = false;
-        
+
         for (let i = 0; i < text.length; i++) {
             const char = text[i];
-            
+
             if (char === '"') {
                 // Handle quotes - toggle quote state
                 if (inQuote && i + 1 < text.length && text[i + 1] === '"') {
@@ -2129,18 +2411,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 cell += char;
             }
         }
-        
+
         // Add the last cell
         result.push(cell);
         return result;
     }
-    
+
     if (importMappingsBtn && csvFileInput) {
         importMappingsBtn.addEventListener('click', function() {
             csvFileInput.click(); // Trigger file input dialog
         });
-        
-        csvFileInput.addEventListener('change', function(e) {
+
+        csvFileInput.addEventListener('change', function() {
             if (this.files && this.files[0]) {
                 importMappingsFromCSV(this.files[0]);
                 // Clear the input so the same file can be selected again
@@ -2148,7 +2430,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Add event listener for export button
     if (exportMappingsBtn) {
         exportMappingsBtn.addEventListener('click', function() {

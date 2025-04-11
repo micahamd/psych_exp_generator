@@ -37,10 +37,18 @@ The builder supports two operational modes:
    - Configurable stimulus size and color
    - Adjustable presentation timing
 
-2. **Advanced Stimulus Types**:
+2. **Image Stimuli**:
+   - Image files with extensions: .jpg, .jpeg, .png, .gif, .bmp, .webp
+   - Example: "apple.jpg" will be displayed as an image
+   - Customizable width and height (default: 400x400 pixels)
+   - Images should be placed in the same directory as the HTML file
+   - Fallback text shown if image cannot be loaded
+
+3. **Advanced Stimulus Types**:
    - Sequential stimuli using square brackets: `[apple, corn]`
    - Concurrent stimuli using curved brackets: `(apple, corn)`
    - Mixed types: `[apple, (corn, bean)], speed`
+   - Mixed media: `apple, corn, speed.jpg` (two text stimuli and one image)
 
 ### Custom Stimulus-Response (S-R) Mappings
 Access via the S-R Mapping dialog to set:
@@ -49,7 +57,8 @@ Access via the S-R Mapping dialog to set:
    - Position (X and Y coordinates)
    - Presentation timing offset
    - Custom text color
-   - Custom font size (in pixels)
+   - Custom font size (for text stimuli, in pixels)
+   - Custom width and height (for image stimuli, in pixels)
 
 2. **Concurrent Stimuli Settings**:
    - Individual X and Y positions
@@ -270,8 +279,8 @@ Survey Data Structure:
 Planned Features:
 - ✓ Survey Form integration (Completed!)
 - ✓ Slider scale response type for surveys (Completed!)
+- ✓ Visual stimulus support (images) (Completed!)
 - Enhanced timing precision
-- Visual stimulus support (images/shapes)
 - Network data submission
 - Conditional branching
 - Response criteria handling

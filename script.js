@@ -1450,7 +1450,7 @@ document.addEventListener('DOMContentLoaded', function() {
         savedState = currentState;
     }
 
-    // Parse stimuli input to handle sequences and concurrent stimuli
+    // Parse stimuli input to handle sequences, concurrent stimuli, and images
     function parseStimuli(input) {
         const result = [];
         let inSequence = false;
@@ -1463,13 +1463,17 @@ document.addEventListener('DOMContentLoaded', function() {
         function addItem() {
             const trimmed = currentItem.trim();
             if (trimmed) {
+                // Check if the item is an image (has .jpg, .png, etc. extension)
+                const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(trimmed);
+                const itemWithType = isImage ? { text: trimmed, type: 'image' } : trimmed;
+
                 if (inSequence) {
-                    currentSequence.push(trimmed);
+                    currentSequence.push(itemWithType);
                 } else if (inConcurrent) {
-                    currentConcurrent.push(trimmed);
+                    currentConcurrent.push(itemWithType);
                 } else {
                     // Single item becomes a sequence of one
-                    result.push([trimmed]);
+                    result.push([itemWithType]);
                 }
             }
             currentItem = '';
@@ -1541,11 +1545,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Generate formatted stimulus key for storage/retrieval
     function getFormattedStimulusKey(stimulusItem) {
         if (Array.isArray(stimulusItem)) {
-            // Sequential stimulus
-            return stimulusItem.length > 1 ? `[${stimulusItem.join(', ')}]` : stimulusItem[0];
+            // Sequential stimulus - handle potential image objects in the array
+            const formattedItems = stimulusItem.map(item => {
+                if (typeof item === 'object' && item.type === 'image') {
+                    return item.text; // Just use the image filename
+                }
+                return item;
+            });
+            return formattedItems.length > 1 ? `[${formattedItems.join(', ')}]` : formattedItems[0];
         } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'concurrent') {
-            // Concurrent stimulus
-            return `(${stimulusItem.stimuli.join(', ')})`;
+            // Concurrent stimulus - handle potential image objects in the stimuli array
+            const formattedItems = stimulusItem.stimuli.map(item => {
+                if (typeof item === 'object' && item.type === 'image') {
+                    return item.text; // Just use the image filename
+                }
+                return item;
+            });
+            return `(${formattedItems.join(', ')})`;
+        } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'image') {
+            // Single image stimulus
+            return stimulusItem.text;
         }
         // Default case (shouldn't happen)
         return String(stimulusItem);
@@ -1692,14 +1711,57 @@ document.addEventListener('DOMContentLoaded', function() {
             displayConcurrentStimuli(currentSequence);
         } else {
             const currentStimulus = currentSequence[sequenceIndex];
-            stimulusText.textContent = currentStimulus;
 
-            // Check for custom settings for this stimulus
-            const stimulusDisplay = Array.isArray(currentSequence) && currentSequence.length > 1
-                ? `[${currentSequence.join(', ')}]`
-                : currentSequence[0];
+            // Check if the stimulus is an image
+            const isImage = typeof currentStimulus === 'object' && currentStimulus.type === 'image';
 
+            // Format the stimulus display key for mapping lookup
+            const stimulusDisplay = getFormattedStimulusKey(currentSequence);
             const mapping = stimuliResponses[stimulusDisplay] || {};
+
+            if (isImage) {
+                // Handle image stimulus
+                const imageName = currentStimulus.text;
+
+                // Clear text content
+                stimulusText.textContent = '';
+
+                // Check if an image already exists, if so remove it
+                const existingImage = stimulusText.querySelector('img');
+                if (existingImage) {
+                    existingImage.remove();
+                }
+
+                // Create image element
+                const imageElement = document.createElement('img');
+                imageElement.alt = imageName;
+
+                // Check for custom width and height in mapping
+                const customWidth = mapping.width !== undefined ? mapping.width : 400; // Default width
+                const customHeight = mapping.height !== undefined ? mapping.height : 400; // Default height
+
+                // Apply width and height
+                imageElement.style.width = `${customWidth}px`;
+                imageElement.style.height = `${customHeight}px`;
+                imageElement.style.display = 'block';
+                imageElement.style.objectFit = 'contain'; // Maintain aspect ratio
+
+                // Set image source - look for the file in the current directory
+                imageElement.src = imageName;
+
+                // Handle image loading errors
+                imageElement.onerror = function() {
+                    // If image fails to load, show placeholder text
+                    imageElement.style.display = 'none';
+                    stimulusText.textContent = `[no '${imageName}' image]`;
+                };
+
+                // Add the image to the stimulus text element
+                stimulusText.appendChild(imageElement);
+            } else {
+                // Handle regular text stimulus
+                stimulusText.textContent = currentStimulus;
+            }
 
             // Apply custom or default stimulus size
             const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
@@ -1757,7 +1819,45 @@ document.addEventListener('DOMContentLoaded', function() {
             const stimulus = stimuli[i];
             const stimElement = document.createElement('div');
             stimElement.className = 'concurrent-stimulus';
-            stimElement.textContent = stimulus;
+
+            // Check if the stimulus is an image
+            const isImage = typeof stimulus === 'object' && stimulus.type === 'image';
+
+            if (isImage) {
+                // Handle image stimulus
+                const imageName = stimulus.text;
+
+                // Create image element
+                const imageElement = document.createElement('img');
+                imageElement.alt = imageName;
+
+                // Check for custom width and height in mapping
+                const stimKey = imageName.toLowerCase().replace(/\s+/g, '_');
+                const customWidth = mapping[`${stimKey}_width`] !== undefined ? mapping[`${stimKey}_width`] : (mapping.width !== undefined ? mapping.width : 400);
+                const customHeight = mapping[`${stimKey}_height`] !== undefined ? mapping[`${stimKey}_height`] : (mapping.height !== undefined ? mapping.height : 400);
+
+                // Apply width and height
+                imageElement.style.width = `${customWidth}px`;
+                imageElement.style.height = `${customHeight}px`;
+                imageElement.style.display = 'block';
+                imageElement.style.objectFit = 'contain'; // Maintain aspect ratio
+
+                // Set image source - look for the file in the current directory
+                imageElement.src = imageName;
+
+                // Handle image loading errors
+                imageElement.onerror = function() {
+                    // If image fails to load, show placeholder text
+                    imageElement.style.display = 'none';
+                    stimElement.textContent = `[no '${imageName}' image]`;
+                };
+
+                // Add the image to the stimulus element
+                stimElement.appendChild(imageElement);
+            } else {
+                // Handle regular text stimulus
+                stimElement.textContent = stimulus;
+            }
 
             // Apply styling
             stimElement.style.position = 'absolute';
@@ -1765,7 +1865,8 @@ document.addEventListener('DOMContentLoaded', function() {
             stimElement.style.left = '50%';
 
             // Get custom position if available
-            const posKey = stimulus.toLowerCase().replace(/\s+/g, '_');
+            const stimulusText = isImage ? stimulus.text : stimulus;
+            const posKey = stimulusText.toLowerCase().replace(/\s+/g, '_');
             const customX = mapping[`${posKey}_x`] !== undefined ?
                 mapping[`${posKey}_x`] : defaultPositions[i][0];
             const customY = mapping[`${posKey}_y`] !== undefined ?
@@ -2432,15 +2533,42 @@ document.addEventListener('DOMContentLoaded', function() {
             colorCell.appendChild(colorInput);
             row.appendChild(colorCell);
 
-            // Size cell - Universal size for all stimuli in the group
-            const sizeCell = document.createElement('td');
-            const sizeInput = document.createElement('input');
-            sizeInput.type = 'number';
-            sizeInput.placeholder = defaultSize;
-            sizeInput.setAttribute('data-type', 'size');
-            sizeInput.setAttribute('data-default', defaultSize);
-            sizeCell.appendChild(sizeInput);
-            row.appendChild(sizeCell);
+            // Check if this is an image stimulus (contains .jpg, .png, etc.)
+            const isImageStimulus = storedStimulus.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i);
+
+            if (isImageStimulus) {
+                // Width cell - for image stimuli
+                const widthCell = document.createElement('td');
+                const widthInput = document.createElement('input');
+                widthInput.type = 'number';
+                widthInput.placeholder = '400'; // Default width for images
+                widthInput.setAttribute('data-type', 'width');
+                widthInput.setAttribute('data-default', '400');
+                widthInput.title = 'Image Width (px)';
+                widthCell.appendChild(widthInput);
+                row.appendChild(widthCell);
+
+                // Height cell - for image stimuli
+                const heightCell = document.createElement('td');
+                const heightInput = document.createElement('input');
+                heightInput.type = 'number';
+                heightInput.placeholder = '400'; // Default height for images
+                heightInput.setAttribute('data-type', 'height');
+                heightInput.setAttribute('data-default', '400');
+                heightInput.title = 'Image Height (px)';
+                heightCell.appendChild(heightInput);
+                row.appendChild(heightCell);
+            } else {
+                // Size cell - for text stimuli
+                const sizeCell = document.createElement('td');
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'number';
+                sizeInput.placeholder = defaultSize;
+                sizeInput.setAttribute('data-type', 'size');
+                sizeInput.setAttribute('data-default', defaultSize);
+                sizeCell.appendChild(sizeInput);
+                row.appendChild(sizeCell);
+            }
 
             // Individual color and size for concurrent stimuli
             if (isConcurrent) {
@@ -2509,9 +2637,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Check for image stimuli
+        let hasImageStimuli = false;
+        parsedStimuli.forEach(item => {
+            if (Array.isArray(item)) {
+                // Check each item in the array for image type
+                item.forEach(subItem => {
+                    if (typeof subItem === 'object' && subItem.type === 'image') {
+                        hasImageStimuli = true;
+                    } else if (typeof subItem === 'string' && subItem.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) {
+                        hasImageStimuli = true;
+                    }
+                });
+            }
+        });
+
         if (!hasConcurrent) {
             // Add standard headers for regular stimuli
-            const standardHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
+            let standardHeaders;
+            if (hasImageStimuli) {
+                standardHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Width (px)', 'Height (px)'];
+            } else {
+                standardHeaders = ['X Position', 'Y Position', 'Offset (ms)', 'Color', 'Size (px)'];
+            }
             standardHeaders.forEach(header => {
                 const th = document.createElement('th');
                 th.textContent = header;

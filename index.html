@@ -240,19 +240,45 @@
 
                 <form id="survey-form" class="hidden">
                     <div class="survey-container">
-                        <div class="form-group">
-                            <label for="question-text">Question Text:</label>
-                            <textarea id="question-text" rows="3" required>Enter your question here</textarea>
+                        <h3>Survey Builder</h3>
+                        <div id="questions-container">
+                            <!-- First question (default) -->
+                            <div class="question-item" data-question-id="1">
+                                <div class="question-header">
+                                    <h4>Question 1</h4>
+                                    <button type="button" class="remove-question-btn secondary-btn" style="display: none;">Remove</button>
+                                </div>
+                                <div class="form-group">
+                                    <label for="question-text-1">Question Text:</label>
+                                    <textarea id="question-text-1" class="question-text" rows="3" required>Enter your question here</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="answer-type-1">Answer Type:</label>
+                                    <select id="answer-type-1" class="answer-type" required>
+                                        <option value="text" selected>Text (single line)</option>
+                                        <option value="textarea">Text (multi-line)</option>
+                                        <option value="radio">Multiple Choice</option>
+                                    </select>
+                                    <p class="helper-text">Select the type of answer input to display to participants.</p>
+                                </div>
+
+                                <!-- Multiple Choice Options (hidden by default) -->
+                                <div id="multiple-choice-options-1" class="multiple-choice-options form-group hidden">
+                                    <label>Multiple Choice Options:</label>
+                                    <div id="options-container-1" class="options-container">
+                                        <!-- Options will be added here dynamically -->
+                                    </div>
+                                    <button type="button" class="add-option-btn secondary-btn">Add Option</button>
+                                    <p class="helper-text">Add the options that participants can choose from.</p>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Add Question Button -->
                         <div class="form-group">
-                            <label for="answer-type">Answer Type:</label>
-                            <select id="answer-type" required>
-                                <option value="text" selected>Text (single line)</option>
-                                <option value="textarea">Text (multi-line)</option>
-                                <option value="radio">Multiple Choice</option>
-                            </select>
-                            <p class="helper-text">Select the type of answer input to display to participants.</p>
+                            <button type="button" id="add-question-btn" class="secondary-btn">Add Another Question</button>
                         </div>
+
                         <div class="form-group">
                             <div class="checkbox-container">
                                 <input type="checkbox" id="survey-save-data">

@@ -30,12 +30,19 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('experiment-form').requestSubmit();
         } else {
             // For survey mode, handle survey test
-            const questionText = document.getElementById('question-text').value;
-            const answerType = document.getElementById('answer-type').value;
-            const saveData = document.getElementById('survey-save-data').checked;
+            const questionItems = document.querySelectorAll('.question-item');
+            let isValid = true;
 
-            if (!questionText.trim()) {
-                alert('Please enter a question');
+            // Validate all questions
+            questionItems.forEach(item => {
+                const questionText = item.querySelector('.question-text').value;
+                if (!questionText.trim()) {
+                    isValid = false;
+                }
+            });
+
+            if (!isValid) {
+                alert('Please enter text for all questions');
                 return;
             }
 
@@ -55,24 +62,16 @@ document.addEventListener('DOMContentLoaded', function() {
             fixationPoint.classList.add('hidden');
             feedbackText.classList.add('hidden');
 
-            // Display the question in the stimulus text area
-            stimulusText.textContent = questionText;
-            stimulusText.style.fontSize = '32px';
-            stimulusText.style.color = 'black';
-            stimulusText.style.transform = 'translate(-50%, -50%)';
-            stimulusText.classList.remove('hidden');
+            // Hide the stimulus text (we'll use the survey container instead)
+            stimulusText.classList.add('hidden');
 
-            // Create and display answer input based on answer type
-            displaySurveyAnswerInput(answerType);
+            // Create and display the survey form with all questions
+            displaySurveyAnswerInput();
 
             // Add event listener for survey completion
             document.addEventListener('keydown', handleSurveyKeyPress);
 
-            console.log('Starting survey test with:', {
-                questionText,
-                answerType,
-                saveData
-            });
+            console.log('Starting survey test with multiple questions');
         }
     });
 
@@ -160,13 +159,28 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         } else {
             // Survey mode configuration
+            const questions = [];
+            const questionItems = document.querySelectorAll('.question-item');
+
+            questionItems.forEach(item => {
+                const questionId = item.dataset.questionId;
+                const questionText = item.querySelector('.question-text').value;
+                const answerType = item.querySelector('.answer-type').value;
+
+                questions.push({
+                    id: questionId,
+                    text: questionText,
+                    answerType: answerType,
+                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : []
+                });
+            });
+
             return {
                 id: Date.now(),
                 name: `Survey ${studyConfigurations.length + 1}`,
                 type: 'survey',
                 config: {
-                    questionText: document.getElementById('question-text').value,
-                    answerType: document.getElementById('answer-type').value,
+                    questions: questions,
                     saveData: document.getElementById('survey-save-data').checked
                 }
             };
@@ -189,21 +203,326 @@ document.addEventListener('DOMContentLoaded', function() {
             experimentForm.classList.add('hidden');
             surveyForm.classList.remove('hidden');
             console.log('Switching to Survey mode');
+
+            // Check if we need to show multiple choice options
+            toggleMultipleChoiceOptions();
         }
 
         // Update state persistence to include form type
         savedState.isExperimentMode = isExperiment;
         if (!isExperiment) {
             // Save survey-specific state
+            const questions = [];
+            const questionItems = document.querySelectorAll('.question-item');
+
+            questionItems.forEach(item => {
+                const questionId = item.dataset.questionId;
+                const questionText = item.querySelector('.question-text').value;
+                const answerType = item.querySelector('.answer-type').value;
+
+                questions.push({
+                    id: questionId,
+                    text: questionText,
+                    answerType: answerType,
+                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : []
+                });
+            });
+
             savedState.surveyState = {
-                questionText: document.getElementById('question-text').value,
-                answerType: document.getElementById('answer-type').value,
+                questions: questions,
                 saveData: document.getElementById('survey-save-data').checked
             };
         }
         localStorage.setItem('experimentBuilderState', JSON.stringify(savedState));
 
         console.log('State saved:', isExperiment ? 'Experiment mode' : 'Survey mode');
+    }
+
+    // Function to toggle multiple choice options visibility
+    function toggleMultipleChoiceOptions(selectElement) {
+        // If no element is provided, use the default one
+        if (!selectElement) {
+            selectElement = document.getElementById('answer-type-1');
+        }
+
+        // Get the question item container
+        const questionItem = selectElement.closest('.question-item');
+        if (!questionItem) return;
+
+        const questionId = questionItem.dataset.questionId;
+        const answerType = selectElement.value;
+        const optionsContainer = document.getElementById(`multiple-choice-options-${questionId}`);
+
+        if (answerType === 'radio') {
+            optionsContainer.classList.remove('hidden');
+
+            // If no options exist, add default options
+            const container = document.getElementById(`options-container-${questionId}`);
+            if (container.children.length === 0) {
+                addMultipleChoiceOption(container, 'Option 1');
+                addMultipleChoiceOption(container, 'Option 2');
+                addMultipleChoiceOption(container, 'Option 3');
+            }
+        } else {
+            optionsContainer.classList.add('hidden');
+        }
+    }
+
+    // Function to add a multiple choice option
+    function addMultipleChoiceOption(container, value = '') {
+        // If container is a string, it's an ID
+        if (typeof container === 'string') {
+            container = document.getElementById(container);
+        }
+
+        if (!container) return null;
+
+        const optionIndex = container.children.length + 1;
+
+        const optionContainer = document.createElement('div');
+        optionContainer.className = 'option-item';
+        optionContainer.style.display = 'flex';
+        optionContainer.style.marginBottom = '10px';
+        optionContainer.style.alignItems = 'center';
+
+        const optionInput = document.createElement('input');
+        optionInput.type = 'text';
+        optionInput.className = 'option-input';
+        optionInput.value = value || `Option ${optionIndex}`;
+        optionInput.style.flex = '1';
+        optionInput.style.marginRight = '10px';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-option-btn';
+        removeBtn.textContent = '×';
+        removeBtn.style.padding = '5px 10px';
+        removeBtn.style.backgroundColor = '#f44336';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '4px';
+        removeBtn.style.cursor = 'pointer';
+
+        removeBtn.addEventListener('click', function() {
+            container.removeChild(optionContainer);
+            saveCurrentState();
+        });
+
+        optionContainer.appendChild(optionInput);
+        optionContainer.appendChild(removeBtn);
+        container.appendChild(optionContainer);
+
+        // Add change listener to save state
+        optionInput.addEventListener('change', saveCurrentState);
+
+        return optionContainer;
+    }
+
+    // Function to get all multiple choice options for a specific question
+    function getMultipleChoiceOptions(questionId = '1') {
+        const options = [];
+        const container = document.getElementById(`options-container-${questionId}`);
+
+        if (container) {
+            const optionInputs = container.querySelectorAll('.option-input');
+            optionInputs.forEach(input => {
+                options.push(input.value);
+            });
+        }
+
+        return options;
+    }
+
+    // Function to add a new question
+    function addQuestion() {
+        const questionsContainer = document.getElementById('questions-container');
+        const questionCount = questionsContainer.children.length + 1;
+        const questionId = questionCount;
+
+        // Create question item
+        const questionItem = document.createElement('div');
+        questionItem.className = 'question-item';
+        questionItem.dataset.questionId = questionId;
+
+        // Create question header
+        const questionHeader = document.createElement('div');
+        questionHeader.className = 'question-header';
+
+        const questionTitle = document.createElement('h4');
+        questionTitle.textContent = `Question ${questionId}`;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-question-btn secondary-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function() {
+            questionsContainer.removeChild(questionItem);
+            renumberQuestions();
+            saveCurrentState();
+        });
+
+        questionHeader.appendChild(questionTitle);
+        questionHeader.appendChild(removeBtn);
+
+        // Create question text group
+        const questionTextGroup = document.createElement('div');
+        questionTextGroup.className = 'form-group';
+
+        const questionTextLabel = document.createElement('label');
+        questionTextLabel.htmlFor = `question-text-${questionId}`;
+        questionTextLabel.textContent = 'Question Text:';
+
+        const questionTextArea = document.createElement('textarea');
+        questionTextArea.id = `question-text-${questionId}`;
+        questionTextArea.className = 'question-text';
+        questionTextArea.rows = 3;
+        questionTextArea.required = true;
+        questionTextArea.value = 'Enter your question here';
+        questionTextArea.addEventListener('change', saveCurrentState);
+
+        questionTextGroup.appendChild(questionTextLabel);
+        questionTextGroup.appendChild(questionTextArea);
+
+        // Create answer type group
+        const answerTypeGroup = document.createElement('div');
+        answerTypeGroup.className = 'form-group';
+
+        const answerTypeLabel = document.createElement('label');
+        answerTypeLabel.htmlFor = `answer-type-${questionId}`;
+        answerTypeLabel.textContent = 'Answer Type:';
+
+        const answerTypeSelect = document.createElement('select');
+        answerTypeSelect.id = `answer-type-${questionId}`;
+        answerTypeSelect.className = 'answer-type';
+        answerTypeSelect.required = true;
+
+        const textOption = document.createElement('option');
+        textOption.value = 'text';
+        textOption.textContent = 'Text (single line)';
+        textOption.selected = true;
+
+        const textareaOption = document.createElement('option');
+        textareaOption.value = 'textarea';
+        textareaOption.textContent = 'Text (multi-line)';
+
+        const radioOption = document.createElement('option');
+        radioOption.value = 'radio';
+        radioOption.textContent = 'Multiple Choice';
+
+        answerTypeSelect.appendChild(textOption);
+        answerTypeSelect.appendChild(textareaOption);
+        answerTypeSelect.appendChild(radioOption);
+
+        answerTypeSelect.addEventListener('change', function() {
+            toggleMultipleChoiceOptions(this);
+            saveCurrentState();
+        });
+
+        const helperText = document.createElement('p');
+        helperText.className = 'helper-text';
+        helperText.textContent = 'Select the type of answer input to display to participants.';
+
+        answerTypeGroup.appendChild(answerTypeLabel);
+        answerTypeGroup.appendChild(answerTypeSelect);
+        answerTypeGroup.appendChild(helperText);
+
+        // Create multiple choice options group
+        const multipleChoiceGroup = document.createElement('div');
+        multipleChoiceGroup.id = `multiple-choice-options-${questionId}`;
+        multipleChoiceGroup.className = 'multiple-choice-options form-group hidden';
+
+        const optionsLabel = document.createElement('label');
+        optionsLabel.textContent = 'Multiple Choice Options:';
+
+        const optionsContainer = document.createElement('div');
+        optionsContainer.id = `options-container-${questionId}`;
+        optionsContainer.className = 'options-container';
+
+        const addOptionBtn = document.createElement('button');
+        addOptionBtn.type = 'button';
+        addOptionBtn.className = 'add-option-btn secondary-btn';
+        addOptionBtn.textContent = 'Add Option';
+        addOptionBtn.addEventListener('click', function() {
+            addMultipleChoiceOption(optionsContainer);
+            saveCurrentState();
+        });
+
+        const optionsHelperText = document.createElement('p');
+        optionsHelperText.className = 'helper-text';
+        optionsHelperText.textContent = 'Add the options that participants can choose from.';
+
+        multipleChoiceGroup.appendChild(optionsLabel);
+        multipleChoiceGroup.appendChild(optionsContainer);
+        multipleChoiceGroup.appendChild(addOptionBtn);
+        multipleChoiceGroup.appendChild(optionsHelperText);
+
+        // Assemble question item
+        questionItem.appendChild(questionHeader);
+        questionItem.appendChild(questionTextGroup);
+        questionItem.appendChild(answerTypeGroup);
+        questionItem.appendChild(multipleChoiceGroup);
+
+        // Add to questions container
+        questionsContainer.appendChild(questionItem);
+
+        // Show remove buttons if there's more than one question
+        updateRemoveButtons();
+
+        return questionItem;
+    }
+
+    // Function to renumber questions
+    function renumberQuestions() {
+        const questionItems = document.querySelectorAll('.question-item');
+        questionItems.forEach((item, index) => {
+            const questionNumber = index + 1;
+            item.dataset.questionId = questionNumber;
+
+            // Update title
+            const title = item.querySelector('h4');
+            if (title) title.textContent = `Question ${questionNumber}`;
+
+            // Update IDs and labels
+            const questionText = item.querySelector('.question-text');
+            const answerType = item.querySelector('.answer-type');
+            const multipleChoiceOptions = item.querySelector('.multiple-choice-options');
+            const optionsContainer = item.querySelector('.options-container');
+
+            if (questionText) {
+                questionText.id = `question-text-${questionNumber}`;
+                const label = item.querySelector('label[for^="question-text"]');
+                if (label) label.htmlFor = `question-text-${questionNumber}`;
+            }
+
+            if (answerType) {
+                answerType.id = `answer-type-${questionNumber}`;
+                const label = item.querySelector('label[for^="answer-type"]');
+                if (label) label.htmlFor = `answer-type-${questionNumber}`;
+            }
+
+            if (multipleChoiceOptions) {
+                multipleChoiceOptions.id = `multiple-choice-options-${questionNumber}`;
+            }
+
+            if (optionsContainer) {
+                optionsContainer.id = `options-container-${questionNumber}`;
+            }
+        });
+
+        // Update remove buttons visibility
+        updateRemoveButtons();
+    }
+
+    // Function to update remove buttons visibility
+    function updateRemoveButtons() {
+        const questionItems = document.querySelectorAll('.question-item');
+        const removeButtons = document.querySelectorAll('.remove-question-btn');
+
+        if (questionItems.length > 1) {
+            removeButtons.forEach(btn => btn.style.display = 'block');
+        } else {
+            removeButtons.forEach(btn => btn.style.display = 'none');
+        }
     }
 
     // Function to display configuration in study window
@@ -218,10 +537,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (config.type === 'survey') {
             // Survey block details
+            let questionCount = 1;
+            let questionPreview = '';
+
+            // Handle both new format (with questions array) and old format
+            if (config.config.questions && config.config.questions.length > 0) {
+                questionCount = config.config.questions.length;
+                questionPreview = config.config.questions[0].text.substring(0, 30) +
+                                 (config.config.questions[0].text.length > 30 ? '...' : '');
+            } else if (config.config.questionText) {
+                // Legacy support
+                questionPreview = config.config.questionText.substring(0, 30) +
+                                (config.config.questionText.length > 30 ? '...' : '');
+            }
+
             detailsHTML = `
                 <small>Type: Survey</small>
-                <small>Question: ${config.config.questionText.substring(0, 30)}${config.config.questionText.length > 30 ? '...' : ''}</small>
-                <small>Answer Type: ${config.config.answerType}</small>
+                <small>Questions: ${questionCount}</small>
+                <small>Preview: ${questionPreview}</small>
                 <small>Save Data: ${config.config.saveData ? 'Yes' : 'No'}</small>
             `;
         } else {
@@ -396,8 +729,158 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Load survey configuration
-            document.getElementById('question-text').value = config.config.questionText;
-            document.getElementById('answer-type').value = config.config.answerType;
+            const questionsContainer = document.getElementById('questions-container');
+            questionsContainer.innerHTML = ''; // Clear existing questions
+
+            // Handle both new format (with questions array) and old format
+            if (config.config.questions && config.config.questions.length > 0) {
+                // New format with multiple questions
+                config.config.questions.forEach((question, index) => {
+                    let questionItem;
+
+                    if (index === 0) {
+                        // Create the first question
+                        questionItem = document.createElement('div');
+                        questionItem.className = 'question-item';
+                        questionItem.dataset.questionId = question.id || '1';
+
+                        questionItem.innerHTML = `
+                            <div class="question-header">
+                                <h4>Question 1</h4>
+                                <button type="button" class="remove-question-btn secondary-btn" style="display: none;">Remove</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="question-text-1">Question Text:</label>
+                                <textarea id="question-text-1" class="question-text" rows="3" required>${question.text}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="answer-type-1">Answer Type:</label>
+                                <select id="answer-type-1" class="answer-type" required>
+                                    <option value="text" ${question.answerType === 'text' ? 'selected' : ''}>Text (single line)</option>
+                                    <option value="textarea" ${question.answerType === 'textarea' ? 'selected' : ''}>Text (multi-line)</option>
+                                    <option value="radio" ${question.answerType === 'radio' ? 'selected' : ''}>Multiple Choice</option>
+                                </select>
+                                <p class="helper-text">Select the type of answer input to display to participants.</p>
+                            </div>
+                            <div id="multiple-choice-options-1" class="multiple-choice-options form-group ${question.answerType === 'radio' ? '' : 'hidden'}">
+                                <label>Multiple Choice Options:</label>
+                                <div id="options-container-1" class="options-container"></div>
+                                <button type="button" class="add-option-btn secondary-btn">Add Option</button>
+                                <p class="helper-text">Add the options that participants can choose from.</p>
+                            </div>
+                        `;
+
+                        questionsContainer.appendChild(questionItem);
+
+                        // Add event listeners
+                        const answerTypeSelect = questionItem.querySelector('.answer-type');
+                        answerTypeSelect.addEventListener('change', function() {
+                            toggleMultipleChoiceOptions(this);
+                            saveCurrentState();
+                        });
+
+                        const addOptionBtn = questionItem.querySelector('.add-option-btn');
+                        addOptionBtn.addEventListener('click', function() {
+                            const container = document.getElementById(`options-container-1`);
+                            addMultipleChoiceOption(container);
+                            saveCurrentState();
+                        });
+
+                        // Add options if it's a radio type
+                        if (question.answerType === 'radio' && question.options && question.options.length > 0) {
+                            const optionsContainer = document.getElementById('options-container-1');
+                            question.options.forEach(option => {
+                                addMultipleChoiceOption(optionsContainer, option);
+                            });
+                        }
+                    } else {
+                        // Add additional questions
+                        questionItem = addQuestion();
+
+                        // Update the question with saved data
+                        const questionText = questionItem.querySelector('.question-text');
+                        const answerType = questionItem.querySelector('.answer-type');
+
+                        if (questionText) questionText.value = question.text || '';
+                        if (answerType) {
+                            answerType.value = question.answerType || 'text';
+
+                            // Add options if it's a radio type
+                            if (question.answerType === 'radio' && question.options && question.options.length > 0) {
+                                const questionId = questionItem.dataset.questionId;
+                                const optionsContainer = document.getElementById(`options-container-${questionId}`);
+                                if (optionsContainer) {
+                                    optionsContainer.innerHTML = '';
+
+                                    question.options.forEach(option => {
+                                        addMultipleChoiceOption(optionsContainer, option);
+                                    });
+
+                                    // Show options container
+                                    document.getElementById(`multiple-choice-options-${questionId}`).classList.remove('hidden');
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (config.config.questionText) {
+                // Legacy support for old format with single question
+                const questionItem = document.createElement('div');
+                questionItem.className = 'question-item';
+                questionItem.dataset.questionId = '1';
+
+                questionItem.innerHTML = `
+                    <div class="question-header">
+                        <h4>Question 1</h4>
+                        <button type="button" class="remove-question-btn secondary-btn" style="display: none;">Remove</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="question-text-1">Question Text:</label>
+                        <textarea id="question-text-1" class="question-text" rows="3" required>${config.config.questionText}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="answer-type-1">Answer Type:</label>
+                        <select id="answer-type-1" class="answer-type" required>
+                            <option value="text" ${config.config.answerType === 'text' ? 'selected' : ''}>Text (single line)</option>
+                            <option value="textarea" ${config.config.answerType === 'textarea' ? 'selected' : ''}>Text (multi-line)</option>
+                            <option value="radio" ${config.config.answerType === 'radio' ? 'selected' : ''}>Multiple Choice</option>
+                        </select>
+                        <p class="helper-text">Select the type of answer input to display to participants.</p>
+                    </div>
+                    <div id="multiple-choice-options-1" class="multiple-choice-options form-group ${config.config.answerType === 'radio' ? '' : 'hidden'}">
+                        <label>Multiple Choice Options:</label>
+                        <div id="options-container-1" class="options-container"></div>
+                        <button type="button" class="add-option-btn secondary-btn">Add Option</button>
+                        <p class="helper-text">Add the options that participants can choose from.</p>
+                    </div>
+                `;
+
+                questionsContainer.appendChild(questionItem);
+
+                // Add event listeners
+                const answerTypeSelect = questionItem.querySelector('.answer-type');
+                answerTypeSelect.addEventListener('change', function() {
+                    toggleMultipleChoiceOptions(this);
+                    saveCurrentState();
+                });
+
+                const addOptionBtn = questionItem.querySelector('.add-option-btn');
+                addOptionBtn.addEventListener('click', function() {
+                    const container = document.getElementById(`options-container-1`);
+                    addMultipleChoiceOption(container);
+                    saveCurrentState();
+                });
+
+                // Add options if it's a radio type and options exist
+                if (config.config.answerType === 'radio' && config.config.options) {
+                    const optionsContainer = document.getElementById('options-container-1');
+                    config.config.options.forEach(option => {
+                        addMultipleChoiceOption(optionsContainer, option);
+                    });
+                }
+            }
+
+            // Set save data checkbox
             document.getElementById('survey-save-data').checked = config.config.saveData;
 
             // Trigger the survey test
@@ -512,6 +995,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Add event listener for answer type change (for the first question)
+    document.getElementById('answer-type-1').addEventListener('change', function() {
+        toggleMultipleChoiceOptions(this);
+        saveCurrentState();
+    });
+
+    // Add event listener for add option button (for the first question)
+    document.querySelector('.add-option-btn').addEventListener('click', function() {
+        const questionItem = this.closest('.question-item');
+        const questionId = questionItem.dataset.questionId;
+        const container = document.getElementById(`options-container-${questionId}`);
+        addMultipleChoiceOption(container);
+        saveCurrentState();
+    });
+
+    // Add event listener for add question button
+    document.getElementById('add-question-btn').addEventListener('click', function() {
+        addQuestion();
+        saveCurrentState();
+    });
+
     // Load saved state from localStorage if available
     try {
         const savedStateJSON = localStorage.getItem('experimentBuilderState');
@@ -525,9 +1029,103 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Load survey state if it exists
                 if (savedState.surveyState) {
-                    document.getElementById('question-text').value = savedState.surveyState.questionText || '';
-                    document.getElementById('answer-type').value = savedState.surveyState.answerType || 'text';
+                    // Set save data checkbox
                     document.getElementById('survey-save-data').checked = savedState.surveyState.saveData || false;
+
+                    // Load questions if they exist
+                    if (savedState.surveyState.questions && savedState.surveyState.questions.length > 0) {
+                        // Clear existing questions except the first one
+                        const questionsContainer = document.getElementById('questions-container');
+                        const firstQuestion = questionsContainer.querySelector('.question-item');
+
+                        if (firstQuestion) {
+                            // Keep only the first question
+                            questionsContainer.innerHTML = '';
+                            questionsContainer.appendChild(firstQuestion);
+
+                            // Update the first question with saved data
+                            const firstQuestionData = savedState.surveyState.questions[0];
+                            if (firstQuestionData) {
+                                const questionText = firstQuestion.querySelector('.question-text');
+                                const answerType = firstQuestion.querySelector('.answer-type');
+
+                                if (questionText) questionText.value = firstQuestionData.text || '';
+                                if (answerType) {
+                                    answerType.value = firstQuestionData.answerType || 'text';
+
+                                    // Load options if it's a radio type
+                                    if (firstQuestionData.answerType === 'radio' && firstQuestionData.options) {
+                                        const optionsContainer = document.getElementById('options-container-1');
+                                        if (optionsContainer) {
+                                            optionsContainer.innerHTML = '';
+
+                                            firstQuestionData.options.forEach(option => {
+                                                addMultipleChoiceOption(optionsContainer, option);
+                                            });
+
+                                            // Show options container
+                                            document.getElementById('multiple-choice-options-1').classList.remove('hidden');
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Add the rest of the questions
+                            for (let i = 1; i < savedState.surveyState.questions.length; i++) {
+                                const questionData = savedState.surveyState.questions[i];
+                                const newQuestion = addQuestion();
+
+                                // Update the new question with saved data
+                                const questionText = newQuestion.querySelector('.question-text');
+                                const answerType = newQuestion.querySelector('.answer-type');
+
+                                if (questionText) questionText.value = questionData.text || '';
+                                if (answerType) {
+                                    answerType.value = questionData.answerType || 'text';
+
+                                    // Load options if it's a radio type
+                                    if (questionData.answerType === 'radio' && questionData.options) {
+                                        const questionId = newQuestion.dataset.questionId;
+                                        const optionsContainer = document.getElementById(`options-container-${questionId}`);
+                                        if (optionsContainer) {
+                                            optionsContainer.innerHTML = '';
+
+                                            questionData.options.forEach(option => {
+                                                addMultipleChoiceOption(optionsContainer, option);
+                                            });
+
+                                            // Show options container
+                                            document.getElementById(`multiple-choice-options-${questionId}`).classList.remove('hidden');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Legacy support for old format with single question
+                        if (savedState.surveyState.questionText) {
+                            document.getElementById('question-text-1').value = savedState.surveyState.questionText;
+                        }
+
+                        if (savedState.surveyState.answerType) {
+                            document.getElementById('answer-type-1').value = savedState.surveyState.answerType;
+
+                            // Load options if it's a radio type and options exist
+                            if (savedState.surveyState.answerType === 'radio' && savedState.surveyState.options) {
+                                const optionsContainer = document.getElementById('options-container-1');
+                                if (optionsContainer) {
+                                    optionsContainer.innerHTML = '';
+
+                                    savedState.surveyState.options.forEach(option => {
+                                        addMultipleChoiceOption(optionsContainer, option);
+                                    });
+
+                                    // Show options container
+                                    document.getElementById('multiple-choice-options-1').classList.remove('hidden');
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1835,121 +2433,172 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to display survey answer input based on answer type
-    function displaySurveyAnswerInput(answerType) {
+    function displaySurveyAnswerInput() {
         // Remove any existing answer input
         const existingInput = document.getElementById('survey-answer-input');
         if (existingInput) {
             existingInput.remove();
         }
 
-        // Create a container for the answer input
-        const answerContainer = document.createElement('div');
-        answerContainer.id = 'survey-answer-input';
-        answerContainer.style.position = 'absolute';
-        answerContainer.style.top = '60%';
-        answerContainer.style.left = '50%';
-        answerContainer.style.transform = 'translateX(-50%)';
-        answerContainer.style.width = '80%';
-        answerContainer.style.maxWidth = '500px';
-        answerContainer.style.textAlign = 'center';
-        answerContainer.style.zIndex = '2';
+        // Get all questions from the form
+        const questionItems = document.querySelectorAll('.question-item');
+        if (questionItems.length === 0) return;
 
-        // Create input based on answer type
-        let inputElement;
+        // Create a container for the survey
+        const surveyContainer = document.createElement('div');
+        surveyContainer.id = 'survey-answer-input';
+        surveyContainer.style.position = 'absolute';
+        surveyContainer.style.top = '10%';
+        surveyContainer.style.left = '50%';
+        surveyContainer.style.transform = 'translateX(-50%)';
+        surveyContainer.style.width = '80%';
+        surveyContainer.style.maxWidth = '600px';
+        surveyContainer.style.backgroundColor = 'white';
+        surveyContainer.style.padding = '20px';
+        surveyContainer.style.borderRadius = '8px';
+        surveyContainer.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        surveyContainer.style.maxHeight = '80vh';
+        surveyContainer.style.overflowY = 'auto';
 
-        switch(answerType.toLowerCase()) {
-            case 'text':
-                inputElement = document.createElement('input');
-                inputElement.type = 'text';
-                inputElement.placeholder = 'Type your answer here...';
-                inputElement.style.width = '100%';
-                inputElement.style.padding = '10px';
-                inputElement.style.fontSize = '18px';
-                inputElement.style.borderRadius = '4px';
-                inputElement.style.border = '1px solid #ccc';
-                break;
+        // Create a form element
+        const form = document.createElement('form');
+        form.id = 'survey-form-display';
+        form.style.width = '100%';
 
-            case 'textarea':
-                inputElement = document.createElement('textarea');
-                inputElement.placeholder = 'Type your answer here...';
-                inputElement.rows = 4;
-                inputElement.style.width = '100%';
-                inputElement.style.padding = '10px';
-                inputElement.style.fontSize = '18px';
-                inputElement.style.borderRadius = '4px';
-                inputElement.style.border = '1px solid #ccc';
-                break;
+        // Add each question to the form
+        questionItems.forEach((item, index) => {
+            const questionId = item.dataset.questionId;
+            const questionText = item.querySelector('.question-text').value;
+            const answerType = item.querySelector('.answer-type').value;
 
-            case 'radio':
-                // Create a fieldset for radio options
-                inputElement = document.createElement('fieldset');
-                inputElement.style.border = 'none';
-                inputElement.style.padding = '10px';
-                inputElement.style.margin = '0';
-                inputElement.style.textAlign = 'left';
+            // Create question container
+            const questionContainer = document.createElement('div');
+            questionContainer.className = 'survey-question';
+            questionContainer.style.marginBottom = '30px';
+            questionContainer.dataset.questionId = questionId;
 
-                // Add some sample options
-                const options = ['Option 1', 'Option 2', 'Option 3'];
-                options.forEach((option, index) => {
-                    const container = document.createElement('div');
-                    container.style.margin = '10px 0';
+            // Create question label
+            const questionLabel = document.createElement('h3');
+            questionLabel.textContent = `${index + 1}. ${questionText}`;
+            questionLabel.style.marginBottom = '15px';
+            questionLabel.style.color = '#2196F3';
 
-                    const radio = document.createElement('input');
-                    radio.type = 'radio';
-                    radio.name = 'survey-radio';
-                    radio.id = `survey-radio-${index}`;
-                    radio.value = option;
-                    radio.style.marginRight = '10px';
+            questionContainer.appendChild(questionLabel);
 
-                    const label = document.createElement('label');
-                    label.htmlFor = `survey-radio-${index}`;
-                    label.textContent = option;
-                    label.style.fontSize = '18px';
+            // Create input based on answer type
+            let inputElement;
 
-                    container.appendChild(radio);
-                    container.appendChild(label);
-                    inputElement.appendChild(container);
-                });
-                break;
+            switch(answerType.toLowerCase()) {
+                case 'text':
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'text';
+                    inputElement.name = `question-${questionId}`;
+                    inputElement.placeholder = 'Type your answer here...';
+                    inputElement.style.width = '100%';
+                    inputElement.style.padding = '10px';
+                    inputElement.style.fontSize = '16px';
+                    inputElement.style.borderRadius = '4px';
+                    inputElement.style.border = '1px solid #ccc';
+                    break;
 
-            default:
-                // Default to text input
-                inputElement = document.createElement('input');
-                inputElement.type = 'text';
-                inputElement.placeholder = 'Type your answer here...';
-                inputElement.style.width = '100%';
-                inputElement.style.padding = '10px';
-                inputElement.style.fontSize = '18px';
-                inputElement.style.borderRadius = '4px';
-                inputElement.style.border = '1px solid #ccc';
-        }
+                case 'textarea':
+                    inputElement = document.createElement('textarea');
+                    inputElement.name = `question-${questionId}`;
+                    inputElement.placeholder = 'Type your answer here...';
+                    inputElement.rows = 4;
+                    inputElement.style.width = '100%';
+                    inputElement.style.padding = '10px';
+                    inputElement.style.fontSize = '16px';
+                    inputElement.style.borderRadius = '4px';
+                    inputElement.style.border = '1px solid #ccc';
+                    break;
 
-        // Add the input to the container
-        answerContainer.appendChild(inputElement);
+                case 'radio':
+                    // Create a fieldset for radio options
+                    inputElement = document.createElement('fieldset');
+                    inputElement.style.border = 'none';
+                    inputElement.style.padding = '10px';
+                    inputElement.style.margin = '0';
+                    inputElement.style.textAlign = 'left';
+
+                    // Get custom options from the form
+                    const options = getMultipleChoiceOptions(questionId);
+
+                    // If no options are defined, use defaults
+                    if (options.length === 0) {
+                        options.push('Option 1', 'Option 2', 'Option 3');
+                    }
+
+                    options.forEach((option, optIndex) => {
+                        const container = document.createElement('div');
+                        container.style.margin = '10px 0';
+
+                        const radio = document.createElement('input');
+                        radio.type = 'radio';
+                        radio.name = `question-${questionId}`;
+                        radio.id = `question-${questionId}-option-${optIndex}`;
+                        radio.value = option;
+                        radio.style.marginRight = '10px';
+
+                        const label = document.createElement('label');
+                        label.htmlFor = `question-${questionId}-option-${optIndex}`;
+                        label.textContent = option;
+                        label.style.fontSize = '16px';
+
+                        container.appendChild(radio);
+                        container.appendChild(label);
+                        inputElement.appendChild(container);
+                    });
+                    break;
+
+                default:
+                    // Default to text input
+                    inputElement = document.createElement('input');
+                    inputElement.type = 'text';
+                    inputElement.name = `question-${questionId}`;
+                    inputElement.placeholder = 'Type your answer here...';
+                    inputElement.style.width = '100%';
+                    inputElement.style.padding = '10px';
+                    inputElement.style.fontSize = '16px';
+                    inputElement.style.borderRadius = '4px';
+                    inputElement.style.border = '1px solid #ccc';
+            }
+
+            // Add the input to the question container
+            questionContainer.appendChild(inputElement);
+
+            // Add the question container to the form
+            form.appendChild(questionContainer);
+        });
 
         // Add a submit button
         const submitButton = document.createElement('button');
-        submitButton.textContent = 'Submit';
-        submitButton.style.marginTop = '15px';
-        submitButton.style.padding = '10px 20px';
-        submitButton.style.fontSize = '16px';
+        submitButton.type = 'button';
+        submitButton.textContent = 'Submit Survey';
+        submitButton.style.marginTop = '20px';
+        submitButton.style.padding = '12px 24px';
+        submitButton.style.fontSize = '18px';
         submitButton.style.backgroundColor = '#4CAF50';
         submitButton.style.color = 'white';
         submitButton.style.border = 'none';
         submitButton.style.borderRadius = '4px';
         submitButton.style.cursor = 'pointer';
+        submitButton.style.display = 'block';
+        submitButton.style.margin = '20px auto';
 
         // Add event listener to the submit button
         submitButton.addEventListener('click', completeSurvey);
 
-        answerContainer.appendChild(submitButton);
+        form.appendChild(submitButton);
+        surveyContainer.appendChild(form);
 
         // Add the container to the experiment screen
-        experimentScreen.appendChild(answerContainer);
+        experimentScreen.appendChild(surveyContainer);
 
-        // Focus on the input element if it's a text input or textarea
-        if (inputElement.tagName === 'INPUT' || inputElement.tagName === 'TEXTAREA') {
-            inputElement.focus();
+        // Focus on the first input element
+        const firstInput = form.querySelector('input, textarea');
+        if (firstInput) {
+            firstInput.focus();
         }
     }
 
@@ -1963,34 +2612,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to complete the survey and return to the intro screen
     function completeSurvey() {
-        // Get the answer input
-        const answerInput = document.getElementById('survey-answer-input');
-        let answer = '';
+        // Get the answer input container
+        const surveyContainer = document.getElementById('survey-answer-input');
+        const answers = {};
 
-        if (answerInput) {
-            // Get the input element based on the answer type
-            const inputElement = answerInput.querySelector('input[type="text"], textarea');
-            const radioElements = answerInput.querySelectorAll('input[type="radio"]');
+        if (surveyContainer) {
+            // Get all question containers
+            const questionContainers = surveyContainer.querySelectorAll('.survey-question');
 
-            if (inputElement) {
-                answer = inputElement.value;
-            } else if (radioElements.length > 0) {
-                // Find the selected radio button
-                radioElements.forEach(radio => {
-                    if (radio.checked) {
-                        answer = radio.value;
-                    }
-                });
-            }
+            // Process each question
+            questionContainers.forEach(container => {
+                const questionId = container.dataset.questionId;
+                let answer = '';
+
+                // Get the input element based on what's in the container
+                const textInput = container.querySelector('input[type="text"]');
+                const textareaInput = container.querySelector('textarea');
+                const radioInputs = container.querySelectorAll('input[type="radio"]');
+
+                if (textInput) {
+                    answer = textInput.value;
+                } else if (textareaInput) {
+                    answer = textareaInput.value;
+                } else if (radioInputs.length > 0) {
+                    // Find the selected radio button
+                    radioInputs.forEach(radio => {
+                        if (radio.checked) {
+                            answer = radio.value;
+                        }
+                    });
+                }
+
+                // Store the answer
+                answers[questionId] = answer;
+            });
 
             // Save the survey data if enabled
-            const saveData = document.getElementById('survey-save-data').checked;
-            if (saveData) {
-                saveSurveyData(answer);
+            const saveDataEnabled = document.getElementById('survey-save-data').checked;
+            if (saveDataEnabled) {
+                saveSurveyData(answers);
             }
 
-            // Remove the answer input
-            answerInput.remove();
+            // Remove the survey container
+            surveyContainer.remove();
         }
 
         // Remove the keydown event listener
@@ -1999,7 +2663,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset the stimulus text
         stimulusText.classList.add('hidden');
 
-        console.log('Survey completed with answer:', answer);
+        console.log('Survey completed with answers:', answers);
 
         if (isStudyMode) {
             // In study mode, proceed to the next configuration
@@ -2017,19 +2681,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to save survey data
-    function saveSurveyData(answer) {
+    function saveSurveyData(answers) {
         const now = new Date();
         const timestamp = formatDateTime(now);
 
-        const surveyData = {
-            Timestamp: timestamp,
-            Question: document.getElementById('question-text').value,
-            Answer: answer,
-            AnswerType: document.getElementById('answer-type').value
-        };
+        // Get all questions from the form
+        const questionItems = document.querySelectorAll('.question-item');
+        const surveyData = [];
+
+        // Process each question
+        questionItems.forEach(item => {
+            const questionId = item.dataset.questionId;
+            const questionText = item.querySelector('.question-text').value;
+            const answerType = item.querySelector('.answer-type').value;
+
+            // Add the question and answer to the survey data
+            surveyData.push({
+                Timestamp: timestamp,
+                QuestionNumber: questionId,
+                Question: questionText,
+                Answer: answers[questionId] || '',
+                AnswerType: answerType
+            });
+        });
 
         // Create a JSON blob and trigger download
-        const dataStr = JSON.stringify([surveyData], null, 2);
+        const dataStr = JSON.stringify(surveyData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
 
         // Create timestamp for filename

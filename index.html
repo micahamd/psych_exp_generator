@@ -236,12 +236,31 @@
                         </div>
                         <p class="helper-text">When checked, experiment data will be saved and available for download when the experiment completes.</p>
                     </div>
-                    
-                    <div class="button-group">
-                        <button type="submit" id="begin-btn">TEST (run first)</button>
-                        <button type="button" id="add-to-study-btn">Add Study</button>
+                </form>
+                
+                <form id="survey-form" class="hidden">
+                    <div class="survey-container">
+                        <div class="form-group">
+                            <label for="question-text">Question Text:</label>
+                            <textarea id="question-text" rows="3" required>Enter your question here</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="answer-type">Answer Type:</label>
+                            <input type="text" id="answer-type" value="text" required>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="survey-save-data">
+                                <label for="survey-save-data">Save Data</label>
+                            </div>
+                        </div>
                     </div>
                 </form>
+
+                <div class="button-group">
+                    <button type="button" id="begin-btn">TEST (run first)</button>
+                    <button type="button" id="add-to-study-btn">Add Study</button>
+                </div>
             </div>
             <div class="right-panel">
                 <div id="study-window">
@@ -298,27 +317,14 @@
     </div>
     
     <div id="completion-screen" class="container hidden">
-        <h2 id="completion-message">Task complete!</h2>
-        <div id="completion-stats" class="hidden"></div>
-        <button id="ok-btn">OK</button>
-    </div>
-
-    <form id="survey-form" class="hidden">
-        <div class="form-group">
-            <label for="question-text">Question Text:</label>
-            <textarea id="question-text" rows="3" required>Enter your question here</textarea>
-        </div>
-        <div class="form-group">
-            <label for="answer-type">Answer Type:</label>
-            <input type="text" id="answer-type" value="text" required>
-        </div>
-        <div class="form-group">
-            <div class="checkbox-container">
-                <input type="checkbox" id="survey-save-data">
-                <label for="survey-save-data">Save Data</label>
+        <h2 id="completion-message"></h2>
+        <div id="completion-stats" class="hidden">
+            <div class="stats-container">
+                <!-- Stats content will be dynamically inserted -->
             </div>
         </div>
-    </form>
+        <button id="ok-btn">OK</button>
+    </div>
 
     <script src="script.js"></script>
 </body>

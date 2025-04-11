@@ -24,6 +24,38 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleFormMode(isExperimentMode);
     });
 
+    document.getElementById('begin-btn').addEventListener('click', function() {
+        if (isExperimentMode) {
+            // For experiment mode, trigger the experiment form submission
+            document.getElementById('experiment-form').requestSubmit();
+        } else {
+            // For survey mode, handle survey test
+            const surveyForm = document.getElementById('survey-form');
+            const questionText = document.getElementById('question-text').value;
+            const answerType = document.getElementById('answer-type').value;
+            const saveData = document.getElementById('survey-save-data').checked;
+            
+            if (!questionText.trim()) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            // Save current state before starting
+            saveCurrentState();
+            
+            // Hide intro screen and show survey test interface
+            introScreen.classList.add('hidden');
+            experimentScreen.classList.remove('hidden');
+            
+            // We'll implement the actual survey display logic later
+            console.log('Starting survey test with:', {
+                questionText,
+                answerType,
+                saveData
+            });
+        }
+    });
+
     // Experiment variables
     let trialInterval;
     let fixationInterval;

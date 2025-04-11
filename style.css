@@ -693,3 +693,31 @@ input:checked + .slider:before {
     font-weight: bold;
     color: #666;
 }
+
+.survey-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.survey-container .form-group {
+    margin-bottom: 20px;
+}
+
+.survey-container textarea,
+.survey-container input[type="text"] {
+    width: 100%;
+    max-width: 580px;
+}
+
+.button-group {
+    margin-top: 20px;
+    padding: 10px;
+    border-top: 1px solid #eee;
+}
+
+.stats-container {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 15px;
+}

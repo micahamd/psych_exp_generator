@@ -167,11 +167,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 const questionText = item.querySelector('.question-text').value;
                 const answerType = item.querySelector('.answer-type').value;
 
+                // Get slider configuration if applicable
+                let sliderConfig = null;
+                if (answerType === 'slider') {
+                    sliderConfig = {
+                        min: parseInt(item.querySelector(`.slider-min`).value) || 1,
+                        max: parseInt(item.querySelector(`.slider-max`).value) || 9,
+                        leftLabel: item.querySelector(`.slider-left-label`).value || 'Left',
+                        rightLabel: item.querySelector(`.slider-right-label`).value || 'Right'
+                    };
+                }
+
                 questions.push({
                     id: questionId,
                     text: questionText,
                     answerType: answerType,
-                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : []
+                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : [],
+                    sliderConfig: sliderConfig
                 });
             });
 
@@ -220,11 +232,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 const questionText = item.querySelector('.question-text').value;
                 const answerType = item.querySelector('.answer-type').value;
 
+                // Get slider configuration if applicable
+                let sliderConfig = null;
+                if (answerType === 'slider') {
+                    sliderConfig = {
+                        min: parseInt(item.querySelector(`.slider-min`).value) || 1,
+                        max: parseInt(item.querySelector(`.slider-max`).value) || 9,
+                        leftLabel: item.querySelector(`.slider-left-label`).value || 'Left',
+                        rightLabel: item.querySelector(`.slider-right-label`).value || 'Right'
+                    };
+                }
+
                 questions.push({
                     id: questionId,
                     text: questionText,
                     answerType: answerType,
-                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : []
+                    options: answerType === 'radio' ? getMultipleChoiceOptions(questionId) : [],
+                    sliderConfig: sliderConfig
                 });
             });
 
@@ -238,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('State saved:', isExperiment ? 'Experiment mode' : 'Survey mode');
     }
 
-    // Function to toggle multiple choice options visibility
+    // Function to toggle answer type specific options visibility
     function toggleMultipleChoiceOptions(selectElement) {
         // If no element is provided, use the default one
         if (!selectElement) {
@@ -251,10 +275,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const questionId = questionItem.dataset.questionId;
         const answerType = selectElement.value;
-        const optionsContainer = document.getElementById(`multiple-choice-options-${questionId}`);
+        const multipleChoiceContainer = document.getElementById(`multiple-choice-options-${questionId}`);
+        const sliderContainer = document.getElementById(`slider-options-${questionId}`);
 
+        // Hide all option containers first
+        if (multipleChoiceContainer) multipleChoiceContainer.classList.add('hidden');
+        if (sliderContainer) sliderContainer.classList.add('hidden');
+
+        // Show the appropriate container based on answer type
         if (answerType === 'radio') {
-            optionsContainer.classList.remove('hidden');
+            multipleChoiceContainer.classList.remove('hidden');
 
             // If no options exist, add default options
             const container = document.getElementById(`options-container-${questionId}`);
@@ -263,8 +293,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 addMultipleChoiceOption(container, 'Option 2');
                 addMultipleChoiceOption(container, 'Option 3');
             }
-        } else {
-            optionsContainer.classList.add('hidden');
+        } else if (answerType === 'slider') {
+            sliderContainer.classList.remove('hidden');
         }
     }
 
@@ -409,9 +439,14 @@ document.addEventListener('DOMContentLoaded', function() {
         radioOption.value = 'radio';
         radioOption.textContent = 'Multiple Choice';
 
+        const sliderOption = document.createElement('option');
+        sliderOption.value = 'slider';
+        sliderOption.textContent = 'Slider Scale';
+
         answerTypeSelect.appendChild(textOption);
         answerTypeSelect.appendChild(textareaOption);
         answerTypeSelect.appendChild(radioOption);
+        answerTypeSelect.appendChild(sliderOption);
 
         answerTypeSelect.addEventListener('change', function() {
             toggleMultipleChoiceOptions(this);
@@ -456,11 +491,49 @@ document.addEventListener('DOMContentLoaded', function() {
         multipleChoiceGroup.appendChild(addOptionBtn);
         multipleChoiceGroup.appendChild(optionsHelperText);
 
+        // Create slider options group
+        const sliderOptionsGroup = document.createElement('div');
+        sliderOptionsGroup.id = `slider-options-${questionId}`;
+        sliderOptionsGroup.className = 'slider-options form-group hidden';
+
+        sliderOptionsGroup.innerHTML = `
+            <label>Slider Scale Options:</label>
+            <div class="slider-config">
+                <div class="slider-row">
+                    <div class="slider-field">
+                        <label for="slider-min-${questionId}">Min Value:</label>
+                        <input type="number" id="slider-min-${questionId}" class="slider-min" value="1" min="0" max="100">
+                    </div>
+                    <div class="slider-field">
+                        <label for="slider-max-${questionId}">Max Value:</label>
+                        <input type="number" id="slider-max-${questionId}" class="slider-max" value="9" min="1" max="100">
+                    </div>
+                </div>
+                <div class="slider-row">
+                    <div class="slider-field">
+                        <label for="slider-left-label-${questionId}">Left Label:</label>
+                        <input type="text" id="slider-left-label-${questionId}" class="slider-left-label" value="Left">
+                    </div>
+                    <div class="slider-field">
+                        <label for="slider-right-label-${questionId}">Right Label:</label>
+                        <input type="text" id="slider-right-label-${questionId}" class="slider-right-label" value="Right">
+                    </div>
+                </div>
+            </div>
+            <p class="helper-text">Configure the slider scale range and labels.</p>
+        `;
+
+        // Add change event listeners to slider inputs
+        sliderOptionsGroup.querySelectorAll('input').forEach(input => {
+            input.addEventListener('change', saveCurrentState);
+        });
+
         // Assemble question item
         questionItem.appendChild(questionHeader);
         questionItem.appendChild(questionTextGroup);
         questionItem.appendChild(answerTypeGroup);
         questionItem.appendChild(multipleChoiceGroup);
+        questionItem.appendChild(sliderOptionsGroup);
 
         // Add to questions container
         questionsContainer.appendChild(questionItem);
@@ -487,6 +560,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const answerType = item.querySelector('.answer-type');
             const multipleChoiceOptions = item.querySelector('.multiple-choice-options');
             const optionsContainer = item.querySelector('.options-container');
+            const sliderOptions = item.querySelector('.slider-options');
+            const sliderMin = item.querySelector('.slider-min');
+            const sliderMax = item.querySelector('.slider-max');
+            const sliderLeftLabel = item.querySelector('.slider-left-label');
+            const sliderRightLabel = item.querySelector('.slider-right-label');
 
             if (questionText) {
                 questionText.id = `question-text-${questionNumber}`;
@@ -506,6 +584,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (optionsContainer) {
                 optionsContainer.id = `options-container-${questionNumber}`;
+            }
+
+            // Update slider options IDs
+            if (sliderOptions) {
+                sliderOptions.id = `slider-options-${questionNumber}`;
+            }
+
+            if (sliderMin) {
+                sliderMin.id = `slider-min-${questionNumber}`;
+                const label = item.querySelector(`label[for^="slider-min"]`);
+                if (label) label.htmlFor = `slider-min-${questionNumber}`;
+            }
+
+            if (sliderMax) {
+                sliderMax.id = `slider-max-${questionNumber}`;
+                const label = item.querySelector(`label[for^="slider-max"]`);
+                if (label) label.htmlFor = `slider-max-${questionNumber}`;
+            }
+
+            if (sliderLeftLabel) {
+                sliderLeftLabel.id = `slider-left-label-${questionNumber}`;
+                const label = item.querySelector(`label[for^="slider-left-label"]`);
+                if (label) label.htmlFor = `slider-left-label-${questionNumber}`;
+            }
+
+            if (sliderRightLabel) {
+                sliderRightLabel.id = `slider-right-label-${questionNumber}`;
+                const label = item.querySelector(`label[for^="slider-right-label"]`);
+                if (label) label.htmlFor = `slider-right-label-${questionNumber}`;
             }
         });
 
@@ -759,6 +866,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <option value="text" ${question.answerType === 'text' ? 'selected' : ''}>Text (single line)</option>
                                     <option value="textarea" ${question.answerType === 'textarea' ? 'selected' : ''}>Text (multi-line)</option>
                                     <option value="radio" ${question.answerType === 'radio' ? 'selected' : ''}>Multiple Choice</option>
+                                    <option value="slider" ${question.answerType === 'slider' ? 'selected' : ''}>Slider Scale</option>
                                 </select>
                                 <p class="helper-text">Select the type of answer input to display to participants.</p>
                             </div>
@@ -767,6 +875,32 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div id="options-container-1" class="options-container"></div>
                                 <button type="button" class="add-option-btn secondary-btn">Add Option</button>
                                 <p class="helper-text">Add the options that participants can choose from.</p>
+                            </div>
+                            <div id="slider-options-1" class="slider-options form-group ${question.answerType === 'slider' ? '' : 'hidden'}">
+                                <label>Slider Scale Options:</label>
+                                <div class="slider-config">
+                                    <div class="slider-row">
+                                        <div class="slider-field">
+                                            <label for="slider-min-1">Min Value:</label>
+                                            <input type="number" id="slider-min-1" class="slider-min" value="${question.sliderConfig ? question.sliderConfig.min : '1'}" min="0" max="100">
+                                        </div>
+                                        <div class="slider-field">
+                                            <label for="slider-max-1">Max Value:</label>
+                                            <input type="number" id="slider-max-1" class="slider-max" value="${question.sliderConfig ? question.sliderConfig.max : '9'}" min="1" max="100">
+                                        </div>
+                                    </div>
+                                    <div class="slider-row">
+                                        <div class="slider-field">
+                                            <label for="slider-left-label-1">Left Label:</label>
+                                            <input type="text" id="slider-left-label-1" class="slider-left-label" value="${question.sliderConfig ? question.sliderConfig.leftLabel : 'Left'}">
+                                        </div>
+                                        <div class="slider-field">
+                                            <label for="slider-right-label-1">Right Label:</label>
+                                            <input type="text" id="slider-right-label-1" class="slider-right-label" value="${question.sliderConfig ? question.sliderConfig.rightLabel : 'Right'}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="helper-text">Configure the slider scale range and labels.</p>
                             </div>
                         `;
 
@@ -820,6 +954,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                     document.getElementById(`multiple-choice-options-${questionId}`).classList.remove('hidden');
                                 }
                             }
+
+                            // Configure slider if it's a slider type
+                            if (question.answerType === 'slider' && question.sliderConfig) {
+                                const questionId = questionItem.dataset.questionId;
+                                const sliderOptions = document.getElementById(`slider-options-${questionId}`);
+                                if (sliderOptions) {
+                                    // Set slider values
+                                    const minInput = document.getElementById(`slider-min-${questionId}`);
+                                    const maxInput = document.getElementById(`slider-max-${questionId}`);
+                                    const leftLabelInput = document.getElementById(`slider-left-label-${questionId}`);
+                                    const rightLabelInput = document.getElementById(`slider-right-label-${questionId}`);
+
+                                    if (minInput) minInput.value = question.sliderConfig.min || 1;
+                                    if (maxInput) maxInput.value = question.sliderConfig.max || 9;
+                                    if (leftLabelInput) leftLabelInput.value = question.sliderConfig.leftLabel || 'Left';
+                                    if (rightLabelInput) rightLabelInput.value = question.sliderConfig.rightLabel || 'Right';
+
+                                    // Show slider options container
+                                    sliderOptions.classList.remove('hidden');
+                                }
+                            }
                         }
                     }
                 });
@@ -844,6 +999,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <option value="text" ${config.config.answerType === 'text' ? 'selected' : ''}>Text (single line)</option>
                             <option value="textarea" ${config.config.answerType === 'textarea' ? 'selected' : ''}>Text (multi-line)</option>
                             <option value="radio" ${config.config.answerType === 'radio' ? 'selected' : ''}>Multiple Choice</option>
+                            <option value="slider" ${config.config.answerType === 'slider' ? 'selected' : ''}>Slider Scale</option>
                         </select>
                         <p class="helper-text">Select the type of answer input to display to participants.</p>
                     </div>
@@ -852,6 +1008,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div id="options-container-1" class="options-container"></div>
                         <button type="button" class="add-option-btn secondary-btn">Add Option</button>
                         <p class="helper-text">Add the options that participants can choose from.</p>
+                    </div>
+                    <div id="slider-options-1" class="slider-options form-group ${config.config.answerType === 'slider' ? '' : 'hidden'}">
+                        <label>Slider Scale Options:</label>
+                        <div class="slider-config">
+                            <div class="slider-row">
+                                <div class="slider-field">
+                                    <label for="slider-min-1">Min Value:</label>
+                                    <input type="number" id="slider-min-1" class="slider-min" value="${config.config.sliderConfig ? config.config.sliderConfig.min : '1'}" min="0" max="100">
+                                </div>
+                                <div class="slider-field">
+                                    <label for="slider-max-1">Max Value:</label>
+                                    <input type="number" id="slider-max-1" class="slider-max" value="${config.config.sliderConfig ? config.config.sliderConfig.max : '9'}" min="1" max="100">
+                                </div>
+                            </div>
+                            <div class="slider-row">
+                                <div class="slider-field">
+                                    <label for="slider-left-label-1">Left Label:</label>
+                                    <input type="text" id="slider-left-label-1" class="slider-left-label" value="${config.config.sliderConfig ? config.config.sliderConfig.leftLabel : 'Left'}">
+                                </div>
+                                <div class="slider-field">
+                                    <label for="slider-right-label-1">Right Label:</label>
+                                    <input type="text" id="slider-right-label-1" class="slider-right-label" value="${config.config.sliderConfig ? config.config.sliderConfig.rightLabel : 'Right'}">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="helper-text">Configure the slider scale range and labels.</p>
                     </div>
                 `;
 
@@ -2551,6 +2733,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     break;
 
+                case 'slider':
+                    // Create a container for the slider
+                    inputElement = document.createElement('div');
+                    inputElement.className = 'slider-container';
+                    inputElement.style.width = '100%';
+                    inputElement.style.padding = '10px';
+
+                    // Get slider configuration from the form
+                    const questionItem = document.querySelector(`.question-item[data-question-id="${questionId}"]`);
+                    const minValue = parseInt(questionItem.querySelector('.slider-min').value) || 1;
+                    const maxValue = parseInt(questionItem.querySelector('.slider-max').value) || 9;
+                    const leftLabel = questionItem.querySelector('.slider-left-label').value || 'Left';
+                    const rightLabel = questionItem.querySelector('.slider-right-label').value || 'Right';
+
+                    // Create the slider input
+                    const slider = document.createElement('input');
+                    slider.type = 'range';
+                    slider.name = `question-${questionId}`;
+                    slider.min = minValue;
+                    slider.max = maxValue;
+                    slider.value = Math.floor((maxValue + minValue) / 2); // Start in the middle
+                    slider.style.width = '100%';
+
+                    // Create labels container
+                    const labelsContainer = document.createElement('div');
+                    labelsContainer.className = 'slider-labels';
+
+                    // Create left label
+                    const leftLabelSpan = document.createElement('span');
+                    leftLabelSpan.textContent = leftLabel;
+
+                    // Create right label
+                    const rightLabelSpan = document.createElement('span');
+                    rightLabelSpan.textContent = rightLabel;
+
+                    // Add labels to container
+                    labelsContainer.appendChild(leftLabelSpan);
+                    labelsContainer.appendChild(rightLabelSpan);
+
+                    // Create value display
+                    const valueDisplay = document.createElement('div');
+                    valueDisplay.className = 'slider-value-display';
+                    valueDisplay.textContent = slider.value;
+
+                    // Update value display when slider changes
+                    slider.addEventListener('input', function() {
+                        valueDisplay.textContent = this.value;
+                    });
+
+                    // Add all elements to the container
+                    inputElement.appendChild(slider);
+                    inputElement.appendChild(labelsContainer);
+                    inputElement.appendChild(valueDisplay);
+                    break;
+
                 default:
                     // Default to text input
                     inputElement = document.createElement('input');
@@ -2629,6 +2866,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const textInput = container.querySelector('input[type="text"]');
                 const textareaInput = container.querySelector('textarea');
                 const radioInputs = container.querySelectorAll('input[type="radio"]');
+                const sliderInput = container.querySelector('input[type="range"]');
 
                 if (textInput) {
                     answer = textInput.value;
@@ -2641,6 +2879,21 @@ document.addEventListener('DOMContentLoaded', function() {
                             answer = radio.value;
                         }
                     });
+                } else if (sliderInput) {
+                    // Get the slider value
+                    answer = sliderInput.value;
+
+                    // Get the slider configuration for additional context
+                    const questionItem = document.querySelector(`.question-item[data-question-id="${questionId}"]`);
+                    if (questionItem) {
+                        const minValue = questionItem.querySelector('.slider-min')?.value || '1';
+                        const maxValue = questionItem.querySelector('.slider-max')?.value || '9';
+                        const leftLabel = questionItem.querySelector('.slider-left-label')?.value || 'Left';
+                        const rightLabel = questionItem.querySelector('.slider-right-label')?.value || 'Right';
+
+                        // Add context to the answer
+                        answer = `${answer} (on scale from ${minValue} to ${maxValue}, where ${minValue} = "${leftLabel}" and ${maxValue} = "${rightLabel}")`;
+                    }
                 }
 
                 // Store the answer

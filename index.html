@@ -258,6 +258,7 @@
                                         <option value="text" selected>Text (single line)</option>
                                         <option value="textarea">Text (multi-line)</option>
                                         <option value="radio">Multiple Choice</option>
+                                        <option value="slider">Slider Scale</option>
                                     </select>
                                     <p class="helper-text">Select the type of answer input to display to participants.</p>
                                 </div>
@@ -270,6 +271,34 @@
                                     </div>
                                     <button type="button" class="add-option-btn secondary-btn">Add Option</button>
                                     <p class="helper-text">Add the options that participants can choose from.</p>
+                                </div>
+
+                                <!-- Slider Options (hidden by default) -->
+                                <div id="slider-options-1" class="slider-options form-group hidden">
+                                    <label>Slider Scale Options:</label>
+                                    <div class="slider-config">
+                                        <div class="slider-row">
+                                            <div class="slider-field">
+                                                <label for="slider-min-1">Min Value:</label>
+                                                <input type="number" id="slider-min-1" class="slider-min" value="1" min="0" max="100">
+                                            </div>
+                                            <div class="slider-field">
+                                                <label for="slider-max-1">Max Value:</label>
+                                                <input type="number" id="slider-max-1" class="slider-max" value="9" min="1" max="100">
+                                            </div>
+                                        </div>
+                                        <div class="slider-row">
+                                            <div class="slider-field">
+                                                <label for="slider-left-label-1">Left Label:</label>
+                                                <input type="text" id="slider-left-label-1" class="slider-left-label" value="Left">
+                                            </div>
+                                            <div class="slider-field">
+                                                <label for="slider-right-label-1">Right Label:</label>
+                                                <input type="text" id="slider-right-label-1" class="slider-right-label" value="Right">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="helper-text">Configure the slider scale range and labels.</p>
                                 </div>
                             </div>
                         </div>

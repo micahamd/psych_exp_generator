@@ -719,6 +719,63 @@ input:checked + .slider:before {
     background-color: #f9f9f9;
 }
 
+/* Slider configuration styles */
+.slider-config {
+    margin: 10px 0;
+}
+
+.slider-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.slider-field {
+    flex: 0 0 48%;
+}
+
+.slider-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.slider-field input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Slider display styles */
+.slider-container {
+    margin: 20px 0;
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+}
+
+.slider-labels span {
+    font-size: 14px;
+    color: #666;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.slider-value-display {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 5px;
+    font-size: 16px;
+    color: #2196F3;
+}
+
 .question-header {
     display: flex;
     justify-content: space-between;

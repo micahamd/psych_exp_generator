@@ -1516,16 +1516,16 @@ document.addEventListener('DOMContentLoaded', function() {
         savedState = currentState;
     }
 
-    // Parse stimuli input to handle sequences, concurrent stimuli, and images
+    // Parse stimuli input to handle sequences, concurrent stimuli, and images with nested structures
     function parseStimuli(input) {
         const result = [];
-        let inSequence = false;
-        let inConcurrent = false;
+        let bracketStack = []; // Stack to track nested brackets
         let currentItem = '';
         let currentSequence = [];
         let currentConcurrent = [];
+        let nestedStructures = []; // Stack to track nested structures
 
-        // Helper function to add an item to the result
+        // Helper function to add an item to the appropriate container
         function addItem() {
             const trimmed = currentItem.trim();
             if (trimmed) {
@@ -1533,16 +1533,79 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(trimmed);
                 const itemWithType = isImage ? { text: trimmed, type: 'image' } : trimmed;
 
-                if (inSequence) {
-                    currentSequence.push(itemWithType);
-                } else if (inConcurrent) {
-                    currentConcurrent.push(itemWithType);
+                // Check if we're inside brackets
+                if (bracketStack.length > 0) {
+                    const currentBracket = bracketStack[bracketStack.length - 1];
+
+                    if (currentBracket === '[') {
+                        // We're in a sequence
+                        currentSequence.push(itemWithType);
+                    } else if (currentBracket === '(') {
+                        // We're in a concurrent group
+                        currentConcurrent.push(itemWithType);
+                    }
                 } else {
-                    // Single item becomes a sequence of one
+                    // Not in any brackets, add as a single item
                     result.push([itemWithType]);
                 }
             }
             currentItem = '';
+        }
+
+        // Helper function to handle nested structures
+        function processNestedStructure() {
+            const lastBracket = bracketStack.pop();
+
+            if (lastBracket === '[') {
+                // End of a sequence
+                if (currentSequence.length > 0) {
+                    const sequenceArray = [...currentSequence];
+                    currentSequence = [];
+
+                    // If we're still inside another bracket, add this sequence to that structure
+                    if (bracketStack.length > 0) {
+                        const parentBracket = bracketStack[bracketStack.length - 1];
+                        if (parentBracket === '[') {
+                            // Add sequence to parent sequence
+                            currentSequence = nestedStructures.pop();
+                            currentSequence.push(sequenceArray);
+                        } else if (parentBracket === '(') {
+                            // Add sequence to parent concurrent group
+                            currentConcurrent = nestedStructures.pop();
+                            currentConcurrent.push(sequenceArray);
+                        }
+                    } else {
+                        // Not nested, add to result
+                        result.push(sequenceArray);
+                    }
+                }
+            } else if (lastBracket === '(') {
+                // End of a concurrent group
+                if (currentConcurrent.length > 0) {
+                    const concurrentObj = {
+                        type: 'concurrent',
+                        stimuli: [...currentConcurrent]
+                    };
+                    currentConcurrent = [];
+
+                    // If we're still inside another bracket, add this concurrent group to that structure
+                    if (bracketStack.length > 0) {
+                        const parentBracket = bracketStack[bracketStack.length - 1];
+                        if (parentBracket === '[') {
+                            // Add concurrent group to parent sequence
+                            currentSequence = nestedStructures.pop();
+                            currentSequence.push(concurrentObj);
+                        } else if (parentBracket === '(') {
+                            // Add concurrent group to parent concurrent group (rare case)
+                            currentConcurrent = nestedStructures.pop();
+                            currentConcurrent.push(concurrentObj);
+                        }
+                    } else {
+                        // Not nested, add to result
+                        result.push(concurrentObj);
+                    }
+                }
+            }
         }
 
         // Process each character in the input
@@ -1550,47 +1613,49 @@ document.addEventListener('DOMContentLoaded', function() {
             const char = input[i];
 
             if (char === '[') {
-                inSequence = true;
-                // If there was text before the bracket, ignore it
+                // Start of a sequence
+                if (bracketStack.length > 0) {
+                    // We're already inside brackets, save current state before starting new sequence
+                    if (bracketStack[bracketStack.length - 1] === '[') {
+                        nestedStructures.push([...currentSequence]);
+                        currentSequence = [];
+                    } else if (bracketStack[bracketStack.length - 1] === '(') {
+                        nestedStructures.push([...currentConcurrent]);
+                        currentConcurrent = [];
+                    }
+                }
+                bracketStack.push('[');
                 currentItem = '';
             } else if (char === '(') {
-                inConcurrent = true;
-                // If there was text before the bracket, ignore it
+                // Start of a concurrent group
+                if (bracketStack.length > 0) {
+                    // We're already inside brackets, save current state before starting new concurrent group
+                    if (bracketStack[bracketStack.length - 1] === '[') {
+                        nestedStructures.push([...currentSequence]);
+                        currentSequence = [];
+                    } else if (bracketStack[bracketStack.length - 1] === '(') {
+                        nestedStructures.push([...currentConcurrent]);
+                        currentConcurrent = [];
+                    }
+                }
+                bracketStack.push('(');
                 currentItem = '';
             } else if (char === ']') {
-                // End of a sequence, add the current item if any
-                addItem();
-                inSequence = false;
-                // Add the sequence to the result if not empty
-                if (currentSequence.length > 0) {
-                    result.push([...currentSequence]);
-                    currentSequence = [];
-                }
+                // End of a sequence
+                addItem(); // Add any current item
+                processNestedStructure();
             } else if (char === ')') {
-                // End of a concurrent group, add the current item if any
-                addItem();
-                inConcurrent = false;
-                // Add the concurrent group to the result if not empty
-                if (currentConcurrent.length > 0) {
-                    // Use object to mark this as concurrent stimuli
-                    result.push({
-                        type: 'concurrent',
-                        stimuli: [...currentConcurrent]
-                    });
-                    currentConcurrent = [];
-                }
-            } else if (char === ',' && !inSequence && !inConcurrent) {
-                // End of an item outside brackets
+                // End of a concurrent group
+                addItem(); // Add any current item
+                processNestedStructure();
+            } else if (char === ',' && bracketStack.length === 0) {
+                // Comma outside any brackets
                 addItem();
             } else {
-                // Regular character
-                if (inSequence || inConcurrent) {
-                    if (char === ',') {
-                        // Within brackets, comma separates items
-                        addItem();
-                    } else {
-                        currentItem += char;
-                    }
+                // Regular character or comma inside brackets
+                if (bracketStack.length > 0 && char === ',') {
+                    // Comma inside brackets separates items
+                    addItem();
                 } else {
                     currentItem += char;
                 }
@@ -1608,32 +1673,28 @@ document.addEventListener('DOMContentLoaded', function() {
         return result;
     }
 
-    // Generate formatted stimulus key for storage/retrieval
+    // Generate formatted stimulus key for storage/retrieval with support for nested structures
     function getFormattedStimulusKey(stimulusItem) {
-        if (Array.isArray(stimulusItem)) {
-            // Sequential stimulus - handle potential image objects in the array
-            const formattedItems = stimulusItem.map(item => {
-                if (typeof item === 'object' && item.type === 'image') {
-                    return item.text; // Just use the image filename
-                }
-                return item;
-            });
-            return formattedItems.length > 1 ? `[${formattedItems.join(', ')}]` : formattedItems[0];
-        } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'concurrent') {
-            // Concurrent stimulus - handle potential image objects in the stimuli array
-            const formattedItems = stimulusItem.stimuli.map(item => {
-                if (typeof item === 'object' && item.type === 'image') {
-                    return item.text; // Just use the image filename
-                }
-                return item;
-            });
-            return `(${formattedItems.join(', ')})`;
-        } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'image') {
-            // Single image stimulus
-            return stimulusItem.text;
+        // Helper function to format any type of stimulus item recursively
+        function formatItem(item) {
+            if (Array.isArray(item)) {
+                // Sequential stimulus - handle potential nested structures
+                const formattedItems = item.map(subItem => formatItem(subItem));
+                return formattedItems.length > 1 ? `[${formattedItems.join(', ')}]` : formattedItems[0];
+            } else if (typeof item === 'object' && item.type === 'concurrent') {
+                // Concurrent stimulus - handle potential nested structures
+                const formattedItems = item.stimuli.map(subItem => formatItem(subItem));
+                return `(${formattedItems.join(', ')})`;
+            } else if (typeof item === 'object' && item.type === 'image') {
+                // Image stimulus
+                return item.text;
+            } else {
+                // Regular text stimulus
+                return String(item);
+            }
         }
-        // Default case (shouldn't happen)
-        return String(stimulusItem);
+
+        return formatItem(stimulusItem);
     }
 
     // Generate default positions for concurrent stimuli
@@ -1762,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Show the stimulus for this trial
+    // Show the stimulus for this trial with support for nested structures
     function showStimulus() {
         // Reset all concurrent elements to ensure clean state
         clearConcurrentStimuli();
@@ -1772,28 +1833,74 @@ document.addEventListener('DOMContentLoaded', function() {
             currentSequence = getNextStimulusSequence();
         }
 
+        // Helper function to determine if an item is a concurrent group
+        function isConcurrentGroup(item) {
+            return typeof item === 'object' && item.type === 'concurrent';
+        }
+
+        // Helper function to determine if an item is a nested sequence
+        function isNestedSequence(item) {
+            return Array.isArray(item) && item.length > 0;
+        }
+
+        // Helper function to determine if an item is an image
+        function isImageItem(item) {
+            return typeof item === 'object' && item.type === 'image';
+        }
+
         // Check if we're handling a concurrent stimulus group
-        const isConcurrent = typeof currentSequence === 'object' && currentSequence.type === 'concurrent';
+        const isConcurrent = isConcurrentGroup(currentSequence);
+
+        // Get the current stimulus based on the sequence index
+        let currentStimulus = null;
+        if (!isConcurrent && Array.isArray(currentSequence)) {
+            currentStimulus = currentSequence[sequenceIndex];
+        }
+
+        // Check if the current item in a sequence is a concurrent group
+        const isCurrentItemConcurrent = currentStimulus && isConcurrentGroup(currentStimulus);
+
+        // Check if the current item in a sequence is itself a nested sequence
+        const isCurrentItemSequence = currentStimulus && isNestedSequence(currentStimulus);
 
         // For concurrent stimuli, we want to preserve the flag status
-        if (!isConcurrent) {
+        if (!isConcurrent && !isCurrentItemConcurrent) {
             clearAllTimers();
         }
 
         fixationPoint.classList.add('hidden');
         feedbackText.classList.add('hidden');
 
+        // Format the stimulus display key for mapping lookup
+        const stimulusDisplay = getFormattedStimulusKey(currentSequence);
+        const mapping = stimuliResponses[stimulusDisplay] || {};
+
         if (isConcurrent) {
+            // Handle top-level concurrent stimulus group
             displayConcurrentStimuli(currentSequence);
-        } else {
-            const currentStimulus = currentSequence[sequenceIndex];
+        } else if (isCurrentItemConcurrent) {
+            // Handle concurrent stimulus group within a sequence
+            displayConcurrentStimuli(currentStimulus);
+        } else if (isCurrentItemSequence) {
+            // Handle nested sequence - create a temporary display for it
+            // This is a complex case that would require recursive handling
+            // For now, we'll just display it as text
+            stimulusText.textContent = getFormattedStimulusKey(currentStimulus);
+            stimulusText.classList.remove('hidden');
 
-            // Check if the stimulus is an image
-            const isImage = typeof currentStimulus === 'object' && currentStimulus.type === 'image';
+            // Apply styling
+            const customSize = mapping.size !== undefined ? mapping.size : stimulusSize;
+            stimulusText.style.fontSize = `${customSize}px`;
+            const customColor = mapping.color || stimulusColor;
+            stimulusText.style.color = customColor;
 
-            // Format the stimulus display key for mapping lookup
-            const stimulusDisplay = getFormattedStimulusKey(currentSequence);
-            const mapping = stimuliResponses[stimulusDisplay] || {};
+            // Apply positioning
+            const customX = mapping.x !== undefined ? mapping.x : positionX;
+            const customY = mapping.y !== undefined ? mapping.y : positionY;
+            stimulusText.style.transform = `translate(calc(-50% + ${customX}px), calc(-50% + ${customY}px))`;
+        } else if (currentStimulus) {
+            // Handle regular stimulus (text or image)
+            const isImage = isImageItem(currentStimulus);
 
             if (isImage) {
                 // Handle image stimulus
@@ -1858,23 +1965,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             stimulusText.classList.remove('hidden');
+        }
 
-            // Use custom offset if available, otherwise use global offset
-            const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
+        // Use custom offset if available, otherwise use global offset
+        const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
 
-            if (customOffset > 0) {
-                stimulusTimer = setTimeout(() => {
-                    stimulusText.classList.add('hidden');
-                    if (sequenceIndex < currentSequence.length - 1) {
-                        sequenceIndex++;
-                        setTimeout(showStimulus, 10);
-                    } else if (!provideFeedback) {
-                        setTimeout(() => {
-                            advanceTrial();
-                        }, 10);
-                    }
-                }, customOffset);
-            }
+        if (customOffset > 0) {
+            stimulusTimer = setTimeout(() => {
+                stimulusText.classList.add('hidden');
+                clearConcurrentStimuli(); // Clear any concurrent stimuli
+
+                if (!isConcurrent && Array.isArray(currentSequence) && sequenceIndex < currentSequence.length - 1) {
+                    sequenceIndex++;
+                    setTimeout(showStimulus, 10);
+                } else if (!provideFeedback) {
+                    setTimeout(() => {
+                        advanceTrial();
+                    }, 10);
+                }
+            }, customOffset);
         }
 
         // Record stimulus start time for timing data
@@ -1993,7 +2102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Corrected handleKeyPress function
+    // Enhanced handleKeyPress function with support for nested structures
     function handleKeyPress(e) {
         // Skip all keypresses during cycle feedback display
         if (feedbackText.textContent.includes("Starting new cycle") &&
@@ -2007,19 +2116,38 @@ document.addEventListener('DOMContentLoaded', function() {
         if (fixationPoint.classList.contains('hidden')) {
             e.preventDefault();
 
+            // Helper functions to determine stimulus types
+            function isConcurrentGroup(item) {
+                return typeof item === 'object' && item.type === 'concurrent';
+            }
+
+            function isNestedSequence(item) {
+                return Array.isArray(item) && item.length > 0;
+            }
+
+            // Check if we're handling a concurrent stimulus group
+            const isConcurrent = isConcurrentGroup(currentSequence);
+
+            // Get the current stimulus based on the sequence index
+            let currentStimulus = null;
+            if (!isConcurrent && Array.isArray(currentSequence)) {
+                currentStimulus = currentSequence[sequenceIndex];
+            }
+
+            // Check if the current item in a sequence is a concurrent group
+            const isCurrentItemConcurrent = currentStimulus && isConcurrentGroup(currentStimulus);
+
+            // Check if the current item in a sequence is itself a nested sequence
+            const isCurrentItemSequence = currentStimulus && isNestedSequence(currentStimulus);
+
             // Determine if we're at the last item in a sequence
             const isEndOfSequence =
                 Array.isArray(currentSequence) ?
                 (sequenceIndex === currentSequence.length - 1) :
                 true; // For concurrent stimuli, always consider it the end
 
-            // Get stimulus display key
-            const stimulusDisplay =
-                typeof currentSequence === 'object' && currentSequence.type === 'concurrent' ?
-                `(${currentSequence.stimuli.join(', ')})` :
-                (Array.isArray(currentSequence) && currentSequence.length > 1 ?
-                    `[${currentSequence.join(', ')}]` :
-                    currentSequence[0]);
+            // Get stimulus display key using the enhanced formatter that handles nested structures
+            const stimulusDisplay = getFormattedStimulusKey(currentSequence);
 
             // Determine if the key pressed is correct
             let isCorrect = false;
@@ -2050,7 +2178,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!isEndOfSequence && Array.isArray(currentSequence)) {
                     // Save response data for non-end sequence items if data saving is enabled
                     if (saveData) {
-                        saveTrialData(currentSequence[sequenceIndex], keyPressed, isCorrect);
+                        // For nested structures, use the formatted key for the current item
+                        const currentItemDisplay = isCurrentItemConcurrent || isCurrentItemSequence ?
+                            getFormattedStimulusKey(currentStimulus) :
+                            currentStimulus;
+
+                        saveTrialData(currentItemDisplay, keyPressed, isCorrect);
                     }
 
                     sequenceIndex++;
@@ -2060,14 +2193,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     // At the end of a sequence or for concurrent stimuli
 
                     // Explicitly clear concurrent stimuli on valid key press
-                    if (hasConcurrentWithZeroOffset) {
+                    if (hasConcurrentWithZeroOffset || isCurrentItemConcurrent) {
                         clearConcurrentStimuli();
                         hasConcurrentWithZeroOffset = false;
                     }
 
                     // Save data if option is enabled
                     if (saveData) {
-                        saveTrialData(stimulusDisplay, keyPressed, isCorrect);
+                        // For nested structures at the end of a sequence, use the formatted key
+                        const finalItemDisplay = isCurrentItemConcurrent || isCurrentItemSequence ?
+                            getFormattedStimulusKey(currentStimulus) :
+                            stimulusDisplay;
+
+                        saveTrialData(finalItemDisplay, keyPressed, isCorrect);
                     }
 
                     if (provideFeedback) {
@@ -2084,7 +2222,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (provideFeedback && isEndOfSequence) {
                     // Save data for incorrect response if option is enabled
                     if (saveData && isEndOfSequence) {
-                        saveTrialData(stimulusDisplay, keyPressed, false);
+                        // For nested structures at the end of a sequence, use the formatted key
+                        const finalItemDisplay = isCurrentItemConcurrent || isCurrentItemSequence ?
+                            getFormattedStimulusKey(currentStimulus) :
+                            stimulusDisplay;
+
+                        saveTrialData(finalItemDisplay, keyPressed, false);
                     }
 
                     showFeedback(false);

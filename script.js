@@ -2427,13 +2427,27 @@ document.addEventListener('DOMContentLoaded', function() {
             let concurrentStimuli = [];
 
             if (Array.isArray(stimulusItem)) {
-                // Sequential stimulus
-                storedStimulus = stimulusItem.length > 1 ?
-                    `[${stimulusItem.join(', ')}]` :
-                    stimulusItem[0];
+                // Sequential stimulus - handle potential image objects in the array
+                const formattedItems = stimulusItem.map(item => {
+                    if (typeof item === 'object' && item.type === 'image') {
+                        return item.text; // Just use the image filename
+                    }
+                    return item;
+                });
+
+                storedStimulus = formattedItems.length > 1 ?
+                    `[${formattedItems.join(', ')}]` :
+                    formattedItems[0];
             } else if (typeof stimulusItem === 'object' && stimulusItem.type === 'concurrent') {
-                // Concurrent stimulus
-                storedStimulus = `(${stimulusItem.stimuli.join(', ')})`;
+                // Concurrent stimulus - handle potential image objects in the stimuli array
+                const formattedItems = stimulusItem.stimuli.map(item => {
+                    if (typeof item === 'object' && item.type === 'image') {
+                        return item.text; // Just use the image filename
+                    }
+                    return item;
+                });
+
+                storedStimulus = `(${formattedItems.join(', ')})`;
                 isConcurrent = true;
                 concurrentStimuli = stimulusItem.stimuli;
             }
@@ -2485,7 +2499,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Create position fields for each item
                 concurrentStimuli.forEach((stim, index) => {
-                    const posKey = stim.toLowerCase().replace(/\s+/g, '_');
+                    // Handle image objects in concurrent stimuli
+                    const stimText = typeof stim === 'object' && stim.type === 'image' ? stim.text : stim;
+                    const posKey = stimText.toLowerCase().replace(/\s+/g, '_');
                     const defaultPosX = defaultPositions[index][0];
                     const defaultPosY = defaultPositions[index][1];
 
@@ -2496,7 +2512,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     xPosInput.placeholder = defaultPosX;
                     xPosInput.setAttribute('data-type', `${posKey}_x`);
                     xPosInput.setAttribute('data-default', defaultPosX);
-                    xPosInput.title = `${stim} X Position`;
+                    xPosInput.title = `${stimText} X Position`;
                     xPosCell.appendChild(xPosInput);
                     row.appendChild(xPosCell);
 
@@ -2507,7 +2523,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     yPosInput.placeholder = defaultPosY;
                     yPosInput.setAttribute('data-type', `${posKey}_y`);
                     yPosInput.setAttribute('data-default', defaultPosY);
-                    yPosInput.title = `${stim} Y Position`;
+                    yPosInput.title = `${stimText} Y Position`;
                     yPosCell.appendChild(yPosInput);
                     row.appendChild(yPosCell);
                 });
@@ -2573,7 +2589,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Individual color and size for concurrent stimuli
             if (isConcurrent) {
                 concurrentStimuli.forEach(stim => {
-                    const posKey = stim.toLowerCase().replace(/\s+/g, '_');
+                    // Handle image objects in concurrent stimuli
+                    const stimText = typeof stim === 'object' && stim.type === 'image' ? stim.text : stim;
+                    const posKey = stimText.toLowerCase().replace(/\s+/g, '_');
 
                     // Individual color
                     const colorCell = document.createElement('td');
@@ -2582,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     colorInput.placeholder = defaultColor;
                     colorInput.setAttribute('data-type', `${posKey}_color`);
                     colorInput.setAttribute('data-default', defaultColor);
-                    colorInput.title = `${stim} Color`;
+                    colorInput.title = `${stimText} Color`;
                     colorCell.appendChild(colorInput);
                     row.appendChild(colorCell);
 
@@ -2593,7 +2611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     sizeInput.placeholder = defaultSize;
                     sizeInput.setAttribute('data-type', `${posKey}_size`);
                     sizeInput.setAttribute('data-default', defaultSize);
-                    sizeInput.title = `${stim} Size`;
+                    sizeInput.title = `${stimText} Size`;
                     sizeCell.appendChild(sizeInput);
                     row.appendChild(sizeCell);
                 });

@@ -141,7 +141,7 @@
                     </div>
 
                     <div class="form-group stimulus-group">
-                        <label for="stimuli-text">Stimuli - Text (comma separated):</label>
+                        <label for="stimuli-text">Stimuli - Text + Images (comma separated):</label>
                         <div class="checkbox-container">
                             <input type="checkbox" id="randomize-stimuli" checked>
                             <label for="randomize-stimuli">Randomize stimulus sequence</label>
@@ -149,12 +149,12 @@
                         <textarea id="stimuli-text" rows="3" required>apple, corn, speed</textarea>
                         <p class="helper-text">List of stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
                         <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed</p>
-                        <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed</p>
-                        <p class="helper-text">Include image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg</p>
+                        <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed. Positioning defaults can be customized</p>
+                        <p class="helper-text">Indicate image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg. Images should be in the local directory. </p>
                         <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
 
                         <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
-                        <p class="helper-text">Map accurate responses to specific stimuli.</p>
+                        <p class="helper-text">Customize stimulus and response properties.</p>
 
                         <div class="form-row">
                             <div class="form-column">
@@ -235,7 +235,7 @@
                             <input type="checkbox" id="save-data">
                             <label for="save-data">Save Data</label>
                         </div>
-                        <p class="helper-text">When checked, experiment data will be saved and available for download when the experiment completes.</p>
+                        <p class="helper-text">When checked, data will be saved and available for download.</p>
                     </div>
                 </form>
 
@@ -321,7 +321,7 @@
 
                 <div class="button-group">
                     <button type="button" id="begin-btn">TEST (run first)</button>
-                    <button type="button" id="add-to-study-btn">Add Study</button>
+                    <button type="button" id="add-to-study-btn">Add to Study Sequence</button>
                 </div>
             </div>
             <div class="right-panel">

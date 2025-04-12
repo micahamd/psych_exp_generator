@@ -814,6 +814,119 @@ document.addEventListener('DOMContentLoaded', function() {
         startStudyConfiguration(currentStudyIndex);
     });
 
+    // Save Study button click handler
+    document.getElementById('save-study-btn').addEventListener('click', function() {
+        if (studyConfigurations.length === 0) {
+            alert('Please add at least one configuration to the study before saving.');
+            return;
+        }
+
+        saveStudyToFile();
+    });
+
+    // Load Study button click handler
+    document.getElementById('load-study-btn').addEventListener('click', function() {
+        // Trigger the hidden file input
+        document.getElementById('study-file-input').click();
+    });
+
+    // File input change handler
+    document.getElementById('study-file-input').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            loadStudyFromFile(file);
+        }
+    });
+
+    // Function to save the current study to a file
+    function saveStudyToFile() {
+        // Create a study object with metadata
+        const studyObject = {
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            name: 'Psychology Experiment Study',
+            configurations: studyConfigurations
+        };
+
+        // Convert to JSON string
+        const studyJSON = JSON.stringify(studyObject, null, 2);
+
+        // Create a blob and download link
+        const blob = new Blob([studyJSON], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'psychology_experiment_study.json';
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+
+    // Function to load a study from a file
+    function loadStudyFromFile(file) {
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            try {
+                // Parse the JSON content
+                const studyObject = JSON.parse(event.target.result);
+
+                // Validate the study object
+                if (!studyObject.configurations || !Array.isArray(studyObject.configurations)) {
+                    throw new Error('Invalid study file format');
+                }
+
+                // Confirm with the user if they want to replace the current study
+                if (studyConfigurations.length > 0) {
+                    if (!confirm('Loading this study will replace your current study configurations. Continue?')) {
+                        return;
+                    }
+                }
+
+                // Clear current configurations
+                studyConfigurations = [];
+                document.getElementById('study-window').innerHTML = '';
+
+                // Load the configurations
+                studyObject.configurations.forEach(config => {
+                    // Ensure the configuration has a unique ID
+                    if (!config.id) {
+                        config.id = Date.now() + Math.random().toString(36).substring(2, 11);
+                    }
+
+                    // Add to the study configurations array
+                    studyConfigurations.push(config);
+
+                    // Display in the UI
+                    displayConfiguration(config);
+                });
+
+                // Show success message
+                alert(`Study loaded successfully with ${studyConfigurations.length} configuration(s).`);
+
+                // Reset the file input
+                document.getElementById('study-file-input').value = '';
+
+            } catch (error) {
+                console.error('Error loading study:', error);
+                alert('Error loading study file. Please make sure it is a valid study configuration file.');
+            }
+        };
+
+        reader.onerror = function() {
+            alert('Error reading the file. Please try again.');
+        };
+
+        reader.readAsText(file);
+    }
+
     // Function to start a specific configuration in the study
     function startStudyConfiguration(configIndex) {
         if (configIndex >= studyConfigurations.length) {

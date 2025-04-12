@@ -41,24 +41,24 @@ The builder supports two ways to run experiments and surveys:
    - Optional randomization of stimulus sequence
    - Configurable font size and color for each text stimulus
    - Customizable width and height for each image stimulus (default: 400x400 pixels)
-   - Adjustable stimulus offset 
+   - Adjustable stimulus offset
    - Automatic centering with default positioning adjustments to preve
    - Maintains aspect ratio with configurable dimensions
 
 3. **Stimulus Presentation Options**:
    - **Sequential Presentation**: To present stimuli one after another, enclose them inside *square* brackets
      - Example: `[apple, corn]` shows "apple" followed by "corn" as a single 'sequential' stimulus
-     - Each stimulus advances with a predetermined correct response when stimulus offset = 0. 
+     - Each stimulus advances with a predetermined correct response when stimulus offset = 0.
      - If offset > 0, then items in a sequence advance automatically in accordance with the provided value.
-     
+
    - **Concurrent Presentation**: To show multiple stimuli on screen simultaneously, enclose them inside *curved* brackets
      - Example: `(apple, corn)` shows both "apple" and "corn" on screen, equidistant from each other and their adjacent border edges.
      - Including additional stimuli automatically updates the default positioning to ensure symmetric spatial distribution.
      - Element positioning and styling (color, size) can also be manually set
-     
-   - **Mixed Presentation Types**: Combine sequential and concurrent presentations
+
+   - **Experimental: Mixed Presentation Types**: Combine sequential and concurrent presentations
      - Example: `[apple, (corn, bean)], speed.jpg` for complex sequences
-     - Unlimited nesting of presentation types
+     - In principle, you can nest unlimited combinations of presentation types, but this can cause timing and response issues.
 
 ### Custom Stimulus-Response (S-R) Mappings
 
@@ -71,7 +71,7 @@ The S-R Mapping dialog provides precise control over stimulus presentation and r
    - **Appearance Settings**:
      - For text: Custom color and font size (in pixels)
      - For images: Custom width and height (in pixels)
-   - **Automatic Detection**: System automatically detects stimulus type and shows relevant options
+   - **Automatic Detection**: System automatically detects stimulus type and shows relevant options with default values
 
 2. **Concurrent Stimuli Settings**:
    - Individual control for each stimulus within a concurrent group
@@ -250,6 +250,12 @@ Precise control over stimulus positioning using a coordinate system:
   - Study configurations maintained across browser restarts
   - All settings saved securely in browser's localStorage
 
+- **Study Export/Import**:
+  - Complete study configurations can be saved to JSON files
+  - Saved studies can be loaded from files into any browser
+  - Enables sharing of experimental protocols between researchers
+  - Provides backup and versioning capabilities for complex studies
+
 - **Configuration Management**:
   - Multiple experiment and survey configurations can be saved
   - Study sequences preserved with all settings intact
@@ -346,12 +352,19 @@ Precise control over stimulus positioning using a coordinate system:
    - Arrange the order using the up/down arrows in each block
    - Remove unwanted blocks using the X button
 
-3. **Executing the Study**:
+3. **Saving and Loading Studies**:
+   - Click "Save Study" to export the entire study configuration to a JSON file
+   - The file contains all experiment and survey configurations, including stimulus-response mappings
+   - Click "Load Study" to import a previously saved study file
+   - Loaded studies replace the current study configuration after confirmation
+   - Share study files with colleagues to replicate exact experimental protocols
+
+4. **Executing the Study**:
    - Click "Begin Study" to run the complete sequence
    - Each configuration will run in order with transition screens
    - Participants progress through all blocks automatically
 
-4. **Data Collection**:
+5. **Data Collection**:
    - Data is collected throughout the entire study
    - Each configuration's data is stored separately but linked
    - At completion, download the consolidated dataset
@@ -447,7 +460,7 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - **Multi-Phase Studies**: Run different experimental protocols in sequence
 - **Qualitative + Quantitative**: Collect both types of data in a single session
 
-## Future Development Roadmap
+## Development Roadmap
 
 ### Completed Features
 - ✓ Survey Form integration with multiple question types
@@ -456,6 +469,7 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - ✓ Advanced stimulus presentation (sequential, concurrent, mixed)
 - ✓ Custom stimulus-response mappings with individual settings
 - ✓ Study mode for multi-phase experimental protocols
+- ✓ Export/import study configurations for sharing
 
 ### Planned Enhancements
 - Enhanced timing precision using requestAnimationFrame
@@ -465,7 +479,6 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - Additional trial types (go/no-go, forced choice, etc.)
 - Custom appearance themes and styling options
 - Built-in data visualization and analysis tools
-- Export/import study configurations for sharing
 - Mobile device optimization for tablet-based testing
 - Audio stimulus support for auditory experiments
 - Eye-tracking integration (where supported by browser)

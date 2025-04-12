@@ -2622,7 +2622,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add function to download study data with support for both experiment and survey data
     function downloadStudyData() {
-        console.log('downloadStudyData called, studyData =', studyData);
+        console.log('downloadStudyData called');
+        console.log('studyData length =', studyData.length);
+        console.log('studyData contents =', JSON.stringify(studyData, null, 2));
+        console.log('saveData =', saveData);
+        console.log('isStudyMode =', isStudyMode);
 
         if (studyData.length === 0) {
             console.log('No study data to download');
@@ -3532,10 +3536,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Save the survey data if enabled
             // Use the global saveData variable which is kept in sync with the checkbox
             if (saveData) {
-                console.log('Saving survey data, saveData =', saveData);
+                console.log('Saving survey data, saveData =', saveData, 'isStudyMode =', isStudyMode);
                 saveSurveyData(answers);
             } else {
-                console.log('Not saving survey data, saveData =', saveData);
+                console.log('Not saving survey data, saveData =', saveData, 'isStudyMode =', isStudyMode);
             }
 
             // Remove the survey container
@@ -3611,14 +3615,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // If in study mode, add the survey data to the study data array
         if (isStudyMode) {
+            console.log('In study mode, adding survey data to study data array');
+            console.log('Current study index:', currentStudyIndex);
+            console.log('Study configurations:', studyConfigurations);
+
             // Add this survey's data to the study data array
-            studyData.push({
+            const surveyDataEntry = {
                 configurationIndex: currentStudyIndex,
                 configurationName: studyConfigurations[currentStudyIndex].name || `Survey ${currentStudyIndex + 1}`,
                 type: 'survey', // Mark this as survey data for proper handling
                 data: surveyData
-            });
-            console.log('Added survey data to study:', studyData);
+            };
+
+            studyData.push(surveyDataEntry);
+            console.log('Added survey data to study:', surveyDataEntry);
+            console.log('Current study data array:', studyData);
 
             // In study mode, we don't add individual download buttons for each survey
             // The data will be available in the final study download
@@ -3663,16 +3674,38 @@ document.addEventListener('DOMContentLoaded', function() {
             completionScreen.insertBefore(downloadBtn, okBtn);
             console.log('Added download button for survey data');
         } else {
-            // Completion screen is not visible yet, store the data for later
-            console.log('Completion screen not visible, storing survey data for later download');
+            // Completion screen is not visible yet, we need to show it
+            console.log('Completion screen not visible, showing it with download button');
 
-            // Create a temporary download link and trigger download
+            // Store the data for the download button
+            window.surveyDataBlob = dataBlob;
+            window.surveyDataFilename = filename;
+
+            // Show the completion screen
+            experimentContainer.classList.add('hidden');
+            completionScreen.classList.remove('hidden');
+            document.getElementById('completion-message').textContent = 'Survey Complete!';
+            document.getElementById('completion-stats').classList.add('hidden');
+
+            // Create download button and add to completion screen
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = 'Download Survey Data';
+            downloadBtn.className = 'secondary-btn';
+            downloadBtn.style.marginTop = '20px';
+
+            // Create download link
             const downloadLink = document.createElement('a');
             downloadLink.href = URL.createObjectURL(dataBlob);
             downloadLink.download = filename;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+
+            // Add click event to button
+            downloadBtn.addEventListener('click', function() {
+                downloadLink.click();
+            });
+
+            // Add button to completion screen
+            completionScreen.insertBefore(downloadBtn, okBtn);
+            console.log('Added download button for survey data to newly shown completion screen');
         }
     }
 

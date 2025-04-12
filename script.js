@@ -2526,13 +2526,33 @@ document.addEventListener('DOMContentLoaded', function() {
         // If save data is enabled, store the current configuration's data
         if (saveData && experimentData.length > 0) {
             if (isStudyMode) {
-                // Add this configuration's data to the study data array
-                studyData.push({
+                console.log('In study mode, adding experiment data to study data array');
+                console.log('Current study index:', currentStudyIndex);
+                console.log('Study configurations:', studyConfigurations);
+
+                // Create the experiment data entry
+                const experimentDataEntry = {
                     configurationIndex: currentStudyIndex,
-                    configurationName: studyConfigurations[currentStudyIndex].name || `Configuration ${currentStudyIndex + 1}`,
+                    configurationName: studyConfigurations[currentStudyIndex]?.name || `Configuration ${currentStudyIndex + 1}`,
                     type: 'experiment', // Mark this as experiment data for proper handling
                     data: experimentData
-                });
+                };
+
+                // Check if we already have data for this configuration index
+                const existingIndex = studyData.findIndex(item =>
+                    item.configurationIndex === currentStudyIndex && item.type === 'experiment');
+
+                if (existingIndex >= 0) {
+                    // Replace existing data
+                    console.log('Replacing existing experiment data at index', existingIndex);
+                    studyData[existingIndex] = experimentDataEntry;
+                } else {
+                    // Add new data
+                    studyData.push(experimentDataEntry);
+                }
+
+                console.log('Added/updated experiment data in study:', experimentDataEntry);
+                console.log('Current study data array:', studyData);
             } else {
                 // Single task mode - download data immediately
                 downloadExperimentData();
@@ -2641,12 +2661,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const enhancedConfigDetails = studyConfigurations.map(config => ({
             name: config.name || 'Unnamed Configuration',
             type: config.type || 'experiment', // Include the type (experiment or survey)
-            id: config.id // Include the ID for reference
+            id: config.id, // Include the ID for reference
+            saveData: config.config.saveData !== undefined ? config.config.saveData : false // Include saveData setting
         }));
 
         // Log the types of data in the study data array
         const dataTypes = studyData.map(item => item.type || 'unknown');
         console.log('Study data types:', dataTypes);
+
+        // Sort the study data by configuration index
+        studyData.sort((a, b) => a.configurationIndex - b.configurationIndex);
+        console.log('Sorted study data:', studyData);
 
         const studyDataObject = {
             studyMetadata: {
@@ -3622,13 +3647,25 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add this survey's data to the study data array
             const surveyDataEntry = {
                 configurationIndex: currentStudyIndex,
-                configurationName: studyConfigurations[currentStudyIndex].name || `Survey ${currentStudyIndex + 1}`,
+                configurationName: studyConfigurations[currentStudyIndex]?.name || `Survey ${currentStudyIndex + 1}`,
                 type: 'survey', // Mark this as survey data for proper handling
                 data: surveyData
             };
 
-            studyData.push(surveyDataEntry);
-            console.log('Added survey data to study:', surveyDataEntry);
+            // Check if we already have data for this configuration index
+            const existingIndex = studyData.findIndex(item =>
+                item.configurationIndex === currentStudyIndex && item.type === 'survey');
+
+            if (existingIndex >= 0) {
+                // Replace existing data
+                console.log('Replacing existing survey data at index', existingIndex);
+                studyData[existingIndex] = surveyDataEntry;
+            } else {
+                // Add new data
+                studyData.push(surveyDataEntry);
+            }
+
+            console.log('Added/updated survey data in study:', surveyDataEntry);
             console.log('Current study data array:', studyData);
 
             // In study mode, we don't add individual download buttons for each survey

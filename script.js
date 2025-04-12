@@ -2500,6 +2500,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 studyData.push({
                     configurationIndex: currentStudyIndex,
                     configurationName: studyConfigurations[currentStudyIndex].name || `Configuration ${currentStudyIndex + 1}`,
+                    type: 'experiment', // Mark this as experiment data for proper handling
                     data: experimentData
                 });
             } else {
@@ -2582,22 +2583,30 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadLink.click();
     }
 
-    // Add function to download study data
+    // Add function to download study data with support for both experiment and survey data
     function downloadStudyData() {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `study_data_${timestamp}.json`;
+
+        // Create enhanced configuration details with type information
+        const enhancedConfigDetails = studyConfigurations.map(config => ({
+            name: config.name || 'Unnamed Configuration',
+            type: config.type || 'experiment', // Include the type (experiment or survey)
+            id: config.id // Include the ID for reference
+        }));
 
         const studyDataObject = {
             studyMetadata: {
                 completionTime: new Date().toISOString(),
                 numberOfConfigurations: studyConfigurations.length,
-                configurationDetails: studyConfigurations.map(config => ({
-                    name: config.name || 'Unnamed Configuration',
-                    // Add any other relevant configuration metadata
-                }))
+                configurationDetails: enhancedConfigDetails
             },
             configurationData: studyData
         };
+
+        // Add a note about the data structure for easier analysis
+        studyDataObject.studyMetadata.dataStructureNote =
+            "This study contains both experiment and survey data. Each configuration in configurationData has a 'type' field indicating its type.";
 
         const dataStr = JSON.stringify(studyDataObject, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -2608,6 +2617,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
+
+        console.log('Downloaded complete study data including experiments and surveys:', studyDataObject);
     }
 
     // Clear all timers and elements
@@ -3522,7 +3533,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Create a JSON blob and trigger download
+        // If in study mode, add the survey data to the study data array
+        if (isStudyMode) {
+            // Add this survey's data to the study data array
+            studyData.push({
+                configurationIndex: currentStudyIndex,
+                configurationName: studyConfigurations[currentStudyIndex].name || `Survey ${currentStudyIndex + 1}`,
+                type: 'survey', // Mark this as survey data for proper handling
+                data: surveyData
+            });
+            console.log('Added survey data to study:', studyData);
+        }
+
+        // Always create a JSON blob and trigger download for individual survey data
         const dataStr = JSON.stringify(surveyData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
 

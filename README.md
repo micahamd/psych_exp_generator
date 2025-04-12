@@ -137,22 +137,36 @@ The S-R Mapping dialog provides precise control over stimulus presentation and r
 - Captures all question responses with timestamps
 - Records question type and response format
 - For slider responses, includes scale configuration details
-- Integrates with experiment data in study mode
+- Fully integrates with experiment data in study mode
+- Survey data now included in consolidated study downloads
 
 #### Data Structure
 
-Experiment Data Format:
+Study Data Format (includes both experiment and survey data):
 ```json
 {
   "studyMetadata": {
     "completionTime": "2023-...",
     "numberOfConfigurations": 3,
-    "configurationDetails": [...]
+    "configurationDetails": [
+      {
+        "name": "Block 1",
+        "type": "experiment",
+        "id": 1234567890
+      },
+      {
+        "name": "Survey Block",
+        "type": "survey",
+        "id": 1234567891
+      }
+    ],
+    "dataStructureNote": "This study contains both experiment and survey data. Each configuration in configurationData has a 'type' field indicating its type."
   },
   "configurationData": [
     {
       "configurationIndex": 0,
-      "configurationName": "Configuration 1",
+      "configurationName": "Block 1",
+      "type": "experiment",
       "data": [
         {
           "Timestamp": "13:45:22_15:06:2023",
@@ -161,9 +175,25 @@ Experiment Data Format:
           "Stimulus_Offset": 0,
           "Response": "SPACE",
           "Accurate": 1,
-          "ResponseTime_ms": 543
+          "ResponseTime_ms": 543,
+          "PreciseTimingUsed": true
         },
         // ... more trials
+      ]
+    },
+    {
+      "configurationIndex": 1,
+      "configurationName": "Survey Block",
+      "type": "survey",
+      "data": [
+        {
+          "Timestamp": "14:30:45_16:06:2023",
+          "QuestionNumber": "1",
+          "Question": "How are you feeling today?",
+          "Answer": "I'm feeling great!",
+          "AnswerType": "textarea"
+        },
+        // ... more questions
       ]
     },
     // ... more configurations

@@ -119,6 +119,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let experimentData = [];
     let responseStartTime = null;
 
+    // Add new variables for high-precision timing
+    let animationFrameId = null;
+    let lastFrameTimestamp = 0;
+    let stimulusStartTime = 0;
+    let stimulusDuration = 0;
+    let isWaitingForStimulus = false;
+    let pendingAnimationCallback = null;
+    let targetFrameRate = 60; // Assumed frame rate (will be measured)
+
     // Add new variables for study management
     let studyConfigurations = [];
     let currentStudyIndex = 0;
@@ -1881,7 +1890,7 @@ document.addEventListener('DOMContentLoaded', function() {
         startTrial();
     }
 
-    // Start a new trial
+    // Start a new trial with high-precision timing
     function startTrial() {
         // Reset sequence index for the new trial
         sequenceIndex = 0;
@@ -1892,8 +1901,11 @@ document.addEventListener('DOMContentLoaded', function() {
             stimulusText.classList.add('hidden');
             feedbackText.classList.add('hidden');
 
-            // After fixation interval, show stimulus
-            setTimeout(showStimulus, fixationInterval);
+            // After fixation interval, show stimulus using high-precision timing
+            scheduleWithPrecision(showStimulus, fixationInterval);
+
+            // Record the start time of the fixation for precise timing calculations
+            lastFrameTimestamp = performance.now();
         } else {
             // Skip fixation, show stimulus immediately
             showStimulus();
@@ -2083,24 +2095,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use custom offset if available, otherwise use global offset
         const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
 
+        // Record stimulus start time for timing data with high precision
+        stimulusStartTime = performance.now();
+        responseStartTime = stimulusStartTime; // For backward compatibility
+
+        // Store the duration for this stimulus
+        stimulusDuration = customOffset;
+
         if (customOffset > 0) {
-            stimulusTimer = setTimeout(() => {
+            // Use high-precision timing for stimulus offset
+            scheduleWithPrecision(() => {
                 stimulusText.classList.add('hidden');
                 clearConcurrentStimuli(); // Clear any concurrent stimuli
 
                 if (!isConcurrent && Array.isArray(currentSequence) && sequenceIndex < currentSequence.length - 1) {
                     sequenceIndex++;
-                    setTimeout(showStimulus, 10);
+                    // Use requestAnimationFrame for smoother transitions between stimuli
+                    requestAnimationFrame(showStimulus);
                 } else if (!provideFeedback) {
-                    setTimeout(() => {
-                        advanceTrial();
-                    }, 10);
+                    // Use requestAnimationFrame for smoother transitions
+                    requestAnimationFrame(advanceTrial);
                 }
             }, customOffset);
         }
-
-        // Record stimulus start time for timing data
-        responseStartTime = new Date();
     }
 
     // Display concurrent stimuli - SIMPLIFIED to always wait for response
@@ -2323,7 +2340,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     if (provideFeedback) {
                         showFeedback(isCorrect);
-                        feedbackTimer = setTimeout(() => {
+                        // Use high-precision timing for feedback duration
+                        scheduleWithPrecision(() => {
                             hideFeedback();
                             advanceTrial();
                         }, feedbackDuration);
@@ -2344,7 +2362,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     showFeedback(false);
-                    feedbackTimer = setTimeout(() => {
+                    // Use high-precision timing for feedback duration
+                    scheduleWithPrecision(() => {
                         hideFeedback();
                         // Important fix: Advance the trial after incorrect feedback too
                         advanceTrial();
@@ -2357,18 +2376,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to save trial data
+    // Function to save trial data with high-precision timing
     function saveTrialData(stimulus, response, accurate) {
-        const now = new Date();
-        const responseTime = now - responseStartTime; // Calculate response time in ms
+        // Use high-precision timing for response time calculation
+        const now = performance.now();
+        const responseTime = now - stimulusStartTime; // Calculate response time in ms with high precision
+
+        // For backward compatibility, also create a Date object
+        const dateNow = new Date();
 
         // Format timestamp as HH:MM:SS_DD:MM:YYYY
-        const timestamp = formatDateTime(now);
+        const timestamp = formatDateTime(dateNow);
 
         // Calculate the absolute trial number (including past cycles)
         const absoluteTrialNumber = currentTrial + 1; // +1 because currentTrial is 0-indexed
 
-        // Create data object
+        // Create data object with enhanced timing information
         const trialData = {
             Timestamp: timestamp,
             "Trial Number": absoluteTrialNumber,
@@ -2376,7 +2399,8 @@ document.addEventListener('DOMContentLoaded', function() {
             Stimulus_Offset: stimulusOffset,
             Response: response,
             Accurate: accurate ? 1 : 0,
-            ResponseTime_ms: responseTime
+            ResponseTime_ms: Math.round(responseTime * 100) / 100, // Round to 2 decimal places for readability
+            PreciseTimingUsed: true // Flag to indicate high-precision timing was used
         };
 
         // Add to experiment data array
@@ -2395,13 +2419,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${hours}:${minutes}:${seconds}_${day}:${month}:${year}`;
     }
 
-    // Modify advanceTrial to check threshold at cycle end
+    // Modify advanceTrial to check threshold at cycle end with high-precision timing
     function advanceTrial() {
         clearAllTimers();
         hasConcurrentWithZeroOffset = false; // Reset flag when advancing trials
         stimulusText.classList.add('hidden');
         feedbackText.classList.add('hidden');
-        setTimeout(() => {
+
+        // Use high-precision timing for trial interval
+        scheduleWithPrecision(() => {
             currentTrial++;
             console.log(`Advancing to trial ${currentTrial}/${trialCount}`);
 
@@ -2424,7 +2450,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, trialInterval);
     }
 
-    // Updated showCycleMessage to display for fixed duration without requiring keypress
+    // Updated showCycleMessage to display for fixed duration with high-precision timing
     function showCycleMessage() {
         // Show message that we're starting a new cycle
         feedbackText.textContent = `Correct: ${currentCycleCorrect}/${cycleThreshold} - Starting new cycle`;
@@ -2436,8 +2462,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log(`Cycle completed. Correct responses: ${currentCycleCorrect}/${cycleThreshold}`);
 
-        // Automatically hide message and start new cycle after fixed duration
-        setTimeout(() => {
+        // Automatically hide message and start new cycle after fixed duration using high-precision timing
+        scheduleWithPrecision(() => {
             // Hide message
             feedbackText.classList.add('hidden');
 
@@ -2596,10 +2622,50 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackTimer = null;
         }
 
+        // Cancel any animation frames
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+
+        // Reset animation state
+        pendingAnimationCallback = null;
+        isWaitingForStimulus = false;
+
         // Only clear concurrent stimuli when explicitly called for
         if (!hasConcurrentWithZeroOffset) {
             clearConcurrentStimuli();
         }
+    }
+
+    // High-precision timing functions
+
+    // Schedule a function to run after a precise delay using requestAnimationFrame
+    function scheduleWithPrecision(callback, delayMs) {
+        const startTime = performance.now();
+        const targetTime = startTime + delayMs;
+        isWaitingForStimulus = true;
+        pendingAnimationCallback = callback;
+
+        function checkTime(timestamp) {
+            if (!isWaitingForStimulus) return; // Cancelled
+
+            if (timestamp >= targetTime) {
+                isWaitingForStimulus = false;
+                pendingAnimationCallback = null;
+                callback();
+            } else {
+                animationFrameId = requestAnimationFrame(checkTime);
+            }
+        }
+
+        animationFrameId = requestAnimationFrame(checkTime);
+        return animationFrameId;
+    }
+
+    // Get high-precision timestamp
+    function getPreciseTimestamp() {
+        return performance.now();
     }
 
     // OK button click

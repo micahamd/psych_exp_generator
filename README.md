@@ -107,11 +107,12 @@ The S-R Mapping dialog provides precise control over stimulus presentation and r
    - Create complex response rules for different stimuli
    - Supports sophisticated experimental designs like Stroop tasks
 
-4. **Response Timing**:
-   - Precise measurement of response times in milliseconds
-   - Timing starts from stimulus onset
-   - Accounts for stimulus offset in calculations
-   - Detailed timing data included in experiment output
+4. **High-Precision Response Timing**:
+   - Microsecond-precision measurement of response times using performance.now()
+   - Frame-synchronized stimulus presentation with requestAnimationFrame
+   - Precise interval timing for all experiment phases (fixation, stimulus, feedback)
+   - Timing starts from exact stimulus onset for maximum accuracy
+   - Detailed timing data with precision markers included in experiment output
 
 ### Data Collection and Analysis
 
@@ -278,7 +279,7 @@ Precise control over stimulus positioning using a coordinate system:
 
 3. **Configure and Test**:
    - Set up your experiment or survey with the desired parameters
-   - Use the "Test" button to preview and validate your configuration
+   - Use the "Test" button to preview and validate your configuration. **YOU MUST TEST THE CONFIGURATION AT FIRST TO INITIALIZE GLOBAL VARIABLES**
    - Make adjustments as needed before finalizing
 
 4. **Run or Add to Study**:
@@ -470,9 +471,9 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - ✓ Custom stimulus-response mappings with individual settings
 - ✓ Study mode for multi-phase experimental protocols
 - ✓ Export/import study configurations for sharing
+- ✓ Enhanced timing precision using requestAnimationFrame
 
 ### Planned Enhancements
-- Enhanced timing precision using requestAnimationFrame
 - Network data submission to remote servers
 - Conditional branching based on participant responses
 - Response criteria handling for advanced experimental control

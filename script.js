@@ -49,6 +49,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Save current state before starting
             saveCurrentState();
 
+            // Update the global saveData variable from the survey save data checkbox
+            saveData = document.getElementById('survey-save-data').checked;
+            console.log('Survey test started with saveData =', saveData);
+
             // Hide intro screen and show survey test interface
             introScreen.classList.add('hidden');
             experimentContainer.classList.remove('hidden');
@@ -1188,6 +1192,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Set save data checkbox
             document.getElementById('survey-save-data').checked = config.config.saveData;
 
+            // Update the global saveData variable to match the checkbox state
+            saveData = config.config.saveData;
+            console.log('Survey saveData set to:', saveData);
+
             // Trigger the survey test
             document.getElementById('begin-btn').click();
         } else {
@@ -1400,7 +1408,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Load survey state if it exists
                 if (savedState.surveyState) {
                     // Set save data checkbox
-                    document.getElementById('survey-save-data').checked = savedState.surveyState.saveData || false;
+                    const surveyStateData = savedState.surveyState.saveData || false;
+                    document.getElementById('survey-save-data').checked = surveyStateData;
+
+                    // Update the global saveData variable if we're in survey mode
+                    if (!isExperimentMode) {
+                        saveData = surveyStateData;
+                        console.log('Loaded survey saveData from saved state:', saveData);
+                    }
 
                     // Load questions if they exist
                     if (savedState.surveyState.questions && savedState.surveyState.questions.length > 0) {
@@ -1519,7 +1534,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState.feedbackDuration) document.getElementById('feedback-duration').value = savedState.feedbackDuration;
             if (savedState.positionX !== undefined) document.getElementById('position-x').value = savedState.positionX;
             if (savedState.positionY !== undefined) document.getElementById('position-y').value = savedState.positionY;
-            if (savedState.saveData !== undefined) document.getElementById('save-data').checked = savedState.saveData;
+            if (savedState.saveData !== undefined) {
+                document.getElementById('save-data').checked = savedState.saveData;
+                // Update the global saveData variable
+                saveData = savedState.saveData;
+                console.log('Loaded saveData from saved state:', saveData);
+            }
             if (savedState.trialInterval) document.getElementById('trial-interval').value = savedState.trialInterval;
 
             // Restore S-R mappings
@@ -1610,6 +1630,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to save current state to localStorage
     function saveCurrentState() {
+        // Update the global saveData variable based on the current form mode
+        if (isExperimentMode) {
+            saveData = document.getElementById('save-data').checked;
+            console.log('saveCurrentState: updated experiment saveData =', saveData);
+        } else {
+            saveData = document.getElementById('survey-save-data').checked;
+            console.log('saveCurrentState: updated survey saveData =', saveData);
+        }
+
         const currentState = {
             canvasBackground: document.getElementById('canvas-background').value,
             trialInterval: parseInt(document.getElementById('trial-interval').value),
@@ -1630,7 +1659,7 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackDuration: parseInt(document.getElementById('feedback-duration').value),
             positionX: parseInt(document.getElementById('position-x').value) || 0,
             positionY: parseInt(document.getElementById('position-y').value) || 0,
-            saveData: document.getElementById('save-data').checked,
+            saveData: saveData, // Use the global variable
             stimuliResponses: stimuliResponses
         };
 
@@ -2566,6 +2595,14 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
 
+        // Remove any existing experiment download buttons to prevent duplicates
+        const existingButtons = completionScreen.querySelectorAll('button.secondary-btn');
+        existingButtons.forEach(button => {
+            if (button.textContent === 'Download Data') {
+                button.remove();
+            }
+        });
+
         // Create download button
         const downloadBtn = document.createElement('button');
         downloadBtn.textContent = 'Download Data';
@@ -2579,12 +2616,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add button to completion screen
         completionScreen.insertBefore(downloadBtn, okBtn);
 
-        // Auto download
-        downloadLink.click();
+        // No automatic download
     }
 
     // Add function to download study data with support for both experiment and survey data
     function downloadStudyData() {
+        console.log('downloadStudyData called, studyData =', studyData);
+
+        if (studyData.length === 0) {
+            console.log('No study data to download');
+            alert('No study data available to download. Make sure "Save Data" is checked for each configuration.');
+            return;
+        }
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `study_data_${timestamp}.json`;
 
@@ -2614,11 +2658,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const downloadLink = document.createElement('a');
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
+
+        // Trigger the download when the button is clicked
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
 
-        console.log('Downloaded complete study data including experiments and surveys:', studyDataObject);
+        console.log('Downloaded study data including experiments and surveys:', studyDataObject);
     }
 
     // Clear all timers and elements
@@ -3476,9 +3522,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // Save the survey data if enabled
-            const saveDataEnabled = document.getElementById('survey-save-data').checked;
-            if (saveDataEnabled) {
+            // Use the global saveData variable which is kept in sync with the checkbox
+            if (saveData) {
+                console.log('Saving survey data, saveData =', saveData);
                 saveSurveyData(answers);
+            } else {
+                console.log('Not saving survey data, saveData =', saveData);
             }
 
             // Remove the survey container
@@ -3510,6 +3559,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to save survey data
     function saveSurveyData(answers) {
+        console.log('saveSurveyData called with saveData =', saveData);
+
+        // If saveData is false, don't save anything
+        if (!saveData) {
+            console.log('saveData is false, not saving survey data');
+            return;
+        }
+
         const now = new Date();
         const timestamp = formatDateTime(now);
 
@@ -3533,6 +3590,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        console.log('Processed survey data:', surveyData);
+
         // If in study mode, add the survey data to the study data array
         if (isStudyMode) {
             // Add this survey's data to the study data array
@@ -3543,9 +3602,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 data: surveyData
             });
             console.log('Added survey data to study:', studyData);
+
+            // In study mode, we don't add individual download buttons for each survey
+            // The data will be available in the final study download
+            return;
         }
 
-        // Always create a JSON blob and trigger download for individual survey data
+        // Only for non-study mode: create a JSON blob and prepare download for individual survey data
         const dataStr = JSON.stringify(surveyData, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
 
@@ -3553,15 +3616,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileTimestamp = timestamp.replace(/:/g, '-').replace(/_/g, '_');
         const filename = `survey_data_${fileTimestamp}.json`;
 
+        // Remove any existing survey download buttons to prevent duplicates
+        const existingButtons = completionScreen.querySelectorAll('button.secondary-btn');
+        existingButtons.forEach(button => {
+            if (button.textContent === 'Download Survey Data') {
+                button.remove();
+            }
+        });
+
+        // Create download button and add to completion screen
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = 'Download Survey Data';
+        downloadBtn.className = 'secondary-btn';
+        downloadBtn.style.marginTop = '20px';
+
         // Create download link
         const downloadLink = document.createElement('a');
         downloadLink.href = URL.createObjectURL(dataBlob);
         downloadLink.download = filename;
 
-        // Trigger download
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        // Add click event to button
+        downloadBtn.addEventListener('click', function() {
+            downloadLink.click();
+        });
+
+        // Add button to completion screen
+        completionScreen.insertBefore(downloadBtn, okBtn);
+        console.log('Added download button for survey data');
     }
 
     // Export mappings to CSV file - modified to include default values
@@ -3952,6 +4033,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (exportMappingsBtn) {
         exportMappingsBtn.addEventListener('click', function() {
             exportMappingsToCSV();
+        });
+    }
+
+    // Add event listener for survey save data checkbox
+    const surveySaveDataCheckbox = document.getElementById('survey-save-data');
+    if (surveySaveDataCheckbox) {
+        surveySaveDataCheckbox.addEventListener('change', function() {
+            // Update the global saveData variable when the checkbox is changed
+            saveData = this.checked;
+            console.log('Survey saveData updated to:', saveData);
+        });
+    }
+
+    // Add event listener for experiment save data checkbox
+    const experimentSaveDataCheckbox = document.getElementById('save-data');
+    if (experimentSaveDataCheckbox) {
+        experimentSaveDataCheckbox.addEventListener('change', function() {
+            // Update the global saveData variable when the checkbox is changed
+            saveData = this.checked;
+            console.log('Experiment saveData updated to:', saveData);
         });
     }
 });

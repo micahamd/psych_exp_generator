@@ -1190,10 +1190,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Set save data checkbox
-            document.getElementById('survey-save-data').checked = config.config.saveData;
+            const configSaveData = config.config.saveData !== undefined ? config.config.saveData : false;
+            document.getElementById('survey-save-data').checked = configSaveData;
 
             // Update the global saveData variable to match the checkbox state
-            saveData = config.config.saveData;
+            saveData = configSaveData;
             console.log('Survey saveData set to:', saveData);
 
             // Trigger the survey test
@@ -2639,6 +2640,10 @@ document.addEventListener('DOMContentLoaded', function() {
             id: config.id // Include the ID for reference
         }));
 
+        // Log the types of data in the study data array
+        const dataTypes = studyData.map(item => item.type || 'unknown');
+        console.log('Study data types:', dataTypes);
+
         const studyDataObject = {
             studyMetadata: {
                 completionTime: new Date().toISOString(),
@@ -2756,7 +2761,10 @@ document.addEventListener('DOMContentLoaded', function() {
             studyData = []; // Reset study data
             clearAllTimers();
 
+            // Save the current state to localStorage
             saveCurrentState();
+
+            console.log('Returned to intro screen, state reset');
         }
     });
 
@@ -3550,8 +3558,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('completion-stats').classList.add('hidden');
 
             // When OK is clicked, it will advance to the next configuration
+        } else if (saveData) {
+            // In regular mode with save data enabled, show completion screen with download button
+            experimentContainer.classList.add('hidden');
+            completionScreen.classList.remove('hidden');
+            document.getElementById('completion-message').textContent = 'Survey Complete!';
+            document.getElementById('completion-stats').classList.add('hidden');
+
+            // When OK is clicked, it will return to the intro screen
+            // The download button will be added by the saveSurveyData function
         } else {
-            // In regular mode, return to the intro screen
+            // In regular mode without save data, return to the intro screen
             experimentContainer.classList.add('hidden');
             introScreen.classList.remove('hidden');
         }
@@ -3616,33 +3633,47 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileTimestamp = timestamp.replace(/:/g, '-').replace(/_/g, '_');
         const filename = `survey_data_${fileTimestamp}.json`;
 
-        // Remove any existing survey download buttons to prevent duplicates
-        const existingButtons = completionScreen.querySelectorAll('button.secondary-btn');
-        existingButtons.forEach(button => {
-            if (button.textContent === 'Download Survey Data') {
-                button.remove();
-            }
-        });
+        // Make sure the completion screen is visible
+        if (!completionScreen.classList.contains('hidden')) {
+            // Remove any existing survey download buttons to prevent duplicates
+            const existingButtons = completionScreen.querySelectorAll('button.secondary-btn');
+            existingButtons.forEach(button => {
+                if (button.textContent === 'Download Survey Data') {
+                    button.remove();
+                }
+            });
 
-        // Create download button and add to completion screen
-        const downloadBtn = document.createElement('button');
-        downloadBtn.textContent = 'Download Survey Data';
-        downloadBtn.className = 'secondary-btn';
-        downloadBtn.style.marginTop = '20px';
+            // Create download button and add to completion screen
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = 'Download Survey Data';
+            downloadBtn.className = 'secondary-btn';
+            downloadBtn.style.marginTop = '20px';
 
-        // Create download link
-        const downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(dataBlob);
-        downloadLink.download = filename;
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(dataBlob);
+            downloadLink.download = filename;
 
-        // Add click event to button
-        downloadBtn.addEventListener('click', function() {
+            // Add click event to button
+            downloadBtn.addEventListener('click', function() {
+                downloadLink.click();
+            });
+
+            // Add button to completion screen
+            completionScreen.insertBefore(downloadBtn, okBtn);
+            console.log('Added download button for survey data');
+        } else {
+            // Completion screen is not visible yet, store the data for later
+            console.log('Completion screen not visible, storing survey data for later download');
+
+            // Create a temporary download link and trigger download
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(dataBlob);
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
             downloadLink.click();
-        });
-
-        // Add button to completion screen
-        completionScreen.insertBefore(downloadBtn, okBtn);
-        console.log('Added download button for survey data');
+            document.body.removeChild(downloadLink);
+        }
     }
 
     // Export mappings to CSV file - modified to include default values

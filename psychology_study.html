@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>psychology_study - Psychology Study</title>
+    <link rel="stylesheet" href="participant_styles.css">
+<script type="text/javascript">
+            // Study configuration data
+            const deployedStudyConfigurations = [{"id":1744530483101,"name":"Block 1","type":"survey","config":{"questions":[{"id":"1","text":"Enter your question here","answerType":"text","options":[],"sliderConfig":null}],"saveData":true}},{"id":1744530486401,"name":"Block 2","type":"experiment","config":{"canvasBackground":"black","trialInterval":200,"fixationInterval":100,"stimulusOffset":0,"trialBackground":"grey","fixation":"yes","fixationColor":"white","trialCount":5,"cycleThreshold":0,"stimuliText":"apple, corn, speed.jpg","randomizeStimuli":true,"stimulusSize":"42","stimulusColor":"white","responseKey":"","additionalResponses":"","provideFeedback":false,"feedbackDuration":500,"saveData":true,"stimuliResponses":{}}}];
+
+            // Initialize the deployed study after the main script has loaded
+            window.addEventListener('load', function() {
+                // Initialize the deployed study
+                console.log('Deployed study loaded with', deployedStudyConfigurations.length, 'configurations');
+
+                // Set study mode to true and load configurations
+                window.isStudyMode = true;
+                window.studyConfigurations = deployedStudyConfigurations;
+                window.currentStudyIndex = 0;
+                window.studyConfigTested = true; // Force the study to be ready
+
+                // Hide all builder elements
+                document.querySelectorAll('.builder-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+
+                // Make sure the participant-visible elements are shown
+                document.querySelectorAll('.participant-visible').forEach(el => {
+                    el.style.display = 'block';
+                });
+
+                // Make sure the participant button group is visible
+                const participantButtonGroup = document.querySelector('.participant-button-group');
+                if (participantButtonGroup) {
+                    participantButtonGroup.style.display = 'flex';
+                }
+
+                // Override the begin-btn click handler
+                const beginBtn = document.getElementById('begin-btn');
+                if (beginBtn) {
+                    // Remove existing event listeners
+                    const newBeginBtn = beginBtn.cloneNode(true);
+                    beginBtn.parentNode.replaceChild(newBeginBtn, beginBtn);
+
+                    // Add new event listener
+                    newBeginBtn.addEventListener('click', function() {
+                        console.log('Test button clicked');
+                        // Initialize the first configuration for testing
+                        if (deployedStudyConfigurations.length > 0) {
+                            const firstConfig = deployedStudyConfigurations[0];
+
+                            // Set a flag to indicate that a configuration has been tested
+                            window.studyConfigTested = true;
+
+                            // Load the configuration
+                            if (firstConfig.type === 'experiment') {
+                                // Set experiment mode
+                                window.isExperimentMode = true;
+
+                                // Load experiment configuration
+                                for (const [key, value] of Object.entries(firstConfig.config)) {
+                                    const element = document.getElementById(key);
+                                    if (element) {
+                                        if (element.type === 'checkbox') {
+                                            element.checked = value;
+                                        } else {
+                                            element.value = value;
+                                        }
+                                    }
+                                }
+
+                                // Set stimuli responses if they exist
+                                if (firstConfig.config.stimuliResponses) {
+                                    window.stimuliResponses = firstConfig.config.stimuliResponses;
+                                    window.hasCustomMappings = Object.keys(firstConfig.config.stimuliResponses).length > 0;
+                                }
+
+                                // Update the global saveData variable
+                                if (firstConfig.config.saveData !== undefined) {
+                                    window.saveData = firstConfig.config.saveData;
+                                }
+
+                                // Submit the experiment form
+                                const experimentForm = document.getElementById('experiment-form');
+                                if (experimentForm && experimentForm.requestSubmit) {
+                                    experimentForm.requestSubmit();
+                                } else {
+                                    // Fallback for browsers that don't support requestSubmit
+                                    startExperiment();
+                                }
+                            } else if (firstConfig.type === 'survey') {
+                                // Set survey mode
+                                window.isExperimentMode = false;
+
+                                // Load survey configuration
+                                if (firstConfig.config.questions && firstConfig.config.questions.length > 0) {
+                                    // Set save data checkbox
+                                    const saveDataCheckbox = document.getElementById('survey-save-data');
+                                    if (saveDataCheckbox) {
+                                        saveDataCheckbox.checked =
+                                            firstConfig.config.saveData !== undefined ? firstConfig.config.saveData : false;
+
+                                        // Update the global saveData variable
+                                        window.saveData = saveDataCheckbox.checked;
+                                    }
+                                }
+
+                                // Start the survey test
+                                startSurvey();
+                            }
+                        }
+                    });
+                }
+
+                // Override the begin-study-btn click handler
+                const beginStudyBtn = document.getElementById('begin-study-btn');
+                if (beginStudyBtn) {
+                    // Remove existing event listeners
+                    const newBeginStudyBtn = beginStudyBtn.cloneNode(true);
+                    beginStudyBtn.parentNode.replaceChild(newBeginStudyBtn, beginStudyBtn);
+
+                    // Add new event listener
+                    newBeginStudyBtn.addEventListener('click', function() {
+                        console.log('Begin Study button clicked');
+                        // Start the study with the loaded configurations
+                        if (deployedStudyConfigurations.length > 0) {
+                            // Make sure the study configurations are loaded
+                            window.studyConfigurations = deployedStudyConfigurations;
+                            window.currentStudyIndex = 0;
+                            window.isStudyMode = true;
+
+                            // Force the study to be ready
+                            window.studyConfigTested = true;
+
+                            console.log('Starting deployed study with configurations:', window.studyConfigurations);
+
+                            // Start the first configuration in the study
+                            startStudyConfiguration(0);
+                        } else {
+                            alert('No study configurations found. Please test first.');
+                        }
+                    });
+                }
+            });
+
+            // Helper function to start a survey directly
+            function startSurvey() {
+                console.log('Starting survey test');
+                const surveyContainer = document.querySelector('.survey-container');
+                if (surveyContainer) {
+                    surveyContainer.classList.remove('hidden');
+                }
+
+                // Hide intro screen
+                const introScreen = document.getElementById('intro-screen');
+                if (introScreen) {
+                    introScreen.classList.add('hidden');
+                }
+
+                // Show experiment container
+                const experimentContainer = document.getElementById('experiment-container');
+                if (experimentContainer) {
+                    experimentContainer.classList.remove('hidden');
+                }
+            }
+
+            // Helper function to start an experiment directly
+            function startExperiment() {
+                console.log('Starting experiment test');
+                // Hide intro screen
+                const introScreen = document.getElementById('intro-screen');
+                if (introScreen) {
+                    introScreen.classList.add('hidden');
+                }
+
+                // Show experiment container
+                const experimentContainer = document.getElementById('experiment-container');
+                if (experimentContainer) {
+                    experimentContainer.classList.remove('hidden');
+                }
+            }
+        </script><style>
+            /* Deployed study specific styles */
+            .builder-only, #survey-form, #experiment-form {
+                display: none !important; /* Hide builder elements */
+            }
+
+            /* Make sure the original button group is hidden */
+            .button-group:not(.participant-button-group) {
+                display: none !important;
+            }
+
+            /* Make sure the study buttons container is visible but the file buttons are hidden */
+            .study-buttons-container {
+                display: block !important;
+            }
+
+            .study-file-buttons {
+                display: none !important;
+            }
+
+            .left-panel {
+                width: 100% !important;
+                padding: 20px !important;
+            }
+
+            .right-panel {
+                display: none !important;
+            }
+
+            .split-container {
+                display: block !important;
+            }
+
+            .participant-button-group {
+                display: flex !important;
+                justify-content: center;
+                gap: 20px;
+                margin-top: 30px;
+                margin-bottom: 30px;
+            }
+
+            /* Make sure the participant visible elements are shown */
+            .participant-visible {
+                display: block !important;
+            }
+
+            /* Ensure buttons in participant button group are displayed properly */
+            .participant-button-group button {
+                display: inline-block !important;
+                min-width: 150px !important;
+                padding: 12px 20px !important;
+                font-size: 16px !important;
+                margin: 10px !important;
+            }
+
+            /* Clean up the intro screen */
+            #intro-screen {
+                max-width: 800px !important;
+                margin: 0 auto !important;
+                padding: 20px !important;
+            }
+
+            /* Ensure the participant instructions are visible */
+            .participant-instructions {
+                display: block !important;
+                margin-bottom: 30px !important;
+            }
+
+            /* Make sure the experiment container is properly styled */
+            #experiment-container {
+                width: 100% !important;
+                height: 80vh !important;
+                margin: 0 auto !important;
+            }
+
+            /* Make sure the completion screen is properly styled */
+            #completion-screen {
+                text-align: center !important;
+                padding: 50px 20px !important;
+            }
+
+            /* Make sure the buttons are properly styled */
+            button {
+                cursor: pointer !important;
+            }
+
+            /* Hide the form switch container */
+            .form-switch-container {
+                display: none !important;
+            }
+        </style></head>
+<body>
+    <div id="intro-screen" class="container"><div class="participant-instructions">
+                <h2>Study Instructions</h2>
+                <p>Thank you for participating in this psychology study. Please follow these steps:</p>
+                <ol>
+                    <li>First, click the <strong>TEST (run first)</strong> button to initialize the study.</li>
+                    <li>After completing the test, click the <strong>Begin Study</strong> button to start the full study.</li>
+                    <li>Follow the on-screen instructions for each part of the study.</li>
+                    <li>At the end, you'll have the option to download your data.</li>
+                </ol>
+                <p><strong>Important:</strong> You must click the TEST button first before beginning the study.</p>
+            </div>
+        <div class="split-container">
+            <div class="left-panel">
+                <h1>psychology_study</h1>
+                <div class="form-switch-container builder-only">
+                    <span class="switch-label">Survey</span>
+                    <label class="switch">
+                        <input type="checkbox" id="form-type-switch" checked="">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="switch-label">Experiment - Text only</span>
+                </div>
+
+                <form id="experiment-form" class="builder-only">
+                    <div class="form-group form-row">
+                        <div class="form-column">
+                            <label for="canvas-background">Canvas Background:</label>
+                            <div class="color-select-container">
+                                <select id="canvas-background" required="">
+                                    <option value="black" selected="">Black</option>
+                                    <option value="white">White</option>
+                                    <option value="grey">Grey</option>
+                                    <option value="red">Red</option>
+                                    <option value="green">Green</option>
+                                    <option value="blue">Blue</option>
+                                    <option value="yellow">Yellow</option>
+                                    <option value="purple">Purple</option>
+                                    <option value="orange">Orange</option>
+                                    <option value="pink">Pink</option>
+                                    <option value="cyan">Cyan</option>
+                                    <option value="brown">Brown</option>
+                                </select>
+                                <span class="color-preview-large" id="canvas-background-preview" style="background-color: black;"></span>
+                            </div>
+                            <p class="helper-text">Background color of the canvas area surrounding the experiment screen.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="trial-interval">Trial interval (milliseconds):</label>
+                            <input type="number" id="trial-interval" min="1" required="" value="200">
+                            <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="trial-background">Trial background:</label>
+                            <div class="color-select-container">
+                                <select id="trial-background" required="">
+                                    <option value="white">White</option>
+                                    <option value="black">Black</option>
+                                    <option value="grey" selected="">Grey</option>
+                                    <option value="red">Red</option>
+                                    <option value="green">Green</option>
+                                    <option value="blue">Blue</option>
+                                    <option value="yellow">Yellow</option>
+                                    <option value="purple">Purple</option>
+                                    <option value="orange">Orange</option>
+                                    <option value="pink">Pink</option>
+                                    <option value="cyan">Cyan</option>
+                                    <option value="brown">Brown</option>
+                                </select>
+                                <span class="color-preview-large" id="trial-background-preview" style="background-color: grey;"></span>
+                            </div>
+                            <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-row">
+                        <div class="form-column">
+                            <label for="fixation">Fixation:</label>
+                            <select id="fixation" required="">
+                                <option value="yes" selected="">Yes</option>
+                                <option value="no">No</option>
+                            </select>
+                            <p class="helper-text">Displays a "+" in the center of the screen to focus participant's attention.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="fixation-interval">Fixation interval (milliseconds):</label>
+                            <input type="number" id="fixation-interval" min="1" required="" value="100">
+                            <p class="helper-text">Duration the fixation cross appears before showing the stimulus.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="fixation-color">Fixation color:</label>
+                            <div class="color-select-container">
+                                <select id="fixation-color" required="">
+                                    <option value="white" selected="">White</option>
+                                    <option value="grey">Grey</option>
+                                    <option value="black">Black</option>
+                                    <option value="red">Red</option>
+                                    <option value="green">Green</option>
+                                    <option value="blue">Blue</option>
+                                    <option value="yellow">Yellow</option>
+                                    <option value="purple">Purple</option>
+                                    <option value="orange">Orange</option>
+                                    <option value="pink">Pink</option>
+                                    <option value="cyan">Cyan</option>
+                                    <option value="brown">Brown</option>
+                                </select>
+                                <span class="color-preview-large" id="fixation-color-preview" style="background-color: white;"></span>
+                            </div>
+                            <p class="helper-text">Color of the fixation cross that appears in the center of the screen.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-row">
+                        <div class="form-column">
+                            <label for="position-x">Fixation and Stimulus Location X:</label>
+                            <input type="number" id="position-x" value="0">
+                            <p class="helper-text">Horizontal position relative to center (negative = left, positive = right)</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="position-y">Fixation and Stimulus Location Y:</label>
+                            <input type="number" id="position-y" value="0">
+                            <p class="helper-text">Vertical position relative to center (negative = up, positive = down)</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="stimulus-offset">Stimulus offset (milliseconds):</label>
+                        <input type="number" id="stimulus-offset" min="0" required="" value="0">
+                        <p class="helper-text">How long the stimulus remains visible (0 = until response, any other value = milliseconds before disappearing).</p>
+                    </div>
+
+                    <div class="form-group form-row">
+                        <div class="form-column">
+                            <label for="trial-count">Trial count (1-999):</label>
+                            <input type="number" id="trial-count" min="1" max="999" required="" value="4">
+                            <p class="helper-text">Total number of trials in each cycle of the experiment.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="cycle-threshold">Cycle Trials until Threshold:</label>
+                            <input type="number" id="cycle-threshold" min="0" required="" value="0">
+                            <p class="helper-text">Minimum correct responses required to end the experiment (0 = no threshold).</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group stimulus-group">
+                        <label for="stimuli-text">Stimuli - Text + Images (comma separated):</label>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="randomize-stimuli" checked="">
+                            <label for="randomize-stimuli">Randomize stimulus sequence</label>
+                        </div>
+                        <textarea id="stimuli-text" rows="3" required="">apple, corn, speed</textarea>
+                        <p class="helper-text">List of stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
+                        <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed</p>
+                        <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed. Positioning defaults can be customized</p>
+                        <p class="helper-text">Indicate image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg. Images should be in the local directory. </p>
+                        <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
+
+                        <button type="button" id="sr-mapping-btn" class="secondary-btn builder-only">Custom S-R Mappings</button>
+                        <p class="helper-text">Customize stimulus and response properties.</p>
+
+                        <div class="form-row">
+                            <div class="form-column">
+                                <label for="stimulus-size">Stimulus Text Size:</label>
+                                <select id="stimulus-size" required="">
+                                    <option value="12">12</option>
+                                    <option value="16">16</option>
+                                    <option value="24">24</option>
+                                    <option value="32">32</option>
+                                    <option value="42" selected="">42</option>
+                                    <option value="48">48</option>
+                                    <option value="56">56</option>
+                                    <option value="64">64</option>
+                                    <option value="72">72</option>
+                                    <option value="84">84</option>
+                                    <option value="96">96</option>
+                                    <option value="120">120</option>
+                                </select>
+                                <p class="helper-text">The font size of the stimulus text in pixels.</p>
+                            </div>
+                            <div class="form-column">
+                                <label for="stimulus-color">Stimulus Text Color:</label>
+                                <div class="color-select-container">
+                                    <select id="stimulus-color" required="">
+                                        <option value="white" selected="">White</option>
+                                        <option value="black">Black</option>
+                                        <option value="grey">Grey</option>
+                                        <option value="red">Red</option>
+                                        <option value="green">Green</option>
+                                        <option value="blue">Blue</option>
+                                        <option value="yellow">Yellow</option>
+                                        <option value="purple">Purple</option>
+                                        <option value="orange">Orange</option>
+                                        <option value="pink">Pink</option>
+                                        <option value="cyan">Cyan</option>
+                                        <option value="brown">Brown</option>
+                                    </select>
+                                    <span class="color-preview-large" id="stimulus-color-preview" style="background-color: white;"></span>
+                                </div>
+                                <p class="helper-text">The color of the stimulus text displayed during trials.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group form-row">
+                        <div class="form-column">
+                            <label for="response-key">Response key (leave blank for SPACEBAR):</label>
+                            <input type="text" id="response-key" placeholder="SPACEBAR">
+                            <p class="helper-text">Key that participants press to advance to the next trial. Defaults to SPACEBAR if left empty.</p>
+                        </div>
+                        <div class="form-column">
+                            <label for="additional-responses">Additional Responses (optional):</label>
+                            <input type="text" id="additional-responses" placeholder="a">
+                            <p class="helper-text">Other keys that can advance trials (comma-separated). These are always accepted.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Response Feedback:</label>
+                        <div class="form-row">
+                            <div class="form-column">
+                                <div class="checkbox-container">
+                                    <input type="checkbox" id="provide-feedback">
+                                    <label for="provide-feedback">Provide Feedback</label>
+                                </div>
+                                <p class="helper-text">When checked, participants will receive feedback on their responses.</p>
+                            </div>
+                            <div class="form-column">
+                                <label for="feedback-duration">Feedback Duration (ms):</label>
+                                <input type="number" id="feedback-duration" min="1" value="500" required="">
+                                <p class="helper-text">Duration (in milliseconds) feedback remains visible.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="save-data">
+                            <label for="save-data">Save Data</label>
+                        </div>
+                        <p class="helper-text">When checked, data will be saved and available for download.</p>
+                    </div>
+                </form>
+
+                <form id="survey-form" class="hidden builder-only">
+                    <div class="survey-container builder-only">
+                        <h3>Survey Builder</h3>
+                        <div id="questions-container"><div class="question-item builder-only" data-question-id="1">
+                            <div class="question-header">
+                                <h4>Question 1</h4>
+                                <button type="button" class="remove-question-btn secondary-btn" style="display: none;">Remove</button>
+                            </div>
+                            <div class="form-group">
+                                <label for="question-text-1">Question Text:</label>
+                                <textarea id="question-text-1" class="question-text" rows="3" required="">Enter your question here</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="answer-type-1">Answer Type:</label>
+                                <select id="answer-type-1" class="answer-type" required="">
+                                    <option value="text" selected="">Text (single line)</option>
+                                    <option value="textarea">Text (multi-line)</option>
+                                    <option value="radio">Multiple Choice</option>
+                                    <option value="slider">Slider Scale</option>
+                                </select>
+                                <p class="helper-text">Select the type of answer input to display to participants.</p>
+                            </div>
+                            <div id="multiple-choice-options-1" class="multiple-choice-options form-group hidden">
+                                <label>Multiple Choice Options:</label>
+                                <div id="options-container-1" class="options-container"></div>
+                                <button type="button" class="add-option-btn secondary-btn">Add Option</button>
+                                <p class="helper-text">Add the options that participants can choose from.</p>
+                            </div>
+                            <div id="slider-options-1" class="slider-options form-group hidden">
+                                <label>Slider Scale Options:</label>
+                                <div class="slider-config">
+                                    <div class="slider-row">
+                                        <div class="slider-field">
+                                            <label for="slider-min-1">Min Value:</label>
+                                            <input type="number" id="slider-min-1" class="slider-min" value="1" min="0" max="100">
+                                        </div>
+                                        <div class="slider-field">
+                                            <label for="slider-max-1">Max Value:</label>
+                                            <input type="number" id="slider-max-1" class="slider-max" value="9" min="1" max="100">
+                                        </div>
+                                    </div>
+                                    <div class="slider-row">
+                                        <div class="slider-field">
+                                            <label for="slider-left-label-1">Left Label:</label>
+                                            <input type="text" id="slider-left-label-1" class="slider-left-label" value="Left">
+                                        </div>
+                                        <div class="slider-field">
+                                            <label for="slider-right-label-1">Right Label:</label>
+                                            <input type="text" id="slider-right-label-1" class="slider-right-label" value="Right">
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="helper-text">Configure the slider scale range and labels.</p>
+                            </div>
+                        </div></div>
+
+                        <!-- Add Question Button -->
+                        <div class="form-group">
+                            <button type="button" id="add-question-btn" class="secondary-btn">Add Another Question</button>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="survey-save-data">
+                                <label for="survey-save-data">Save Data</label>
+                            </div>
+                            <p class="helper-text">When checked, survey responses will be saved and available for download.</p>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="button-group builder-only">
+                    <button type="button" id="begin-btn" class="participant-visible">TEST (run first)</button>
+                    <button type="button" id="add-to-study-btn" class="builder-only">Add to Study Sequence</button>
+                </div>
+            </div>
+            <div class="right-panel builder-only">
+                <div id="study-window" class="builder-only">
+                    <!-- Content will be added here dynamically -->
+                <div class="study-config-item" data-config-id="1744530483101">
+            <div class="config-header">
+                <input type="text" class="block-name-input" value="Block 1" placeholder="Enter block name" title="Click to edit block name">
+                <div class="block-controls">
+                    <button class="move-up-btn" title="Move Up" style="visibility: hidden;">↑</button>
+                    <button class="move-down-btn" title="Move Down" style="visibility: visible;">↓</button>
+                    <button class="remove-config-btn" title="Remove">×</button>
+                </div>
+            </div>
+            <div class="config-details">
+                
+                <small>Type: Survey</small>
+                <small>Questions: 1</small>
+                <small>Preview: Enter your question here</small>
+                <small>Save Data: Yes</small>
+            
+            </div>
+        </div><div class="study-config-item" data-config-id="1744530486401">
+            <div class="config-header">
+                <input type="text" class="block-name-input" value="Block 2" placeholder="Enter block name" title="Click to edit block name">
+                <div class="block-controls">
+                    <button class="move-up-btn" title="Move Up" style="visibility: visible;">↑</button>
+                    <button class="move-down-btn" title="Move Down" style="visibility: hidden;">↓</button>
+                    <button class="remove-config-btn" title="Remove">×</button>
+                </div>
+            </div>
+            <div class="config-details">
+                
+                <small>Type: Experiment</small>
+                <small>Block: 5 trials</small>
+                <small>Stimuli: apple, corn, speed.jpg</small>
+                <small>Feedback: No</small>
+                <small>Save Data: Yes</small>
+                
+            
+            </div>
+        </div></div>
+                <div class="study-buttons-container">
+                    <button type="button" id="begin-study-btn" class="participant-visible">Begin Study</button>
+                    <div class="study-file-buttons builder-only">
+                        <button type="button" id="save-study-btn">Save Study</button>
+                        <button type="button" id="load-study-btn">Load Study</button>
+                        <button type="button" id="deploy-study-btn" style="background-color: #d9534f;">Deploy Study</button>
+                        <input type="file" id="study-file-input" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    <div class="participant-button-group"><button type="button" id="begin-btn" class="participant-visible">TEST (run first)</button><button type="button" id="begin-study-btn" class="participant-visible">Begin Study</button></div></div>
+
+    <!-- S-R Mapping Modal -->
+    <div id="sr-mapping-modal" class="modal hidden builder-only">
+        <div class="modal-content">
+            <span class="close-btn">×</span>
+            <h2>Custom Stimulus-Response Mappings</h2>
+            <p>Customize properties for each stimulus or sequence:</p>
+            <p class="helper-text">Empty fields will use the values from the main form. The dialog is resizable - drag from the bottom-right corner.</p>
+
+            <div class="mapping-table-container">
+                <table id="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>Stimulus</th>
+                            <th>Correct Response Key</th>
+                            <th>X Position</th>
+                            <th>Y Position</th>
+                            <th>Offset (ms)</th>
+                            <th>Color</th>
+                            <th>Size (px)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-tbody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="save-mappings-btn">Save Mappings</button>
+                <button type="button" id="export-mappings-btn" class="secondary-btn">Export Mappings</button>
+                <button type="button" id="import-mappings-btn" class="secondary-btn">Import Mappings</button>
+                <!-- Hidden file input for importing CSV -->
+                <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <div id="experiment-container" class="hidden" style="background-color: black;">
+        <div id="experiment-screen" style="background-color: grey;">
+            <div id="fixation-point" class="hidden" style="color: white; transform: translate(calc(-50% + 0px), calc(-50% + 0px));">+</div>
+            <div id="stimulus-text" class="hidden" style="transform: translate(calc(-50% + 0px), calc(-50% + 0px)); font-size: 42px; color: white;">apple</div>
+            <div id="feedback-text" class="hidden" style="transform: translate(-50%, -50%);"></div>
+        </div>
+    </div>
+
+    <div id="completion-screen" class="container hidden">
+        <h2 id="completion-message">Study Complete!</h2>
+        <div id="completion-stats" class="">
+                    <div class="study-completion-stats">
+                        <h3>Study Summary:</h3>
+                        <p>Completed 2 blocks</p>
+                    
+                        <div class="download-section">
+                            <button id="download-study-data" class="download-btn">
+                                Download Study Data
+                            </button>
+                        </div>
+                    </div></div>
+        <button class="secondary-btn" style="margin-top: 20px;">Download Data</button><button class="secondary-btn" style="margin-top: 20px;">Download Survey Data</button><button id="ok-btn">OK</button>
+    </div>
+
+    <script src="script.js"></script>
+
+
+</body></html>

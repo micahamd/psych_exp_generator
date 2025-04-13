@@ -1,0 +1,137 @@
+/* Participant-focused styles for deployed studies */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    position: relative;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+/* Participant instructions */
+.participant-instructions {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.participant-instructions h2 {
+    color: #2196F3;
+    margin-bottom: 10px;
+}
+
+.participant-instructions p {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.participant-instructions ol {
+    margin-left: 20px;
+    margin-bottom: 10px;
+}
+
+.participant-instructions li {
+    margin-bottom: 5px;
+}
+
+/* Buttons */
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px 0;
+    min-width: 150px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.secondary-btn {
+    background-color: #2196F3;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 10px 0;
+    min-width: 0;
+    display: inline-block;
+}
+
+.secondary-btn:hover {
+    background-color: #0b7dda;
+}
+
+/* Experiment container */
+#experiment-container {
+    width: 100%;
+    height: 80vh;
+    position: relative;
+    margin: 0 auto;
+    background-color: #f0f0f0;
+    overflow: hidden;
+}
+
+#experiment-screen {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background-color: white;
+    overflow: hidden;
+}
+
+/* Completion screen */
+#completion-screen {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+#completion-message {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #4CAF50;
+}
+
+/* Hide all builder UI elements by default */
+.hidden, 
+.builder-only {
+    display: none !important;
+}
+
+/* Only show essential elements for participants */
+.participant-visible {
+    display: block !important;
+}
+
+/* Button group for participant */
+.participant-button-group {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}

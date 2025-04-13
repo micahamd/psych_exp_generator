@@ -4156,4 +4156,438 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Experiment saveData updated to:', saveData);
         });
     }
+
+    // Add event listener for deploy study button
+    const deployStudyBtn = document.getElementById('deploy-study-btn');
+    if (deployStudyBtn) {
+        deployStudyBtn.addEventListener('click', function() {
+            deployStudy();
+        });
+    }
+
+    // Function to deploy the study as a standalone HTML file
+    function deployStudy() {
+        // Check if there are any study configurations
+        if (studyConfigurations.length === 0) {
+            alert('Please add at least one configuration to the study before deploying.');
+            return;
+        }
+
+        // Prompt for study name
+        const studyName = prompt('Enter a name for your deployed study:', 'psychology_study');
+        if (!studyName) return; // User cancelled
+
+        // Create a valid filename
+        const fileName = studyName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.html';
+
+        // Clone the current document
+        const docClone = document.documentElement.cloneNode(true);
+
+        // Modify the cloned document
+        const headElement = docClone.querySelector('head');
+
+        // Change the title
+        const titleElement = headElement.querySelector('title');
+        if (titleElement) {
+            titleElement.textContent = studyName + ' - Psychology Study';
+        }
+
+        // Change the stylesheet to participant_styles.css
+        const styleElement = headElement.querySelector('link[rel="stylesheet"]');
+        if (styleElement) {
+            styleElement.setAttribute('href', 'participant_styles.css');
+        }
+
+        // Add participant instructions
+        const introScreen = docClone.querySelector('#intro-screen');
+        if (introScreen) {
+            // Create instructions element
+            const instructions = document.createElement('div');
+            instructions.className = 'participant-instructions';
+            instructions.innerHTML = `
+                <h2>Study Instructions</h2>
+                <p>Thank you for participating in this psychology study. Please follow these steps:</p>
+                <ol>
+                    <li>First, click the <strong>TEST (run first)</strong> button to initialize the study.</li>
+                    <li>After completing the test, click the <strong>Begin Study</strong> button to start the full study.</li>
+                    <li>Follow the on-screen instructions for each part of the study.</li>
+                    <li>At the end, you'll have the option to download your data.</li>
+                </ol>
+                <p><strong>Important:</strong> You must click the TEST button first before beginning the study.</p>
+            `;
+
+            // Insert at the beginning of the intro screen
+            introScreen.insertBefore(instructions, introScreen.firstChild);
+        }
+
+        // Hide all builder UI elements except essential ones
+        // Add 'builder-only' class to elements we want to hide
+        const elementsToHide = [
+            '.form-switch-container',
+            '#experiment-form',
+            '#survey-form',
+            '#add-to-study-btn',
+            '#study-window',
+            '.study-file-buttons',
+            '#sr-mapping-btn',
+            '#sr-mapping-modal',
+            '.right-panel',
+            '.left-panel form',
+            '.question-item',
+            '.survey-container'
+        ];
+
+        elementsToHide.forEach(selector => {
+            const elements = docClone.querySelectorAll(selector);
+            elements.forEach(el => {
+                el.classList.add('builder-only');
+            });
+        });
+
+        // Update the title
+        const h1Element = docClone.querySelector('h1');
+        if (h1Element) {
+            h1Element.textContent = studyName;
+        }
+
+        // Move the original buttons to a visible location
+        const originalBeginBtn = docClone.querySelector('#begin-btn');
+        const originalBeginStudyBtn = docClone.querySelector('#begin-study-btn');
+
+        if (originalBeginBtn) {
+            originalBeginBtn.classList.remove('hidden');
+            originalBeginBtn.classList.add('participant-visible');
+            originalBeginBtn.textContent = 'TEST (run first)';
+        }
+
+        if (originalBeginStudyBtn) {
+            originalBeginStudyBtn.classList.remove('hidden');
+            originalBeginStudyBtn.classList.add('participant-visible');
+        }
+
+        // Create a new button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'participant-button-group';
+
+        // Move the original buttons to the new container
+        if (originalBeginBtn && originalBeginStudyBtn) {
+            // Clone the buttons to avoid reference issues
+            const testBtn = originalBeginBtn.cloneNode(true);
+            const startStudyBtn = originalBeginStudyBtn.cloneNode(true);
+
+            // Add to container
+            buttonContainer.appendChild(testBtn);
+            buttonContainer.appendChild(startStudyBtn);
+
+            // Add the container to the intro screen
+            const introScreen = docClone.querySelector('#intro-screen');
+            if (introScreen) {
+                introScreen.appendChild(buttonContainer);
+            }
+
+            // Hide the original button group
+            const originalButtonGroup = docClone.querySelector('.button-group');
+            if (originalButtonGroup) {
+                originalButtonGroup.classList.add('builder-only');
+            }
+        }
+
+        // Add study configuration as a script variable
+        const configScript = document.createElement('script');
+        configScript.type = 'text/javascript';
+        configScript.textContent = `
+            // Study configuration data
+            const deployedStudyConfigurations = ${JSON.stringify(studyConfigurations)};
+
+            // Initialize the deployed study after the main script has loaded
+            window.addEventListener('load', function() {
+                // Initialize the deployed study
+                console.log('Deployed study loaded with', deployedStudyConfigurations.length, 'configurations');
+
+                // Set study mode to true and load configurations
+                window.isStudyMode = true;
+                window.studyConfigurations = deployedStudyConfigurations;
+                window.currentStudyIndex = 0;
+                window.studyConfigTested = true; // Force the study to be ready
+
+                // Hide all builder elements
+                document.querySelectorAll('.builder-only').forEach(el => {
+                    el.style.display = 'none';
+                });
+
+                // Make sure the participant-visible elements are shown
+                document.querySelectorAll('.participant-visible').forEach(el => {
+                    el.style.display = 'block';
+                });
+
+                // Make sure the participant button group is visible
+                const participantButtonGroup = document.querySelector('.participant-button-group');
+                if (participantButtonGroup) {
+                    participantButtonGroup.style.display = 'flex';
+                }
+
+                // Override the begin-btn click handler
+                const beginBtn = document.getElementById('begin-btn');
+                if (beginBtn) {
+                    // Remove existing event listeners
+                    const newBeginBtn = beginBtn.cloneNode(true);
+                    beginBtn.parentNode.replaceChild(newBeginBtn, beginBtn);
+
+                    // Add new event listener
+                    newBeginBtn.addEventListener('click', function() {
+                        console.log('Test button clicked');
+                        // Initialize the first configuration for testing
+                        if (deployedStudyConfigurations.length > 0) {
+                            const firstConfig = deployedStudyConfigurations[0];
+
+                            // Set a flag to indicate that a configuration has been tested
+                            window.studyConfigTested = true;
+
+                            // Load the configuration
+                            if (firstConfig.type === 'experiment') {
+                                // Set experiment mode
+                                window.isExperimentMode = true;
+
+                                // Load experiment configuration
+                                for (const [key, value] of Object.entries(firstConfig.config)) {
+                                    const element = document.getElementById(key);
+                                    if (element) {
+                                        if (element.type === 'checkbox') {
+                                            element.checked = value;
+                                        } else {
+                                            element.value = value;
+                                        }
+                                    }
+                                }
+
+                                // Set stimuli responses if they exist
+                                if (firstConfig.config.stimuliResponses) {
+                                    window.stimuliResponses = firstConfig.config.stimuliResponses;
+                                    window.hasCustomMappings = Object.keys(firstConfig.config.stimuliResponses).length > 0;
+                                }
+
+                                // Update the global saveData variable
+                                if (firstConfig.config.saveData !== undefined) {
+                                    window.saveData = firstConfig.config.saveData;
+                                }
+
+                                // Submit the experiment form
+                                const experimentForm = document.getElementById('experiment-form');
+                                if (experimentForm && experimentForm.requestSubmit) {
+                                    experimentForm.requestSubmit();
+                                } else {
+                                    // Fallback for browsers that don't support requestSubmit
+                                    startExperiment();
+                                }
+                            } else if (firstConfig.type === 'survey') {
+                                // Set survey mode
+                                window.isExperimentMode = false;
+
+                                // Load survey configuration
+                                if (firstConfig.config.questions && firstConfig.config.questions.length > 0) {
+                                    // Set save data checkbox
+                                    const saveDataCheckbox = document.getElementById('survey-save-data');
+                                    if (saveDataCheckbox) {
+                                        saveDataCheckbox.checked =
+                                            firstConfig.config.saveData !== undefined ? firstConfig.config.saveData : false;
+
+                                        // Update the global saveData variable
+                                        window.saveData = saveDataCheckbox.checked;
+                                    }
+                                }
+
+                                // Start the survey test
+                                startSurvey();
+                            }
+                        }
+                    });
+                }
+
+                // Override the begin-study-btn click handler
+                const beginStudyBtn = document.getElementById('begin-study-btn');
+                if (beginStudyBtn) {
+                    // Remove existing event listeners
+                    const newBeginStudyBtn = beginStudyBtn.cloneNode(true);
+                    beginStudyBtn.parentNode.replaceChild(newBeginStudyBtn, beginStudyBtn);
+
+                    // Add new event listener
+                    newBeginStudyBtn.addEventListener('click', function() {
+                        console.log('Begin Study button clicked');
+                        // Start the study with the loaded configurations
+                        if (deployedStudyConfigurations.length > 0) {
+                            // Make sure the study configurations are loaded
+                            window.studyConfigurations = deployedStudyConfigurations;
+                            window.currentStudyIndex = 0;
+                            window.isStudyMode = true;
+
+                            // Force the study to be ready
+                            window.studyConfigTested = true;
+
+                            console.log('Starting deployed study with configurations:', window.studyConfigurations);
+
+                            // Start the first configuration in the study
+                            startStudyConfiguration(0);
+                        } else {
+                            alert('No study configurations found. Please test first.');
+                        }
+                    });
+                }
+            });
+
+            // Helper function to start a survey directly
+            function startSurvey() {
+                console.log('Starting survey test');
+                const surveyContainer = document.querySelector('.survey-container');
+                if (surveyContainer) {
+                    surveyContainer.classList.remove('hidden');
+                }
+
+                // Hide intro screen
+                const introScreen = document.getElementById('intro-screen');
+                if (introScreen) {
+                    introScreen.classList.add('hidden');
+                }
+
+                // Show experiment container
+                const experimentContainer = document.getElementById('experiment-container');
+                if (experimentContainer) {
+                    experimentContainer.classList.remove('hidden');
+                }
+            }
+
+            // Helper function to start an experiment directly
+            function startExperiment() {
+                console.log('Starting experiment test');
+                // Hide intro screen
+                const introScreen = document.getElementById('intro-screen');
+                if (introScreen) {
+                    introScreen.classList.add('hidden');
+                }
+
+                // Show experiment container
+                const experimentContainer = document.getElementById('experiment-container');
+                if (experimentContainer) {
+                    experimentContainer.classList.remove('hidden');
+                }
+            }
+        `;
+        headElement.appendChild(configScript);
+
+        // Add a special style tag to handle visibility in the deployed version
+        const deployedStyleTag = document.createElement('style');
+        deployedStyleTag.textContent = `
+            /* Deployed study specific styles */
+            .builder-only, #survey-form, #experiment-form {
+                display: none !important; /* Hide builder elements */
+            }
+
+            /* Make sure the original button group is hidden */
+            .button-group:not(.participant-button-group) {
+                display: none !important;
+            }
+
+            /* Make sure the study buttons container is visible but the file buttons are hidden */
+            .study-buttons-container {
+                display: block !important;
+            }
+
+            .study-file-buttons {
+                display: none !important;
+            }
+
+            .left-panel {
+                width: 100% !important;
+                padding: 20px !important;
+            }
+
+            .right-panel {
+                display: none !important;
+            }
+
+            .split-container {
+                display: block !important;
+            }
+
+            .participant-button-group {
+                display: flex !important;
+                justify-content: center;
+                gap: 20px;
+                margin-top: 30px;
+                margin-bottom: 30px;
+            }
+
+            /* Make sure the participant visible elements are shown */
+            .participant-visible {
+                display: block !important;
+            }
+
+            /* Ensure buttons in participant button group are displayed properly */
+            .participant-button-group button {
+                display: inline-block !important;
+                min-width: 150px !important;
+                padding: 12px 20px !important;
+                font-size: 16px !important;
+                margin: 10px !important;
+            }
+
+            /* Clean up the intro screen */
+            #intro-screen {
+                max-width: 800px !important;
+                margin: 0 auto !important;
+                padding: 20px !important;
+            }
+
+            /* Ensure the participant instructions are visible */
+            .participant-instructions {
+                display: block !important;
+                margin-bottom: 30px !important;
+            }
+
+            /* Make sure the experiment container is properly styled */
+            #experiment-container {
+                width: 100% !important;
+                height: 80vh !important;
+                margin: 0 auto !important;
+            }
+
+            /* Make sure the completion screen is properly styled */
+            #completion-screen {
+                text-align: center !important;
+                padding: 50px 20px !important;
+            }
+
+            /* Make sure the buttons are properly styled */
+            button {
+                cursor: pointer !important;
+            }
+
+            /* Hide the form switch container */
+            .form-switch-container {
+                display: none !important;
+            }
+        `;
+        headElement.appendChild(deployedStyleTag);
+
+        // Generate the HTML content
+        const htmlContent = '<!DOCTYPE html>\n' + docClone.outerHTML;
+
+        // Create a blob and download link
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+
+        alert(`Study deployed as ${fileName}. Place this file in the same directory as the original experiment files.`);
+    }
 });

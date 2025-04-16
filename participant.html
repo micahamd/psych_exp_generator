@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychology Study</title>
+    <link rel="stylesheet" href="participant.css">
+    <!-- Embedded study configuration -->
+    <script>
+        // Embed the study configuration directly in the HTML file
+        const studyConfig = {
+            "studyTitle": "Psychology Study",
+            "instructions": "<h2>Study Instructions</h2><p>Thank you for participating in this psychology study. Please follow these steps:</p><ol><li>Read all instructions carefully before proceeding.</li><li>Click the 'Start Study' button when you are ready to begin.</li><li>Follow the on-screen instructions for each part of the study.</li><li>At the end, you'll have the option to download your data.</li><li>Please send the downloaded data file to the researcher.</li></ol><p><strong>Important:</strong> Please complete the study in a quiet environment without distractions.</p>",
+            "configurations": [
+                {
+                    "id": 1744533523157,
+                    "name": "Block 1",
+                    "type": "experiment",
+                    "config": {
+                        "canvasBackground": "black",
+                        "trialInterval": 200,
+                        "fixationInterval": 100,
+                        "stimulusOffset": 0,
+                        "trialBackground": "grey",
+                        "fixation": "yes",
+                        "fixationColor": "white",
+                        "trialCount": 5,
+                        "cycleThreshold": 0,
+                        "stimuliText": "apple, corn, speed.jpg",
+                        "randomizeStimuli": true,
+                        "stimulusSize": "42",
+                        "stimulusColor": "white",
+                        "responseKey": "",
+                        "additionalResponses": "",
+                        "provideFeedback": false,
+                        "feedbackDuration": 500,
+                        "saveData": true,
+                        "stimuliResponses": {}
+                    }
+                },
+                {
+                    "id": 1744533532825,
+                    "name": "Block 2",
+                    "type": "survey",
+                    "config": {
+                        "questions": [
+                            {
+                                "id": "1",
+                                "text": "Enter your question here",
+                                "answerType": "text",
+                                "options": [],
+                                "sliderConfig": null
+                            }
+                        ],
+                        "saveData": true
+                    }
+                }
+            ]
+        };
+    </script>
+
+    <!-- Pre-initialization script -->
+    <script>
+        // This script runs before anything else
+        // It will set up global variables and override functions
+
+        // Create placeholders for all the global variables
+        window.isStudyMode = false;
+        window.currentStudyIndex = 0;
+        window.isExperimentMode = true;
+        window.stimuli = [];
+        window.stimuliIndex = 0;
+        window.stimuliUsed = [];
+        window.sequenceIndex = 0;
+        window.currentTrial = 0;
+        window.currentCycleCorrect = 0;
+        window.experimentData = [];
+        window.saveData = true;
+        window.studyData = [];
+        window.stimuliResponses = {};
+        window.hasCustomMappings = false;
+        window.experimentRunning = false;
+
+        // Store original functions to override later
+        window.originalFunctions = {};
+
+        // Function to load study configuration
+        function loadStudyConfig() {
+            // First try to load from the embedded config if available
+            if (typeof studyConfig !== 'undefined' && studyConfig) {
+                console.log('Using embedded study configuration');
+                window.studyConfig = studyConfig;
+                window.studyConfigurations = studyConfig.configurations;
+                document.getElementById('study-title').textContent = studyConfig.studyTitle || 'Psychology Study';
+                document.getElementById('instructions').innerHTML = studyConfig.instructions || '';
+
+                // Pre-initialize the first configuration
+                preInitializeFirstConfig();
+                return;
+            }
+
+            // Otherwise try to load from study_config.json
+            console.log('Trying to load study_config.json');
+            fetch('study_config.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(config => {
+                    window.studyConfig = config;
+                    window.studyConfigurations = config.configurations;
+                    document.getElementById('study-title').textContent = config.studyTitle || 'Psychology Study';
+                    document.getElementById('instructions').innerHTML = config.instructions || '';
+
+                    console.log('Study configuration loaded:', config);
+
+                    // Pre-initialize the first configuration
+                    preInitializeFirstConfig();
+                })
+                .catch(error => {
+                    console.error('Error loading study configuration:', error);
+
+                    // Create a fallback configuration for testing
+                    const fallbackConfig = {
+                        studyTitle: 'Psychology Study (Fallback Mode)',
+                        instructions: '<h2>Study Instructions</h2><p>This study is running in fallback mode because the configuration file could not be loaded. Please contact the researcher.</p>',
+                        configurations: []
+                    };
+
+                    // Check if there's a URL parameter with a config
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const configParam = urlParams.get('config');
+                    if (configParam) {
+                        try {
+                            const decodedConfig = JSON.parse(decodeURIComponent(configParam));
+                            if (decodedConfig && decodedConfig.configurations) {
+                                console.log('Using configuration from URL parameter');
+                                window.studyConfig = decodedConfig;
+                                window.studyConfigurations = decodedConfig.configurations;
+                                document.getElementById('study-title').textContent = decodedConfig.studyTitle || 'Psychology Study';
+                                document.getElementById('instructions').innerHTML = decodedConfig.instructions || '';
+                                preInitializeFirstConfig();
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing config from URL:', e);
+                        }
+                    }
+
+                    // Use the fallback config
+                    console.log('Using fallback configuration');
+                    window.studyConfig = fallbackConfig;
+                    window.studyConfigurations = fallbackConfig.configurations;
+                    document.getElementById('study-title').textContent = fallbackConfig.studyTitle;
+                    document.getElementById('instructions').innerHTML = fallbackConfig.instructions;
+
+                    // Show a more user-friendly error message
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-message';
+                    errorDiv.innerHTML = `
+                        <h3>Configuration Error</h3>
+                        <p>The study configuration could not be loaded. This could be due to:</p>
+                        <ul>
+                            <li>Missing study_config.json file</li>
+                            <li>Running the file locally without a web server</li>
+                            <li>Network issues when loading the configuration</li>
+                        </ul>
+                        <p>Please try:</p>
+                        <ul>
+                            <li>Ensuring study_config.json is in the same directory as this file</li>
+                            <li>Running this file through a web server instead of directly from your file system</li>
+                            <li>Checking your internet connection</li>
+                        </ul>
+                    `;
+                    document.getElementById('instructions').appendChild(errorDiv);
+                });
+        }
+
+        // Function to pre-initialize the first configuration
+        function preInitializeFirstConfig() {
+            if (window.studyConfigurations && window.studyConfigurations.length > 0) {
+                const firstConfig = window.studyConfigurations[0];
+                console.log('Pre-initializing first configuration:', firstConfig);
+
+                // Set up hidden form elements with configuration values
+                if (firstConfig.type === 'experiment') {
+                    // Create hidden form elements for experiment
+                    const formFields = [
+                        'canvas-background', 'trial-interval', 'fixation-interval',
+                        'stimulus-offset', 'trial-background', 'fixation',
+                        'fixation-color', 'trial-count', 'cycle-threshold',
+                        'stimuli-text', 'randomize-stimuli', 'stimulus-size',
+                        'stimulus-color', 'response-key', 'additional-responses',
+                        'provide-feedback', 'feedback-duration', 'save-data',
+                        'position-x', 'position-y'
+                    ];
+
+                    const form = document.getElementById('experiment-form');
+                    formFields.forEach(field => {
+                        // Check if element already exists
+                        if (!document.getElementById(field)) {
+                            // Create appropriate input type
+                            let input;
+                            if (field === 'randomize-stimuli' || field === 'provide-feedback' || field === 'save-data') {
+                                input = document.createElement('input');
+                                input.type = 'checkbox';
+                            } else if (field === 'stimuli-text') {
+                                input = document.createElement('textarea');
+                            } else if (field.includes('color') || field === 'fixation') {
+                                input = document.createElement('select');
+                                input.innerHTML = '<option value="white">White</option><option value="black">Black</option>';
+                            } else {
+                                input = document.createElement('input');
+                                input.type = 'text';
+                            }
+
+                            input.id = field;
+                            input.style.display = 'none';
+                            form.appendChild(input);
+                        }
+                    });
+
+                    // Set values from configuration
+                    for (const [key, value] of Object.entries(firstConfig.config)) {
+                        const element = document.getElementById(key);
+                        if (element) {
+                            if (element.type === 'checkbox') {
+                                element.checked = value;
+                            } else {
+                                element.value = value;
+                            }
+                        }
+                    }
+                } else if (firstConfig.type === 'survey') {
+                    // Create hidden form elements for survey
+                    const form = document.getElementById('survey-form');
+
+                    // Create questions container
+                    let questionsContainer = document.getElementById('questions-container');
+                    if (!questionsContainer) {
+                        questionsContainer = document.createElement('div');
+                        questionsContainer.id = 'questions-container';
+                        form.appendChild(questionsContainer);
+                    }
+
+                    // Create save-data checkbox
+                    if (!document.getElementById('survey-save-data')) {
+                        const saveDataInput = document.createElement('input');
+                        saveDataInput.type = 'checkbox';
+                        saveDataInput.id = 'survey-save-data';
+                        saveDataInput.style.display = 'none';
+                        saveDataInput.checked = firstConfig.config.saveData !== undefined ?
+                            firstConfig.config.saveData : true;
+                        form.appendChild(saveDataInput);
+                    }
+
+                    // Create question elements if needed
+                    if (firstConfig.config.questions && firstConfig.config.questions.length > 0) {
+                        firstConfig.config.questions.forEach((question, index) => {
+                            const questionId = question.id || (index + 1).toString();
+
+                            // Create question item if it doesn't exist
+                            let questionItem = document.getElementById(`question-item-${questionId}`);
+                            if (!questionItem) {
+                                questionItem = document.createElement('div');
+                                questionItem.id = `question-item-${questionId}`;
+                                questionItem.className = 'question-item';
+                                questionItem.dataset.questionId = questionId;
+                                questionItem.style.display = 'none';
+                                questionsContainer.appendChild(questionItem);
+                            }
+
+                            // Create question text element
+                            let questionText = document.getElementById(`question-text-${questionId}`);
+                            if (!questionText) {
+                                questionText = document.createElement('textarea');
+                                questionText.id = `question-text-${questionId}`;
+                                questionText.className = 'question-text';
+                                questionText.style.display = 'none';
+                                questionItem.appendChild(questionText);
+                            }
+
+                            // Set question text
+                            questionText.value = question.text || '';
+
+                            // Create answer type select
+                            let answerType = document.getElementById(`answer-type-${questionId}`);
+                            if (!answerType) {
+                                answerType = document.createElement('select');
+                                answerType.id = `answer-type-${questionId}`;
+                                answerType.className = 'answer-type';
+                                answerType.style.display = 'none';
+                                answerType.innerHTML = `
+                                    <option value="text">Text (single line)</option>
+                                    <option value="textarea">Text (multi-line)</option>
+                                    <option value="radio">Multiple Choice</option>
+                                    <option value="slider">Slider Scale</option>
+                                `;
+                                questionItem.appendChild(answerType);
+                            }
+
+                            // Set answer type
+                            answerType.value = question.answerType || 'text';
+                        });
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="participant-container">
+        <div id="intro-screen">
+            <h1 id="study-title">Psychology Study</h1>
+            <div id="instructions">
+                <!-- Instructions will be inserted here -->
+            </div>
+            <button id="start-study-btn">Start Study</button>
+        </div>
+
+        <!-- Experiment container (same as in index.html) -->
+        <div id="experiment-container" class="hidden">
+            <div id="experiment-screen">
+                <div id="fixation-point" class="hidden">+</div>
+                <div id="stimulus-text" class="hidden"></div>
+                <div id="feedback-text" class="hidden"></div>
+            </div>
+        </div>
+
+        <!-- Survey container -->
+        <div id="survey-container" class="hidden">
+            <div id="survey-questions"></div>
+            <button id="submit-survey-btn">Submit Survey</button>
+        </div>
+
+        <!-- Completion screen (same as in index.html) -->
+        <div id="completion-screen" class="hidden">
+            <h2 id="completion-message"></h2>
+            <div id="completion-stats" class="hidden"></div>
+            <button id="ok-btn">Continue</button>
+        </div>
+    </div>
+
+    <!-- Hidden elements needed for compatibility -->
+    <div id="hidden-elements" style="display:none;">
+        <!-- Include all form elements that script.js might access -->
+        <form id="experiment-form">
+            <!-- Minimal versions of all form inputs will be added dynamically -->
+        </form>
+        <form id="survey-form">
+            <!-- Minimal versions of survey elements will be added dynamically -->
+        </form>
+        <!-- Original buttons (hidden) -->
+        <button id="begin-btn" style="display:none;">TEST</button>
+        <button id="begin-study-btn" style="display:none;">Begin Study</button>
+        <button id="add-to-study-btn" style="display:none;">Add to Study</button>
+    </div>
+
+    <!-- Main initialization script -->
+    <script>
+        // Load configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load study configuration
+            loadStudyConfig();
+
+            // Set up start study button
+            document.getElementById('start-study-btn').addEventListener('click', function() {
+                // Perform all the initialization that would happen during testing
+                initializeStudy();
+
+                // Start the study
+                window.isStudyMode = true;
+                window.currentStudyIndex = 0;
+
+                // Hide intro screen
+                document.getElementById('intro-screen').classList.add('hidden');
+
+                // Call startStudyConfiguration directly
+                if (typeof startStudyConfiguration === 'function') {
+                    startStudyConfiguration(0);
+                } else {
+                    // Fallback if function isn't available yet
+                    console.log('startStudyConfiguration not available yet, using fallback');
+                    setTimeout(() => {
+                        if (typeof startStudyConfiguration === 'function') {
+                            startStudyConfiguration(0);
+                        } else {
+                            console.error('startStudyConfiguration function not found');
+                            alert('Error starting study. Please refresh the page and try again.');
+                        }
+                    }, 500);
+                }
+            });
+
+            // Function to initialize the study (perform what testing would do)
+            function initializeStudy() {
+                console.log('Initializing study...');
+
+                // For each configuration, perform the initialization
+                if (window.studyConfigurations && window.studyConfigurations.length > 0) {
+                    // Initialize the first configuration
+                    const firstConfig = window.studyConfigurations[0];
+
+                    // Set form values based on configuration
+                    if (firstConfig.type === 'experiment') {
+                        console.log('Initializing experiment configuration');
+
+                        // Set experiment form values
+                        for (const [key, value] of Object.entries(firstConfig.config)) {
+                            const element = document.getElementById(key);
+                            if (element) {
+                                if (element.type === 'checkbox') {
+                                    element.checked = value;
+                                } else {
+                                    element.value = value;
+                                }
+                            }
+                        }
+
+                        // Set global variables
+                        window.isExperimentMode = true;
+                        window.saveData = firstConfig.config.saveData !== undefined ?
+                            firstConfig.config.saveData : true;
+
+                        // Parse stimuli
+                        if (typeof parseStimuli === 'function' && firstConfig.config.stimuliText) {
+                            window.stimuli = parseStimuli(firstConfig.config.stimuliText);
+                            console.log('Parsed stimuli:', window.stimuli);
+                        } else {
+                            console.warn('parseStimuli function not available or no stimuli text');
+                        }
+
+                        // Set S-R mappings if they exist
+                        if (firstConfig.config.stimuliResponses) {
+                            window.stimuliResponses = firstConfig.config.stimuliResponses;
+                            window.hasCustomMappings = Object.keys(firstConfig.config.stimuliResponses).length > 0;
+                            console.log('Set S-R mappings:', window.stimuliResponses);
+                        }
+
+                        // Force the study to be ready
+                        window.studyConfigTested = true;
+                    } else if (firstConfig.type === 'survey') {
+                        console.log('Initializing survey configuration');
+
+                        // Set survey mode
+                        window.isExperimentMode = false;
+
+                        // Set save data
+                        window.saveData = firstConfig.config.saveData !== undefined ?
+                            firstConfig.config.saveData : true;
+
+                        // Force the study to be ready
+                        window.studyConfigTested = true;
+                    }
+                }
+
+                console.log('Study initialization complete');
+            }
+
+            // Set up OK button
+            document.getElementById('ok-btn').addEventListener('click', function() {
+                if (window.isStudyMode && window.currentStudyIndex < (window.studyConfigurations?.length - 1 || 0)) {
+                    // Continue to next configuration
+                    document.getElementById('completion-screen').classList.add('hidden');
+                    window.currentStudyIndex++;
+
+                    // Reset state
+                    window.currentTrial = 0;
+                    window.experimentRunning = false;
+                    window.stimuliUsed = [];
+                    window.experimentData = [];
+
+                    // Start next configuration
+                    if (typeof startStudyConfiguration === 'function') {
+                        startStudyConfiguration(window.currentStudyIndex);
+                    }
+                } else {
+                    // Study complete
+                    document.getElementById('completion-screen').classList.add('hidden');
+                    document.getElementById('intro-screen').classList.remove('hidden');
+
+                    // Reset state
+                    window.currentTrial = 0;
+                    window.experimentRunning = false;
+                    window.stimuliUsed = [];
+                    window.currentStudyIndex = 0;
+                    window.isStudyMode = false;
+                    window.experimentData = [];
+                }
+            });
+        });
+    </script>
+
+    <!-- Load the main script.js -->
+    <script src="script.js" onerror="handleScriptError()"></script>
+
+    <script>
+        // Handle script loading errors
+        function handleScriptError() {
+            console.error('Error loading script.js');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `
+                <h3>Script Loading Error</h3>
+                <p>The main script file (script.js) could not be loaded. This could be due to:</p>
+                <ul>
+                    <li>Missing script.js file</li>
+                    <li>Running the file locally without a web server</li>
+                    <li>Network issues when loading the script</li>
+                </ul>
+                <p>Please try:</p>
+                <ul>
+                    <li>Ensuring script.js is in the same directory as this file</li>
+                    <li>Running this file through a web server instead of directly from your file system</li>
+                    <li>Checking your internet connection</li>
+                </ul>
+            `;
+            document.getElementById('instructions').appendChild(errorDiv);
+
+            // Disable the start button
+            document.getElementById('start-study-btn').disabled = true;
+            document.getElementById('start-study-btn').textContent = 'Cannot Start (Script Error)';
+        }
+    </script>
+
+    <!-- Post-initialization script -->
+    <script>
+        // This script runs after script.js has loaded
+        // It can access all functions defined in script.js
+
+        window.addEventListener('load', function() {
+            console.log('All scripts loaded, setting up overrides');
+
+            // Override any problematic functions from script.js
+            if (typeof saveCurrentState === 'function') {
+                window.originalFunctions.saveCurrentState = saveCurrentState;
+                window.saveCurrentState = function() {
+                    // Modified version that works in our context
+                    console.log('Modified saveCurrentState called');
+                    // Call original with appropriate context
+                    try {
+                        return window.originalFunctions.saveCurrentState.apply(this, arguments);
+                    } catch (e) {
+                        console.warn('Error in saveCurrentState:', e);
+                    }
+                };
+            }
+
+            // Override parseStimuli if needed
+            if (typeof parseStimuli !== 'function') {
+                window.parseStimuli = function(stimuliText) {
+                    // Simple fallback implementation
+                    console.log('Using fallback parseStimuli function');
+                    return stimuliText.split(',').map(s => s.trim());
+                };
+            }
+
+            // Override startStudyConfiguration if needed
+            if (typeof startStudyConfiguration !== 'function') {
+                window.startStudyConfiguration = function(configIndex) {
+                    console.log('Using fallback startStudyConfiguration function');
+                    if (configIndex >= (window.studyConfigurations?.length || 0)) {
+                        alert('Study completed!');
+                        return;
+                    }
+
+                    const config = window.studyConfigurations[configIndex];
+                    console.log('Starting configuration:', config);
+
+                    if (config.type === 'experiment') {
+                        // Show experiment container
+                        document.getElementById('intro-screen').classList.add('hidden');
+                        document.getElementById('experiment-container').classList.remove('hidden');
+
+                        // Start experiment
+                        if (typeof startExperiment === 'function') {
+                            startExperiment();
+                        } else {
+                            console.error('startExperiment function not found');
+                            alert('Error starting experiment. Please refresh the page and try again.');
+                        }
+                    } else if (config.type === 'survey') {
+                        // Show survey container
+                        document.getElementById('intro-screen').classList.add('hidden');
+                        document.getElementById('survey-container').classList.remove('hidden');
+                    }
+                };
+            }
+        });
+    </script>
+</body>
+</html>

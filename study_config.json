@@ -1,0 +1,49 @@
+{
+  "studyTitle": "psychology_study",
+  "instructions": "<h2>Study Instructions</h2>\n                <p>Thank you for participating in this psychology study. Please follow these steps:</p>\n                <ol>\n                    <li>Read all instructions carefully before proceeding.</li>\n                    <li>Click the 'Start Study' button when you are ready to begin.</li>\n                    <li>Follow the on-screen instructions for each part of the study.</li>\n                    <li>At the end, you'll have the option to download your data.</li>\n                    <li>Please send the downloaded data file to the researcher.</li>\n                </ol>\n                <p><strong>Important:</strong> Please complete the study in a quiet environment without distractions.</p>",
+  "configurations": [
+    {
+      "id": 1744536900237,
+      "name": "Block 1",
+      "type": "experiment",
+      "config": {
+        "canvasBackground": "black",
+        "trialInterval": 200,
+        "fixationInterval": 100,
+        "stimulusOffset": 0,
+        "trialBackground": "grey",
+        "fixation": "yes",
+        "fixationColor": "white",
+        "trialCount": 5,
+        "cycleThreshold": 0,
+        "stimuliText": "apple, corn, speed.jpg",
+        "randomizeStimuli": true,
+        "stimulusSize": "42",
+        "stimulusColor": "white",
+        "responseKey": "",
+        "additionalResponses": "",
+        "provideFeedback": false,
+        "feedbackDuration": 500,
+        "saveData": true,
+        "stimuliResponses": {}
+      }
+    },
+    {
+      "id": 1744536904895,
+      "name": "Block 2",
+      "type": "survey",
+      "config": {
+        "questions": [
+          {
+            "id": "1",
+            "text": "Enter your question here",
+            "answerType": "text",
+            "options": [],
+            "sliderConfig": null
+          }
+        ],
+        "saveData": true
+      }
+    }
+  ]
+}

@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('begin-btn').addEventListener('click', function() {
+        // Set a flag to indicate that a configuration has been tested
+        // This is used to ensure the UI is properly initialized before running a study
+        window.studyConfigTested = true;
+        console.log('Test button clicked, studyConfigTested set to true');
+
         if (isExperimentMode) {
             // For experiment mode, trigger the experiment form submission
             document.getElementById('experiment-form').requestSubmit();
@@ -819,6 +824,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Check if the study configuration has been tested
+        // This is to ensure the UI is properly initialized before running the study
+        const studyConfigTested = window.studyConfigTested || false;
+        if (!studyConfigTested) {
+            alert('Please click the "TEST (run first)" button before beginning the study. This ensures the UI is properly initialized.');
+            return;
+        }
+
         isStudyMode = true;  // Make sure this is set
         console.log('Beginning study mode:', isStudyMode);
         currentStudyIndex = 0;
@@ -1236,6 +1249,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Store the current configuration for reference during the experiment
             currentExperimentConfig = config.config;
+
+            // Update the global saveData variable to match the checkbox state
+            saveData = document.getElementById('save-data').checked;
+            console.log('Experiment saveData set to:', saveData);
 
             // Start the experiment with this configuration
             startExperiment(parsedStimuli);
@@ -2673,11 +2690,33 @@ document.addEventListener('DOMContentLoaded', function() {
         studyData.sort((a, b) => a.configurationIndex - b.configurationIndex);
         console.log('Sorted study data:', studyData);
 
+        // Check if we're missing any configurations in the study data
+        // This can happen if a configuration didn't save data or if there was an error
+        const configIndices = studyData.map(item => item.configurationIndex);
+        const missingConfigs = [];
+
+        for (let i = 0; i < studyConfigurations.length; i++) {
+            if (!configIndices.includes(i) && studyConfigurations[i].config.saveData) {
+                console.warn(`Missing data for configuration index ${i}: ${studyConfigurations[i].name}`);
+                missingConfigs.push(i);
+            }
+        }
+
+        if (missingConfigs.length > 0) {
+            console.warn('Missing data for some configurations:', missingConfigs);
+            // Add a warning to the user
+            const warningMessage = `Note: Data for ${missingConfigs.length} configuration(s) could not be found. ` +
+                                  `This may be because the configuration did not save data or there was an error.`;
+            alert(warningMessage);
+        }
+
+        // Create a combined data structure that includes both experiment and survey data
         const studyDataObject = {
             studyMetadata: {
                 completionTime: new Date().toISOString(),
                 numberOfConfigurations: studyConfigurations.length,
-                configurationDetails: enhancedConfigDetails
+                configurationDetails: enhancedConfigDetails,
+                missingConfigurations: missingConfigs
             },
             configurationData: studyData
         };
@@ -2754,7 +2793,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return animationFrameId;
     }
 
-    // Get high-precision timestamp
+    // Get high-precision timestamp - used in various timing functions
     function getPreciseTimestamp() {
         return performance.now();
     }
@@ -3586,6 +3625,43 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('completion-message').textContent = `Survey ${currentStudyIndex + 1} Complete`;
             document.getElementById('completion-stats').classList.add('hidden');
 
+            // Add a download button for this survey's data even in study mode
+            // This addresses the issue where survey blocks don't merge with experimental blocks
+            if (saveData) {
+                // Create a download button for just this survey's data
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = 'Download This Survey Data';
+                downloadBtn.className = 'secondary-btn';
+                downloadBtn.style.marginTop = '20px';
+
+                // Find the survey data for this configuration
+                const surveyDataEntry = studyData.find(item =>
+                    item.configurationIndex === currentStudyIndex && item.type === 'survey');
+
+                if (surveyDataEntry) {
+                    // Create a blob with just this survey's data
+                    const dataStr = JSON.stringify(surveyDataEntry.data, null, 2);
+                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+                    // Create timestamp for filename
+                    const timestamp = formatDateTime(new Date()).replace(/:/g, '-').replace(/_/g, '_');
+                    const filename = `survey_data_block${currentStudyIndex+1}_${timestamp}.json`;
+
+                    // Create download link
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(dataBlob);
+                    downloadLink.download = filename;
+
+                    // Add click event to button
+                    downloadBtn.addEventListener('click', function() {
+                        downloadLink.click();
+                    });
+
+                    // Add button to completion screen
+                    completionScreen.insertBefore(downloadBtn, okBtn);
+                }
+            }
+
             // When OK is clicked, it will advance to the next configuration
         } else if (saveData) {
             // In regular mode with save data enabled, show completion screen with download button
@@ -3606,6 +3682,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to save survey data
     function saveSurveyData(answers) {
         console.log('saveSurveyData called with saveData =', saveData);
+
+        // In study mode, we need to check the saveData value from the configuration
+        if (isStudyMode) {
+            const currentConfig = studyConfigurations[currentStudyIndex];
+            if (currentConfig && currentConfig.config) {
+                // Override the global saveData with the configuration's saveData setting
+                saveData = currentConfig.config.saveData !== undefined ? currentConfig.config.saveData : false;
+                console.log('In study mode, using configuration saveData setting:', saveData);
+            }
+        }
 
         // If saveData is false, don't save anything
         if (!saveData) {
@@ -3668,8 +3754,38 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Added/updated survey data in study:', surveyDataEntry);
             console.log('Current study data array:', studyData);
 
-            // In study mode, we don't add individual download buttons for each survey
-            // The data will be available in the final study download
+            // In study mode, we still want to provide a way to download individual survey data
+            // Create a JSON blob for this specific survey
+            const surveyDataStr = JSON.stringify(surveyData, null, 2);
+            const surveyDataBlob = new Blob([surveyDataStr], { type: 'application/json' });
+
+            // Create timestamp for filename
+            const fileTimestamp = timestamp.replace(/:/g, '-').replace(/_/g, '_');
+            const filename = `survey_${currentStudyIndex + 1}_data_${fileTimestamp}.json`;
+
+            // Add a download button to the completion screen
+            const downloadBtn = document.createElement('button');
+            downloadBtn.textContent = 'Download This Survey Data';
+            downloadBtn.className = 'secondary-btn';
+            downloadBtn.style.marginTop = '20px';
+
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(surveyDataBlob);
+            downloadLink.download = filename;
+
+            // Add click event to button
+            downloadBtn.addEventListener('click', function() {
+                downloadLink.click();
+            });
+
+            // Add button to completion screen before the OK button
+            const okBtn = document.getElementById('ok-btn');
+            if (okBtn && !completionScreen.querySelector('button.secondary-btn')) {
+                completionScreen.insertBefore(downloadBtn, okBtn);
+                console.log('Added download button for individual survey data in study mode');
+            }
+
             return;
         }
 
@@ -4180,6 +4296,138 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create a valid filename
         const fileName = studyName.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.html';
 
+        // Ask if user wants to use the new participant interface
+        const useNewInterface = confirm(
+            'Would you like to use the new participant interface? ' +
+            'This creates separate files (participant.html, participant.css, and study_config.json) ' +
+            'that provide a cleaner experience for participants.\n\n' +
+            'Click OK for the new interface or Cancel for the traditional single-file deployment.'
+        );
+
+        if (useNewInterface) {
+            // Deploy using the new participant interface
+            deployParticipantInterface(studyName);
+        } else {
+            // Deploy using the traditional single-file approach
+            deploySingleFileStudy(studyName, fileName);
+        }
+    }
+
+    // Function to deploy the study using the new participant interface
+    function deployParticipantInterface(studyName) {
+        // Create study_config.json content
+        const studyConfig = {
+            studyTitle: studyName,
+            instructions: `<h2>Study Instructions</h2>
+                <p>Thank you for participating in this psychology study. Please follow these steps:</p>
+                <ol>
+                    <li>Read all instructions carefully before proceeding.</li>
+                    <li>Click the 'Start Study' button when you are ready to begin.</li>
+                    <li>Follow the on-screen instructions for each part of the study.</li>
+                    <li>At the end, you'll have the option to download your data.</li>
+                    <li>Please send the downloaded data file to the researcher.</li>
+                </ol>
+                <p><strong>Important:</strong> Please complete the study in a quiet environment without distractions.</p>`,
+            configurations: studyConfigurations
+        };
+
+        // Convert to JSON string with pretty formatting
+        const studyConfigJson = JSON.stringify(studyConfig, null, 2);
+
+        // Fetch the standalone participant template
+        fetch('participant_standalone.html')
+            .then(response => response.text())
+            .then(html => {
+                // Embed the study configuration directly in the HTML
+                const configScript = `<script>\n// Embed the study configuration directly in the HTML file\nconst studyConfig = ${JSON.stringify(studyConfig, null, 2)};\n</script>`;
+
+                // Replace the placeholder script with our embedded config
+                let modifiedHtml = html;
+
+                // Check if there's already an embedded config
+                if (html.includes('<!-- Embedded study configuration -->')) {
+                    // Replace the existing embedded config
+                    const regex = /<!-- Embedded study configuration -->\s*<script>[\s\S]*?<\/script>/;
+                    modifiedHtml = html.replace(regex, `<!-- Embedded study configuration -->\n${configScript}`);
+                } else {
+                    // Add the embedded config before the pre-initialization script
+                    modifiedHtml = html.replace('<!-- Pre-initialization script -->', `<!-- Embedded study configuration -->\n${configScript}\n\n<!-- Pre-initialization script -->`);
+                }
+
+                // Create a Blob for the modified participant.html
+                const participantHtmlBlob = new Blob([modifiedHtml], {type: 'text/html'});
+
+                // Create download link for participant.html
+                const participantHtmlLink = document.createElement('a');
+                participantHtmlLink.href = URL.createObjectURL(participantHtmlBlob);
+                participantHtmlLink.download = `${studyName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_participant.html`;
+
+                // Create a Blob for study_config.json (as a backup)
+                const studyConfigBlob = new Blob([studyConfigJson], {type: 'application/json'});
+
+                // Create download link for study_config.json
+                const studyConfigLink = document.createElement('a');
+                studyConfigLink.href = URL.createObjectURL(studyConfigBlob);
+                studyConfigLink.download = 'study_config.json';
+
+                // Create a Blob for participant.css
+                fetch('participant.css')
+                    .then(response => response.text())
+                    .then(css => {
+                        const participantCssBlob = new Blob([css], {type: 'text/css'});
+                        const participantCssLink = document.createElement('a');
+                        participantCssLink.href = URL.createObjectURL(participantCssBlob);
+                        participantCssLink.download = 'participant.css';
+
+                        // Trigger downloads
+                        participantHtmlLink.click();
+                        participantCssLink.click();
+
+                        // Show success message with instructions
+                        alert(
+                            `Study has been deployed as ${participantHtmlLink.download} with participant.css.\n\n` +
+                            `To use these files:\n` +
+                            `1. Place both files in the same directory\n` +
+                            `2. Direct participants to the HTML file\n\n` +
+                            `The study is completely self-contained in these files. ` +
+                            `You do NOT need script.js or any other files.`
+                        );
+                    })
+                    .catch(error => {
+                        console.error('Error fetching participant.css:', error);
+
+                        // Just download the HTML file if CSS fetch fails
+                        participantHtmlLink.click();
+
+                        // Show success message with instructions
+                        alert(
+                            `Study has been deployed as ${participantHtmlLink.download}.\n\n` +
+                            `To use this file:\n` +
+                            `1. Place it in the same directory as participant.css\n` +
+                            `2. Direct participants to this HTML file\n\n` +
+                            `The study is completely self-contained in this file.`
+                        );
+                    });
+            })
+            .catch(error => {
+                console.error('Error fetching participant_standalone.html template:', error);
+
+                // Fallback to just downloading the study_config.json
+                const studyConfigBlob = new Blob([studyConfigJson], {type: 'application/json'});
+                const studyConfigLink = document.createElement('a');
+                studyConfigLink.href = URL.createObjectURL(studyConfigBlob);
+                studyConfigLink.download = 'study_config.json';
+                studyConfigLink.click();
+
+                alert(
+                    `Could not fetch participant template. Study configuration has been saved as study_config.json.\n\n` +
+                    `Please contact the developer for assistance with deploying your study.`
+                );
+            });
+    }
+
+    // Function to deploy the study as a single HTML file (traditional approach)
+    function deploySingleFileStudy(studyName, fileName) {
         // Clone the current document
         const docClone = document.documentElement.cloneNode(true);
 

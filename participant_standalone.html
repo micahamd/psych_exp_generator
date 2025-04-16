@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psychology Study</title>
+    <link rel="stylesheet" href="participant.css">
+
+    <!-- Embedded study configuration -->
+    <script>
+        // Embed the study configuration directly in the HTML file
+        const studyConfig = {
+            "studyTitle": "Psychology Study",
+            "instructions": "<h2>Study Instructions</h2><p>Thank you for participating in this psychology study. Please follow these steps:</p><ol><li>Read all instructions carefully before proceeding.</li><li>Click the 'Start Study' button when you are ready to begin.</li><li>Follow the on-screen instructions for each part of the study.</li><li>At the end, you'll have the option to download your data.</li><li>Please send the downloaded data file to the researcher.</li></ol><p><strong>Important:</strong> Please complete the study in a quiet environment without distractions.</p>",
+            "configurations": [
+                {
+                    "id": 1744533523157,
+                    "name": "Block 1",
+                    "type": "experiment",
+                    "config": {
+                        "canvasBackground": "black",
+                        "trialInterval": 200,
+                        "fixationInterval": 100,
+                        "stimulusOffset": 0,
+                        "trialBackground": "grey",
+                        "fixation": "yes",
+                        "fixationColor": "white",
+                        "trialCount": 5,
+                        "cycleThreshold": 0,
+                        "stimuliText": "apple, corn, speed.jpg",
+                        "randomizeStimuli": true,
+                        "stimulusSize": "42",
+                        "stimulusColor": "white",
+                        "responseKey": "",
+                        "additionalResponses": "",
+                        "provideFeedback": false,
+                        "feedbackDuration": 500,
+                        "saveData": true,
+                        "stimuliResponses": {}
+                    }
+                },
+                {
+                    "id": 1744533532825,
+                    "name": "Block 2",
+                    "type": "survey",
+                    "config": {
+                        "questions": [
+                            {
+                                "id": "1",
+                                "text": "Enter your question here",
+                                "answerType": "text",
+                                "options": [],
+                                "sliderConfig": null
+                            }
+                        ],
+                        "saveData": true
+                    }
+                }
+            ]
+        };
+    </script>
+
+    <style>
+        /* Additional styles for standalone version */
+        .standalone-only {
+            display: block !important;
+        }
+
+        #standalone-start-btn {
+            display: block;
+            margin: 30px auto;
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        #standalone-start-btn:hover {
+            background-color: #45a049;
+        }
+
+        #standalone-start-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- Visible participant interface -->
+    <div id="participant-container">
+        <div id="intro-screen">
+            <h1 id="study-title">Psychology Study</h1>
+            <div id="instructions">
+                <!-- Instructions will be inserted here -->
+            </div>
+            <button id="standalone-start-btn" class="standalone-only">Start Study</button>
+        </div>
+
+        <!-- Experiment container -->
+        <div id="experiment-container" class="hidden">
+            <div id="experiment-screen">
+                <div id="fixation-point" class="hidden">+</div>
+                <div id="stimulus-text" class="hidden"></div>
+                <div id="feedback-text" class="hidden"></div>
+            </div>
+        </div>
+
+        <!-- Survey container -->
+        <div id="survey-container" class="hidden">
+            <div id="survey-questions"></div>
+            <div class="button-container" style="text-align: center; margin-top: 20px;">
+                <button id="submit-survey-btn">Submit Survey</button>
+            </div>
+        </div>
+
+        <!-- Completion screen -->
+        <div id="completion-screen" class="hidden">
+            <h2 id="completion-message"></h2>
+            <div id="completion-stats" class="hidden"></div>
+            <button id="download-data-btn" class="secondary-btn">Download Data</button>
+            <button id="ok-btn">Continue</button>
+        </div>
+    </div>
+
+    <!-- Hidden elements needed for script.js compatibility -->
+    <div style="display:none !important;">
+        <!-- Form switch -->
+        <div class="form-switch-container">
+            <span class="switch-label">Survey</span>
+            <label class="switch">
+                <input type="checkbox" id="form-type-switch" checked>
+                <span class="slider round"></span>
+            </label>
+            <span class="switch-label">Experiment</span>
+        </div>
+
+        <!-- Experiment form -->
+        <form id="experiment-form">
+            <input type="text" id="canvas-background" value="black">
+            <input type="number" id="trial-interval" value="200">
+            <input type="number" id="fixation-interval" value="100">
+            <input type="number" id="stimulus-offset" value="0">
+            <input type="text" id="trial-background" value="grey">
+            <select id="fixation"><option value="yes" selected>Yes</option></select>
+            <select id="fixation-color"><option value="white" selected>White</option></select>
+            <input type="number" id="trial-count" value="5">
+            <input type="number" id="cycle-threshold" value="0">
+            <textarea id="stimuli-text">apple, corn, speed.jpg</textarea>
+            <input type="checkbox" id="randomize-stimuli" checked>
+            <select id="stimulus-size"><option value="42" selected>42</option></select>
+            <select id="stimulus-color"><option value="white" selected>White</option></select>
+            <input type="text" id="response-key" value="">
+            <input type="text" id="additional-responses" value="">
+            <input type="checkbox" id="provide-feedback">
+            <input type="number" id="feedback-duration" value="500">
+            <input type="checkbox" id="save-data" checked>
+            <input type="number" id="position-x" value="0">
+            <input type="number" id="position-y" value="0">
+        </form>
+
+        <!-- Survey form -->
+        <form id="survey-form">
+            <div id="questions-container"></div>
+            <input type="checkbox" id="survey-save-data" checked>
+        </form>
+
+        <!-- Original buttons -->
+        <div class="button-group">
+            <button id="begin-btn">TEST</button>
+            <button id="add-to-study-btn">Add to Study</button>
+        </div>
+
+        <div class="study-buttons-container">
+            <button id="begin-study-btn">Begin Study</button>
+        </div>
+
+        <!-- S-R Mapping elements -->
+        <button id="sr-mapping-btn">Custom S-R Mappings</button>
+        <div id="sr-mapping-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn">×</span>
+                <table id="mapping-table">
+                    <tbody id="mapping-tbody"></tbody>
+                </table>
+                <button id="save-mappings-btn">Save Mappings</button>
+                <button id="export-mappings-btn">Export Mappings</button>
+                <button id="import-mappings-btn">Import Mappings</button>
+                <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Standalone implementation script -->
+    <script>
+        // Initialize global variables
+        window.isStudyMode = true;
+        window.currentStudyIndex = 0;
+        window.isExperimentMode = true;
+        window.stimuli = [];
+        window.stimuliIndex = 0;
+        window.stimuliUsed = [];
+        window.sequenceIndex = 0;
+        window.currentTrial = 0;
+        window.currentCycleCorrect = 0;
+        window.experimentData = [];
+        window.saveData = true;
+        window.studyData = [];
+        window.stimuliResponses = {};
+        window.hasCustomMappings = false;
+        window.experimentRunning = false;
+        window.studyConfigurations = studyConfig.configurations;
+        window.studyConfigTested = true;
+
+        // DOM elements
+        const introScreen = document.getElementById('intro-screen');
+        const experimentContainer = document.getElementById('experiment-container');
+        const experimentScreen = document.getElementById('experiment-screen');
+        const completionScreen = document.getElementById('completion-screen');
+        const fixationPoint = document.getElementById('fixation-point');
+        const stimulusText = document.getElementById('stimulus-text');
+        const feedbackText = document.getElementById('feedback-text');
+        const okBtn = document.getElementById('ok-btn');
+
+        // Initialize the study
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set study title and instructions
+            document.getElementById('study-title').textContent = studyConfig.studyTitle || 'Psychology Study';
+            document.getElementById('instructions').innerHTML = studyConfig.instructions || '';
+
+            // Set up start button
+            document.getElementById('standalone-start-btn').addEventListener('click', function() {
+                startStudy();
+            });
+
+            // Set up OK button
+            okBtn.addEventListener('click', function() {
+                if (window.isStudyMode && window.currentStudyIndex < (window.studyConfigurations?.length - 1 || 0)) {
+                    // Continue to next configuration
+                    completionScreen.classList.add('hidden');
+                    window.currentStudyIndex++;
+
+                    // Reset state
+                    window.currentTrial = 0;
+                    window.experimentRunning = false;
+                    window.stimuliUsed = [];
+                    window.experimentData = [];
+
+                    // Start next configuration
+                    startStudyConfiguration(window.currentStudyIndex);
+                } else {
+                    // Study complete
+                    completionScreen.classList.add('hidden');
+                    introScreen.classList.remove('hidden');
+
+                    // Reset state
+                    window.currentTrial = 0;
+                    window.experimentRunning = false;
+                    window.stimuliUsed = [];
+                    window.currentStudyIndex = 0;
+                    window.isStudyMode = false;
+                    window.experimentData = [];
+
+                    // Show thank you message
+                    document.getElementById('instructions').innerHTML += '<div class="thank-you-message"><h3>Thank You!</h3><p>You have completed the study. Thank you for your participation.</p></div>';
+                }
+            });
+
+            // Set up download data button
+            document.getElementById('download-data-btn').addEventListener('click', function() {
+                downloadStudyData();
+            });
+        });
+
+        // Start the study
+        function startStudy() {
+            // Hide intro screen
+            introScreen.classList.add('hidden');
+
+            // Start the first configuration
+            startStudyConfiguration(0);
+        }
+
+        // Start a specific configuration in the study
+        function startStudyConfiguration(configIndex) {
+            if (configIndex >= window.studyConfigurations.length) {
+                // All configurations completed
+                showCompletionScreen('Study Completed!');
+                return;
+            }
+
+            const config = window.studyConfigurations[configIndex];
+            console.log('Starting configuration:', config);
+
+            if (config.type === 'experiment') {
+                // Handle experiment configuration
+                console.log('Starting experiment configuration');
+
+                // Set experiment mode
+                window.isExperimentMode = true;
+
+                // Load experiment configuration
+                for (const [key, value] of Object.entries(config.config)) {
+                    const element = document.getElementById(key);
+                    if (element) {
+                        if (element.type === 'checkbox') {
+                            element.checked = value;
+                        } else {
+                            element.value = value;
+                        }
+                    }
+                }
+
+                // Set stimuli responses if they exist
+                if (config.config.stimuliResponses) {
+                    window.stimuliResponses = config.config.stimuliResponses;
+                    window.hasCustomMappings = Object.keys(config.config.stimuliResponses).length > 0;
+                }
+
+                // Set save data
+                window.saveData = config.config.saveData !== undefined ? config.config.saveData : true;
+
+                // Start experiment
+                startExperiment();
+            } else if (config.type === 'survey') {
+                // Handle survey configuration
+                console.log('Starting survey configuration');
+
+                // Set survey mode
+                window.isExperimentMode = false;
+
+                // Set save data
+                window.saveData = config.config.saveData !== undefined ? config.config.saveData : true;
+
+                // Start survey
+                startSurvey(config);
+            }
+        }
+
+        // Start an experiment
+        function startExperiment() {
+            // Reset state
+            window.currentTrial = 0;
+            window.stimuliUsed = [];
+            window.experimentRunning = true;
+
+            // Parse stimuli
+            const stimuliText = document.getElementById('stimuli-text').value;
+            window.stimuli = parseStimuli(stimuliText);
+
+            // Check if we have any stimuli
+            if (!window.stimuli || window.stimuli.length === 0) {
+                alert('Error: No stimuli found. Please contact the researcher.');
+                // Skip to completion
+                showCompletionScreen('Error: No stimuli found');
+                return;
+            }
+
+            // Show experiment container
+            experimentContainer.classList.remove('hidden');
+
+            // Start first trial
+            startTrial();
+        }
+
+        // Start a survey
+        function startSurvey(config) {
+            // Show survey container
+            document.getElementById('survey-container').classList.remove('hidden');
+
+            // Create survey questions
+            const surveyQuestions = document.getElementById('survey-questions');
+            surveyQuestions.innerHTML = '';
+
+            // Check if we have any questions
+            if (!config.config.questions || config.config.questions.length === 0) {
+                console.warn('No survey questions found');
+                // Skip to next configuration
+                window.currentStudyIndex++;
+                startStudyConfiguration(window.currentStudyIndex);
+                return;
+            }
+
+            // Create questions
+            config.config.questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'survey-question';
+
+                const questionText = document.createElement('p');
+                questionText.className = 'question-text';
+                questionText.textContent = question.text;
+                questionDiv.appendChild(questionText);
+
+                let answerInput;
+
+                switch (question.answerType) {
+                        case 'text':
+                            answerInput = document.createElement('input');
+                            answerInput.type = 'text';
+                            answerInput.className = 'survey-answer';
+                            answerInput.id = `question-${question.id}-answer`;
+                            break;
+                        case 'textarea':
+                            answerInput = document.createElement('textarea');
+                            answerInput.className = 'survey-answer';
+                            answerInput.id = `question-${question.id}-answer`;
+                            answerInput.rows = 4;
+                            break;
+                        case 'radio':
+                            answerInput = document.createElement('div');
+                            answerInput.className = 'radio-options';
+
+                            if (question.options && question.options.length > 0) {
+                                question.options.forEach((option, optIndex) => {
+                                    const radioContainer = document.createElement('div');
+                                    radioContainer.className = 'radio-option';
+
+                                    const radio = document.createElement('input');
+                                    radio.type = 'radio';
+                                    radio.name = `question-${question.id}-answer`;
+                                    radio.id = `question-${question.id}-option-${optIndex}`;
+                                    radio.value = option;
+
+                                    const label = document.createElement('label');
+                                    label.htmlFor = radio.id;
+                                    label.textContent = option;
+
+                                    radioContainer.appendChild(radio);
+                                    radioContainer.appendChild(label);
+                                    answerInput.appendChild(radioContainer);
+                                });
+                            }
+                            break;
+                        case 'slider':
+                            const sliderContainer = document.createElement('div');
+                            sliderContainer.className = 'slider-container';
+
+                            if (question.sliderConfig) {
+                                const leftLabel = document.createElement('span');
+                                leftLabel.className = 'slider-label left-label';
+                                leftLabel.textContent = question.sliderConfig.leftLabel || 'Low';
+
+                                answerInput = document.createElement('input');
+                                answerInput.type = 'range';
+                                answerInput.className = 'survey-slider';
+                                answerInput.id = `question-${question.id}-answer`;
+                                answerInput.min = question.sliderConfig.min || 1;
+                                answerInput.max = question.sliderConfig.max || 9;
+                                answerInput.value = Math.floor((parseInt(answerInput.min) + parseInt(answerInput.max)) / 2);
+
+                                const rightLabel = document.createElement('span');
+                                rightLabel.className = 'slider-label right-label';
+                                rightLabel.textContent = question.sliderConfig.rightLabel || 'High';
+
+                                const valueDisplay = document.createElement('span');
+                                valueDisplay.className = 'slider-value';
+                                valueDisplay.textContent = answerInput.value;
+
+                                answerInput.addEventListener('input', function() {
+                                    valueDisplay.textContent = this.value;
+                                });
+
+                                sliderContainer.appendChild(leftLabel);
+                                sliderContainer.appendChild(answerInput);
+                                sliderContainer.appendChild(rightLabel);
+                                sliderContainer.appendChild(valueDisplay);
+
+                                answerInput = sliderContainer;
+                            }
+                            break;
+                        default:
+                            answerInput = document.createElement('input');
+                            answerInput.type = 'text';
+                            answerInput.className = 'survey-answer';
+                            answerInput.id = `question-${question.id}-answer`;
+                    }
+
+                    questionDiv.appendChild(answerInput);
+                    surveyQuestions.appendChild(questionDiv);
+                });
+
+                // Add submit button
+                const submitBtn = document.getElementById('submit-survey-btn');
+                submitBtn.classList.remove('hidden');
+                submitBtn.onclick = function() {
+                    // Collect survey data
+                    const surveyData = [];
+
+                    config.config.questions.forEach(question => {
+                        let answer;
+
+                        if (question.answerType === 'radio') {
+                            const selectedRadio = document.querySelector(`input[name="question-${question.id}-answer"]:checked`);
+                            answer = selectedRadio ? selectedRadio.value : '';
+                        } else if (question.answerType === 'slider') {
+                            const slider = document.getElementById(`question-${question.id}-answer`);
+                            answer = slider ? slider.value : '';
+                        } else {
+                            const input = document.getElementById(`question-${question.id}-answer`);
+                            answer = input ? input.value : '';
+                        }
+
+                        surveyData.push({
+                            questionId: question.id,
+                            questionText: question.text,
+                            answer: answer
+                        });
+                    });
+
+                    // Save survey data
+                    if (window.saveData) {
+                        window.experimentData = surveyData;
+                        window.studyData.push({
+                            type: 'survey',
+                            name: config.name,
+                            data: surveyData
+                        });
+                    }
+
+                    // Hide survey container
+                    document.getElementById('survey-container').classList.add('hidden');
+
+                    // Show completion screen
+                    showCompletionScreen(`Survey "${config.name}" Complete`);
+                };
+
+                // Show survey container
+                document.getElementById('survey-container').classList.remove('hidden');
+            } else {
+                // No questions, skip to next configuration
+                window.currentStudyIndex++;
+                startStudyConfiguration(window.currentStudyIndex);
+            }
+        }
+
+        // Parse stimuli text into an array
+        function parseStimuli(stimuliText) {
+            if (!stimuliText) return [];
+
+            // Split by commas and trim
+            const stimuli = stimuliText.split(',').map(s => s.trim());
+
+            // Check if any stimulus is an image file
+            stimuli.forEach((stimulus, index) => {
+                // If it ends with a common image extension, it's an image file
+                if (/\.(jpg|jpeg|png|gif|bmp|svg)$/i.test(stimulus)) {
+                    console.log(`Detected image stimulus: ${stimulus}`);
+                    // For image files, we'll handle them specially in the showStimulus function
+                }
+            });
+
+            return stimuli;
+        }
+
+        // Start a trial
+        function startTrial() {
+            // Get trial parameters
+            const showFixation = document.getElementById('fixation').value === 'yes';
+            const fixationInterval = parseInt(document.getElementById('fixation-interval').value) || 500;
+
+            // Show fixation if enabled
+            if (showFixation) {
+                fixationPoint.classList.remove('hidden');
+                stimulusText.classList.add('hidden');
+                feedbackText.classList.add('hidden');
+
+                // After fixation interval, show stimulus
+                setTimeout(showStimulus, fixationInterval);
+            } else {
+                // Skip fixation, show stimulus immediately
+                showStimulus();
+            }
+        }
+
+        // Show stimulus
+        function showStimulus() {
+            // Hide fixation point
+            fixationPoint.classList.add('hidden');
+
+            // Get a stimulus
+            let stimulus;
+            const randomize = document.getElementById('randomize-stimuli').checked;
+
+            if (randomize) {
+                // Get a random stimulus that hasn't been used yet
+                const unusedStimuli = window.stimuli.filter(s => !window.stimuliUsed.includes(s));
+
+                if (unusedStimuli.length === 0) {
+                    // All stimuli used, reset
+                    window.stimuliUsed = [];
+                    stimulus = window.stimuli[Math.floor(Math.random() * window.stimuli.length)];
+                } else {
+                    stimulus = unusedStimuli[Math.floor(Math.random() * unusedStimuli.length)];
+                }
+
+                window.stimuliUsed.push(stimulus);
+            } else {
+                // Get the next stimulus in sequence
+                stimulus = window.stimuli[window.stimuliIndex % window.stimuli.length];
+                window.stimuliIndex++;
+            }
+
+            // Check if stimulus is an image file
+            const isImage = /\.(jpg|jpeg|png|gif|bmp|svg)$/i.test(stimulus);
+
+            if (isImage) {
+                // For image files, create an image element
+                stimulusText.textContent = '';
+                const img = document.createElement('img');
+                img.src = stimulus;
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.display = 'block';
+                stimulusText.appendChild(img);
+            } else {
+                // For text stimuli, just set the text content
+                stimulusText.textContent = stimulus;
+            }
+
+            stimulusText.classList.remove('hidden');
+
+            // Set stimulus style
+            const stimulusSize = document.getElementById('stimulus-size').value;
+            const stimulusColor = document.getElementById('stimulus-color').value;
+
+            if (!isImage) {
+                // Only apply font size and color to text stimuli
+                stimulusText.style.fontSize = `${stimulusSize}px`;
+                stimulusText.style.color = stimulusColor;
+            } else {
+                // For images, we already set the max width/height on the img element
+                // Reset any text styling that might have been applied previously
+                stimulusText.style.fontSize = '';
+                stimulusText.style.color = '';
+            }
+
+            // Set position
+            const posX = parseInt(document.getElementById('position-x').value) || 0;
+            const posY = parseInt(document.getElementById('position-y').value) || 0;
+            stimulusText.style.transform = `translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px))`;
+
+            // Record stimulus onset time
+            const stimulusOnsetTime = performance.now();
+
+            // Set up response handler
+            const handleResponse = function(event) {
+                // Remove event listener
+                document.removeEventListener('keydown', handleResponse);
+
+                // Calculate response time
+                const responseTime = performance.now() - stimulusOnsetTime;
+
+                // Check if response is correct
+                const correctResponse = window.hasCustomMappings && window.stimuliResponses[stimulus] ?
+                    window.stimuliResponses[stimulus].responseKey :
+                    document.getElementById('response-key').value.toUpperCase() || 'SPACE';
+
+                const additionalResponses = document.getElementById('additional-responses').value
+                    .split(',')
+                    .map(r => r.trim().toUpperCase())
+                    .filter(r => r);
+
+                const keyPressed = event.code === 'Space' ? 'SPACE' : event.key.toUpperCase();
+                const isCorrect = keyPressed === correctResponse || additionalResponses.includes(keyPressed);
+
+                if (isCorrect) {
+                    window.currentCycleCorrect++;
+                }
+
+                // Save data
+                if (window.saveData) {
+                    window.experimentData.push({
+                        trial: window.currentTrial + 1,
+                        stimulus: stimulus,
+                        responseKey: keyPressed,
+                        correctResponse: correctResponse,
+                        isCorrect: isCorrect,
+                        responseTime: responseTime
+                    });
+                }
+
+                // Show feedback if enabled
+                const provideFeedback = document.getElementById('provide-feedback').checked;
+                const feedbackDuration = parseInt(document.getElementById('feedback-duration').value) || 500;
+
+                if (provideFeedback) {
+                    feedbackText.textContent = isCorrect ? 'Correct!' : 'Incorrect';
+                    feedbackText.style.color = isCorrect ? 'green' : 'red';
+                    feedbackText.classList.remove('hidden');
+                    stimulusText.classList.add('hidden');
+
+                    setTimeout(endTrial, feedbackDuration);
+                } else {
+                    endTrial();
+                }
+            };
+
+            // Add keydown event listener
+            document.addEventListener('keydown', handleResponse);
+
+            // Set stimulus offset timer if specified
+            const stimulusOffset = parseInt(document.getElementById('stimulus-offset').value) || 0;
+            if (stimulusOffset > 0) {
+                setTimeout(() => {
+                    stimulusText.classList.add('hidden');
+                }, stimulusOffset);
+            }
+        }
+
+        // End the current trial
+        function endTrial() {
+            // Hide all elements
+            stimulusText.classList.add('hidden');
+            feedbackText.classList.add('hidden');
+
+            // Get trial interval
+            const trialInterval = parseInt(document.getElementById('trial-interval').value) || 500;
+
+            // Wait for trial interval before starting next trial
+            setTimeout(() => {
+                window.currentTrial++;
+                const trialCount = parseInt(document.getElementById('trial-count').value) || 10;
+
+                if (window.currentTrial < trialCount) {
+                    // Continue to next trial
+                    startTrial();
+                } else {
+                    // End of experiment
+                    endExperiment();
+                }
+            }, trialInterval);
+        }
+
+        // End the experiment
+        function endExperiment() {
+            // Hide experiment container
+            experimentContainer.classList.add('hidden');
+
+            // Save study data
+            if (window.saveData) {
+                const currentConfig = window.studyConfigurations[window.currentStudyIndex];
+                window.studyData.push({
+                    type: 'experiment',
+                    name: currentConfig.name,
+                    data: window.experimentData
+                });
+            }
+
+            // Show completion screen
+            const currentConfig = window.studyConfigurations[window.currentStudyIndex];
+            showCompletionScreen(`Experiment "${currentConfig.name}" Complete`);
+        }
+
+        // Show completion screen
+        function showCompletionScreen(message) {
+            // Set completion message
+            document.getElementById('completion-message').textContent = message;
+
+            // Show completion stats if data was saved
+            const statsElement = document.getElementById('completion-stats');
+            if (window.saveData && window.experimentData.length > 0) {
+                // Calculate stats
+                const totalTrials = window.experimentData.length;
+                const correctTrials = window.experimentData.filter(trial => trial.isCorrect).length;
+                const accuracy = totalTrials > 0 ? (correctTrials / totalTrials * 100).toFixed(1) : 0;
+
+                const responseTimesMs = window.experimentData.map(trial => trial.responseTime);
+                const avgResponseTime = responseTimesMs.reduce((sum, time) => sum + time, 0) / responseTimesMs.length;
+
+                // Display stats
+                statsElement.innerHTML = `
+                    <h3>Performance Summary</h3>
+                    <p>Total Trials: ${totalTrials}</p>
+                    <p>Correct Responses: ${correctTrials}</p>
+                    <p>Accuracy: ${accuracy}%</p>
+                    <p>Average Response Time: ${avgResponseTime.toFixed(2)} ms</p>
+                `;
+                statsElement.classList.remove('hidden');
+            } else {
+                statsElement.classList.add('hidden');
+            }
+
+            // Show completion screen
+            completionScreen.classList.remove('hidden');
+        }
+
+        // Download study data
+        function downloadStudyData() {
+            if (window.studyData.length === 0) {
+                alert('No data to download.');
+                return;
+            }
+
+            // Create JSON data
+            const jsonData = JSON.stringify(window.studyData, null, 2);
+
+            // Create blob and download link
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `study_data_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            document.body.appendChild(a);
+            a.click();
+
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+    </script>
+</body>
+</html>

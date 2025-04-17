@@ -1788,6 +1788,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         type: 'concurrent',
                         stimuli: [...currentConcurrent]
                     };
+
+                    // Debug output to help diagnose issues
+                    console.log('Created concurrent object:', concurrentObj);
                     currentConcurrent = [];
 
                     // If we're still inside another bracket, add this concurrent group to that structure
@@ -1893,12 +1896,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function getFormattedStimulusKey(stimulusItem) {
         // Helper function to format any type of stimulus item recursively
         function formatItem(item) {
+            // Debug output to help diagnose issues
+            console.log('Formatting item:', item);
+
             if (Array.isArray(item)) {
                 // Sequential stimulus - handle potential nested structures
                 const formattedItems = item.map(subItem => formatItem(subItem));
                 return formattedItems.length > 1 ? `[${formattedItems.join(', ')}]` : formattedItems[0];
             } else if (typeof item === 'object' && item.type === 'concurrent') {
                 // Concurrent stimulus - handle potential nested structures
+                if (!item.stimuli || !Array.isArray(item.stimuli)) {
+                    console.error('Invalid concurrent item, missing stimuli array:', item);
+                    return '(invalid)'; // Return a placeholder to avoid errors
+                }
                 const formattedItems = item.stimuli.map(subItem => formatItem(subItem));
                 return `(${formattedItems.join(', ')})`;
             } else if (typeof item === 'object' && item.type === 'image') {
@@ -1913,7 +1923,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        return formatItem(stimulusItem);
+        try {
+            return formatItem(stimulusItem);
+        } catch (error) {
+            console.error('Error formatting stimulus key:', error, stimulusItem);
+            return String(stimulusItem); // Return a simple string representation as fallback
+        }
     }
 
     // Generate default positions for concurrent stimuli
@@ -2271,7 +2286,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display concurrent stimuli - SIMPLIFIED to always wait for response
     function displayConcurrentStimuli(currentSequence) {
         // Make sure we have the stimuli array
+        if (!currentSequence || !currentSequence.stimuli) {
+            console.error('Invalid concurrent sequence:', currentSequence);
+            return;
+        }
+
         const stimuli = currentSequence.stimuli || [];
+
+        // Debug output to help diagnose issues
+        console.log('Displaying concurrent stimuli:', stimuli);
+
+        // Check if any stimulus is still a variable category (should have been expanded already)
+        for (let i = 0; i < stimuli.length; i++) {
+            if (typeof stimuli[i] === 'object' && stimuli[i].type === 'variable') {
+                console.warn('Found unexpanded variable in concurrent stimuli:', stimuli[i]);
+                // Try to expand it now
+                const values = stimuli[i].values;
+                if (values && values.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * values.length);
+                    stimuli[i] = values[randomIndex];
+                    console.log('Expanded variable to:', stimuli[i]);
+                }
+            }
+        }
 
         // Create a display key for mapping lookup
         const stimulusDisplay = `(${stimuli.map(s => {
@@ -2283,8 +2320,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const mapping = stimuliResponses[stimulusDisplay] || {};
 
-        // Debug output to help diagnose issues
-        console.log('Displaying concurrent stimuli:', stimuli);
+        // More debug output
         console.log('Stimulus display key:', stimulusDisplay);
         console.log('Mapping:', mapping);
 
@@ -3194,9 +3230,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If stimuli changed, clear old mappings that no longer apply
             const newParsedStimuli = parseStimuli(stimuliInput);
+            console.log('Parsed stimuli for S-R mapping:', newParsedStimuli);
+
             const newStimuliKeys = newParsedStimuli.map(seq => {
                 return getFormattedStimulusKey(seq);
             });
+            console.log('Formatted stimulus keys:', newStimuliKeys);
 
             // Create a new stimuliResponses with only valid keys
             const updatedResponses = {};
@@ -3210,13 +3249,19 @@ document.addEventListener('DOMContentLoaded', function() {
             stimuliResponses = updatedResponses;
         }
 
-        const parsedStimuli = parseStimuli(stimuliInput);
+        try {
+            const parsedStimuli = parseStimuli(stimuliInput);
+            console.log('Parsed stimuli for mapping table:', parsedStimuli);
 
-        // Generate table rows
-        generateMappingTable(parsedStimuli);
+            // Generate table rows
+            generateMappingTable(parsedStimuli);
 
-        // Show modal
-        srMappingModal.classList.remove('hidden');
+            // Show modal
+            srMappingModal.classList.remove('hidden');
+        } catch (error) {
+            console.error('Error generating mapping table:', error);
+            alert('There was an error generating the mapping table. Please check the console for details.');
+        }
     });
 
     // Close modal when clicking X

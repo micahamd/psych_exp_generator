@@ -141,24 +141,31 @@
                     </div>
 
                     <div class="form-group stimulus-group">
-                        <label for="stimuli-text">Stimuli - Text + Images (comma separated):</label>
+                        <label for="stimuli-text">Stimulus Sequence Builder:</label>
                         <div class="checkbox-container">
                             <input type="checkbox" id="randomize-stimuli" checked>
                             <label for="randomize-stimuli">Randomize stimulus sequence</label>
                         </div>
-                        <textarea id="stimuli-text" rows="3" required>apple, corn, speed</textarea>
-                        <p class="helper-text">List of stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
-                        <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed</p>
-                        <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed. Positioning defaults can be customized</p>
-                        <p class="helper-text">Indicate image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg. Images should be in the local directory.</p>
-                        <p class="helper-text">Use single quotes for variable categories: e.g., ('X', 'Y'), ('Y', 'X'). Define variables using the "Define Variables" button.</p>
+                        <div id="sequence-builder-container">
+                            <div id="available-variables">
+                                <h4>Available Variables</h4>
+                                <div id="variable-categories-list" class="variable-list-container"></div>
+                                <button type="button" id="define-variables-btn" class="primary-btn">Define Variables</button>
+                            </div>
+                            <div id="sequence-builder">
+                                <h4>Sequence Builder</h4>
+                                <textarea id="stimuli-text" rows="3" required placeholder="Build your sequence using the variable categories">'X', 'Y', ('X', 'Y')</textarea>
+                                <p class="helper-text">Use single quotes around variable names: e.g., 'X', 'Y'</p>
+                                <p class="helper-text">Use square brackets for sequential groups: e.g., ['X', 'Y'], 'Z'</p>
+                                <p class="helper-text">Use curved brackets for concurrent display: e.g., ('X', 'Y')</p>
+                            </div>
+                        </div>
                         <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
 
                         <div class="button-row">
                             <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
-                            <button type="button" id="define-variables-btn" class="secondary-btn">Define Variables</button>
                         </div>
-                        <p class="helper-text">Customize stimulus and response properties or define variable categories.</p>
+                        <p class="helper-text">Customize stimulus and response properties for your variables.</p>
 
                         <div class="form-row">
                             <div class="form-column">
@@ -386,9 +393,10 @@
     <div id="variable-definition-modal" class="modal hidden">
         <div class="modal-content">
             <span class="close-btn variable-modal-close">&times;</span>
-            <h2>Define Variable Categories</h2>
-            <p>Create variable categories that can be used in your stimulus sequence.</p>
-            <p class="helper-text">Use single quotes around variable names in the stimulus field: e.g., ('X', 'Y'), ('Y', 'X')</p>
+            <h2>Define Stimulus Variables</h2>
+            <p>Create stimulus categories that will be used in your experiment.</p>
+            <p class="helper-text">All stimuli must be defined as variables. Use the sequence builder to arrange them.</p>
+            <p class="helper-text">Variables can be text, images, or a mix of both.</p>
 
             <div class="variable-categories-container">
                 <div class="variable-list">

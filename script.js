@@ -3028,6 +3028,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 refreshVariableCategoriesList();
                 selectVariableCategory(variableName);
                 newVariableNameInput.value = '';
+
+                // Update the sequence builder
+                updateSequenceBuilder();
             } else {
                 alert(`Variable category '${variableName}' already exists.`);
             }
@@ -3057,6 +3060,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 variableCategories[currentVariableCategory].push(valueToAdd);
                 refreshVariableValuesList();
                 newValueInput.value = '';
+
+                // Update the sequence builder
+                updateSequenceBuilder();
             } else {
                 alert(`Value '${value}' already exists in this category.`);
             }
@@ -3065,10 +3071,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Initialize the sequence builder when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Display available variables in the sequence builder
+        displayAvailableVariables();
+    });
+
+    // Update the sequence builder when variables are modified
+    function updateSequenceBuilder() {
+        // Display available variables in the sequence builder
+        displayAvailableVariables();
+
+        // Save the current state
+        saveCurrentState();
+    }
+
     // Save variables button
     saveVariablesBtn.addEventListener('click', function() {
         // Save the variable categories to the state
         saveCurrentState();
+
+        // Update the sequence builder
+        updateSequenceBuilder();
 
         // Close the modal
         variableDefinitionModal.classList.add('hidden');
@@ -3108,6 +3132,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         variableValuesContainer.innerHTML = '';
                     }
                     refreshVariableCategoriesList();
+
+                    // Update the sequence builder
+                    updateSequenceBuilder();
+
+                    // Update the stimulus text to remove references to this category
+                    const stimuliText = document.getElementById('stimuli-text');
+                    if (stimuliText) {
+                        const regex = new RegExp(`'${category}'`, 'g');
+                        stimuliText.value = stimuliText.value.replace(regex, `'deleted-${category}'`);
+
+                        // Save the current state
+                        saveCurrentState();
+                    }
                 }
             });
 
@@ -3192,6 +3229,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (confirm(`Are you sure you want to delete the value '${displayValue}'?`)) {
                     variableCategories[currentVariableCategory].splice(i, 1);
                     refreshVariableValuesList();
+
+                    // Update the sequence builder
+                    updateSequenceBuilder();
                 }
             });
 
@@ -3216,10 +3256,98 @@ document.addEventListener('DOMContentLoaded', function() {
         refreshVariableValuesList();
     }
 
+    // Function to display available variable categories in the sequence builder
+    function displayAvailableVariables() {
+        const variableCategoriesList = document.getElementById('variable-categories-list');
+        variableCategoriesList.innerHTML = '';
+
+        // Create a list item for each variable category
+        for (const category in variableCategories) {
+            const categoryItem = document.createElement('div');
+            categoryItem.className = 'variable-category-item';
+
+            const categoryName = document.createElement('span');
+            categoryName.textContent = category;
+            categoryName.className = 'variable-name';
+
+            // Add click event to insert the variable into the sequence builder
+            categoryItem.addEventListener('click', function() {
+                insertVariableIntoSequence(category);
+            });
+
+            categoryItem.appendChild(categoryName);
+            variableCategoriesList.appendChild(categoryItem);
+        }
+
+        // If no categories, show a message
+        if (Object.keys(variableCategories).length === 0) {
+            const noCategories = document.createElement('p');
+            noCategories.textContent = 'No variable categories defined. Click "Define Variables" to create some.';
+            noCategories.style.fontStyle = 'italic';
+            noCategories.style.color = '#666';
+            variableCategoriesList.appendChild(noCategories);
+        }
+    }
+
+    // Function to insert a variable into the sequence builder
+    function insertVariableIntoSequence(category) {
+        const stimuliText = document.getElementById('stimuli-text');
+        const cursorPos = stimuliText.selectionStart;
+        const textBefore = stimuliText.value.substring(0, cursorPos);
+        const textAfter = stimuliText.value.substring(cursorPos);
+
+        // Insert the variable with proper formatting
+        const variableText = `'${category}'`;
+
+        // Check if we need to add a comma
+        let insertText = variableText;
+        if (cursorPos > 0 && textBefore.trim().length > 0 && !textBefore.trim().endsWith(',') &&
+            !textBefore.trim().endsWith('[') && !textBefore.trim().endsWith('(')) {
+            insertText = ', ' + variableText;
+        }
+
+        stimuliText.value = textBefore + insertText + textAfter;
+
+        // Update the cursor position after the inserted text
+        const newCursorPos = cursorPos + insertText.length;
+        stimuliText.setSelectionRange(newCursorPos, newCursorPos);
+        stimuliText.focus();
+
+        // Save the current state
+        saveCurrentState();
+    }
+
+    // Initialize the available variables display when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Display available variables in the sequence builder
+        displayAvailableVariables();
+    });
+
+    // Update available variables when variables are saved
+    saveVariablesBtn.addEventListener('click', function() {
+        // Save the variable categories to the state
+        saveCurrentState();
+
+        // Update the available variables display
+        displayAvailableVariables();
+
+        // Close the modal
+        variableDefinitionModal.classList.add('hidden');
+
+        // Show a confirmation message
+        alert('Variable categories saved successfully.');
+    });
+
     // Add event listener for S-R mapping button
     srMappingBtn.addEventListener('click', function() {
         // Parse current stimuli to generate mapping table
         const stimuliInput = document.getElementById('stimuli-text').value;
+
+        // Check if any variables are defined
+        if (Object.keys(variableCategories).length === 0) {
+            alert('You need to define variables first. Click "Define Variables" to create some.');
+            return;
+        }
 
         // Check if stimuli have changed
         const stimuliChanged = (stimuliInput !== lastStimuliText);
@@ -3228,25 +3356,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (stimuliChanged) {
             lastStimuliText = stimuliInput;
 
-            // If stimuli changed, clear old mappings that no longer apply
-            const newParsedStimuli = parseStimuli(stimuliInput);
-            console.log('Parsed stimuli for S-R mapping:', newParsedStimuli);
+            try {
+                // If stimuli changed, clear old mappings that no longer apply
+                const newParsedStimuli = parseStimuli(stimuliInput);
+                console.log('Parsed stimuli for S-R mapping:', newParsedStimuli);
 
-            const newStimuliKeys = newParsedStimuli.map(seq => {
-                return getFormattedStimulusKey(seq);
-            });
-            console.log('Formatted stimulus keys:', newStimuliKeys);
+                const newStimuliKeys = newParsedStimuli.map(seq => {
+                    return getFormattedStimulusKey(seq);
+                });
+                console.log('Formatted stimulus keys:', newStimuliKeys);
 
-            // Create a new stimuliResponses with only valid keys
-            const updatedResponses = {};
-            for (const key of newStimuliKeys) {
-                if (stimuliResponses[key]) {
-                    updatedResponses[key] = stimuliResponses[key];
+                // Create a new stimuliResponses with only valid keys
+                const updatedResponses = {};
+                for (const key of newStimuliKeys) {
+                    if (stimuliResponses[key]) {
+                        updatedResponses[key] = stimuliResponses[key];
+                    }
                 }
-            }
 
-            // Update with new mappings object
-            stimuliResponses = updatedResponses;
+                // Update with new mappings object
+                stimuliResponses = updatedResponses;
+            } catch (error) {
+                console.error('Error updating mappings:', error);
+            }
         }
 
         try {
@@ -3262,6 +3394,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error generating mapping table:', error);
             alert('There was an error generating the mapping table. Please check the console for details.');
         }
+    // End of srMappingBtn click handler
     });
 
     // Close modal when clicking X

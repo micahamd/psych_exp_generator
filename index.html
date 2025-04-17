@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Psychology Experiment Builder</title>
+    <title>Psychology Experiment and Survey Builder</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="intro-screen" class="container">
         <div class="split-container">
             <div class="left-panel">
-                <h1>Psychology Experiment Builder</h1>
+                <h1>Builder</h1>
                 <div class="form-switch-container">
                     <span class="switch-label">Survey</span>
                     <label class="switch">
                         <input type="checkbox" id="form-type-switch" checked>
                         <span class="slider round"></span>
                     </label>
-                    <span class="switch-label">Experiment - Text only</span>
+                    <span class="switch-label">Experiment</span>
                 </div>
 
                 <form id="experiment-form">
@@ -41,12 +41,12 @@
                                 </select>
                                 <span class="color-preview-large" id="canvas-background-preview" style="background-color: black;"></span>
                             </div>
-                            <p class="helper-text">Background color of the canvas area surrounding the experiment screen.</p>
+                            <p class="helper-text">Background color of the canvas area behind the trial screen.</p>
                         </div>
                         <div class="form-column">
-                            <label for="trial-interval">Trial interval (milliseconds):</label>
+                            <label for="trial-interval">Inter-trial interval (milliseconds):</label>
                             <input type="number" id="trial-interval" min="1" required value="200">
-                            <p class="helper-text">Duration of blank screen between trials. Lower values create faster-paced experiments.</p>
+                            <p class="helper-text">Duration of blank interval between trials.</p>
                         </div>
                         <div class="form-column">
                             <label for="trial-background">Trial background:</label>
@@ -67,7 +67,7 @@
                                 </select>
                                 <span class="color-preview-large" id="trial-background-preview" style="background-color: grey;"></span>
                             </div>
-                            <p class="helper-text">Background color of the experiment area. Different colors may affect participant attention.</p>
+                            <p class="helper-text">Background color of the experiment area.</p>
                         </div>
                     </div>
 
@@ -78,15 +78,15 @@
                                 <option value="yes" selected>Yes</option>
                                 <option value="no">No</option>
                             </select>
-                            <p class="helper-text">Displays a "+" in the center of the screen to focus participant's attention.</p>
+                            <p class="helper-text">Displays a "+" prior to stimulus onset.</p>
                         </div>
                         <div class="form-column">
                             <label for="fixation-interval">Fixation interval (milliseconds):</label>
                             <input type="number" id="fixation-interval" min="1" required value="100">
-                            <p class="helper-text">Duration the fixation cross appears before showing the stimulus.</p>
+                            <p class="helper-text">Duration the fixation cross before the stimulus appears.</p>
                         </div>
                         <div class="form-column">
-                            <label for="fixation-color">Fixation color:</label>
+                            <label for="fixation-color">Fixation Cross color:</label>
                             <div class="color-select-container">
                                 <select id="fixation-color" required>
                                     <option value="white" selected>White</option>
@@ -104,18 +104,18 @@
                                 </select>
                                 <span class="color-preview-large" id="fixation-color-preview" style="background-color: white;"></span>
                             </div>
-                            <p class="helper-text">Color of the fixation cross that appears in the center of the screen.</p>
+                            <p class="helper-text">Color of the fixation cross.</p>
                         </div>
                     </div>
 
                     <div class="form-group form-row">
                         <div class="form-column">
-                            <label for="position-x">Fixation and Stimulus Location X:</label>
+                            <label for="position-x">Fixation/Stimulus Location X coord:</label>
                             <input type="number" id="position-x" value="0">
                             <p class="helper-text">Horizontal position relative to center (negative = left, positive = right)</p>
                         </div>
                         <div class="form-column">
-                            <label for="position-y">Fixation and Stimulus Location Y:</label>
+                            <label for="position-y">Fixation/Stimulus Location Y coord:</label>
                             <input type="number" id="position-y" value="0">
                             <p class="helper-text">Vertical position relative to center (negative = up, positive = down)</p>
                         </div>
@@ -131,20 +131,20 @@
                         <div class="form-column">
                             <label for="trial-count">Trial count (1-999):</label>
                             <input type="number" id="trial-count" min="1" max="999" required value="4">
-                            <p class="helper-text">Total number of trials in each cycle of the experiment.</p>
+                            <p class="helper-text">Total number of trials for this block.</p>
                         </div>
                         <div class="form-column">
                             <label for="cycle-threshold">Cycle Trials until Threshold:</label>
                             <input type="number" id="cycle-threshold" min="0" required value="0">
-                            <p class="helper-text">Minimum correct responses required to end the experiment (0 = no threshold).</p>
+                            <p class="helper-text">Set the minimum number of correct responses required to end the experiment (0 = no threshold). The trials will keep cycling until this threshold is reached.</p>
                         </div>
                     </div>
 
                     <div class="form-group stimulus-group">
-                        <label for="stimuli-text">Stimulus Sequence Builder:</label>
+                        <label for="stimuli-text">Randomize Sequence:</label>
                         <div class="checkbox-container">
                             <input type="checkbox" id="randomize-stimuli" checked>
-                            <label for="randomize-stimuli">Randomize stimulus sequence</label>
+                            <label for="randomize-stimuli">Whether variables will appear sequentially or randomly</label>
                         </div>
                         <div id="sequence-builder-container">
                             <div id="available-variables">
@@ -158,7 +158,6 @@
                             <div id="sequence-builder">
                                 <h4>Sequence Builder</h4>
                                 <textarea id="stimuli-text" rows="3" required placeholder="Build your sequence using the variable categories">'X', 'Y', ('X', 'Y')</textarea>
-                                <p class="helper-text">Use single quotes around variable names: e.g., 'X', 'Y'</p>
                                 <p class="helper-text">Use square brackets for sequential groups: e.g., ['X', 'Y'], 'Z'</p>
                                 <p class="helper-text">Use curved brackets for concurrent display: e.g., ('X', 'Y')</p>
                             </div>
@@ -209,7 +208,7 @@
                                     </select>
                                     <span class="color-preview-large" id="stimulus-color-preview" style="background-color: white;"></span>
                                 </div>
-                                <p class="helper-text">The color of the stimulus text displayed during trials.</p>
+                                <p class="helper-text">The color of the stimulus text.</p>
                             </div>
                         </div>
                     </div>
@@ -235,12 +234,12 @@
                                     <input type="checkbox" id="provide-feedback">
                                     <label for="provide-feedback">Provide Feedback</label>
                                 </div>
-                                <p class="helper-text">When checked, participants will receive feedback on their responses.</p>
+                                <p class="helper-text">When checked, participants will receive feedback (Correct/X) on their responses.</p>
                             </div>
                             <div class="form-column">
                                 <label for="feedback-duration">Feedback Duration (ms):</label>
                                 <input type="number" id="feedback-duration" min="1" value="500" required>
-                                <p class="helper-text">Duration (in milliseconds) feedback remains visible.</p>
+                                <p class="helper-text">Duration feedback remains visible.</p>
                             </div>
                         </div>
                     </div>

@@ -45,9 +45,19 @@ The builder supports two ways to run experiments and surveys:
    - Automatic centering with default positioning adjustments to prevent overlap
    - Maintains aspect ratio with configurable dimensions
    - Variable categories for organizing stimuli into logical groups
+   - Three selection modes for variables (Sequential, Random, Random without Replacement)
+   - Each trial uses a new row of data from variable categories
+   - Visual indication of defined variables in the UI with "Variables Defined" label
+   - "Clear Variables" button to reset all variable categories
    - Ability to delete and switch between variable categories
 
 3. **Stimulus Presentation Options**:
+   - **Variable Categories**: Define groups of related stimuli that can be used in your sequences
+     - Example: Define a category "colors" with values ["red", "blue", "green"]
+     - Use the category name in your sequence to include values from that category
+     - Each trial will use a new row of data from your variable categories
+     - Selection modes (Sequential, Random, Random without Replacement) control how values are selected
+
    - **Sequential Presentation**: To present stimuli one after another, enclose them inside *square* brackets
      - Example: `[apple, corn]` shows "apple" followed by "corn" as a single 'sequential' stimulus
      - Each stimulus advances with a predetermined correct response when stimulus offset = 0.
@@ -57,6 +67,7 @@ The builder supports two ways to run experiments and surveys:
      - Example: `(apple, corn)` shows both "apple" and "corn" on screen, equidistant from each other and their adjacent border edges.
      - Including additional stimuli automatically updates the default positioning to ensure symmetric spatial distribution.
      - Element positioning and styling (color, size) can also be manually set
+     - Example with variables: `(colors, shapes)` will show one value from the "colors" category and one from the "shapes" category
 
    - **Experimental: Mixed Presentation Types**: Combine sequential and concurrent presentations
      - Example: `[apple, (corn, bean)], speed.jpg` for complex sequences
@@ -335,10 +346,17 @@ Precise control over stimulus positioning using a coordinate system:
 2. **Variable Categories and Stimulus Configuration**:
    - Click "Define Variables" to create variable categories
    - Add categories and values for your stimuli
+   - Select a selection mode for each category:
+     - **Sequential**: Cycles through values in order
+     - **Random**: Selects values randomly with replacement
+     - **Random without Replacement**: Selects values randomly without repeating until all are used
+   - Each trial will use a new row of data from your variable categories
    - Use the "Delete Category" button to remove unwanted categories
    - Use the "Switch Category" button to quickly navigate between categories
    - Include image files by adding the appropriate extension (.jpg, .png, etc.)
    - Use the sequence builder to arrange stimuli in your experiment
+   - Once variables are defined, the "Define Variables" button will change to "Variables Defined"
+   - Use the "Clear Variables" button to reset all variable categories
 
 3. **Response Configuration**:
    - Set the primary response key (default is SPACEBAR)
@@ -521,13 +539,16 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - ✓ Advanced stimulus presentation (sequential, concurrent, mixed)
 - ✓ Separate Text-Resp and Image-Resp mapping interfaces
 - ✓ Variable categories with management features (delete, switch)
+- ✓ Variable selection modes (Sequential, Random, Random without Replacement)
+- ✓ Trial-by-trial cycling through variable values
+- ✓ Visual indication of defined variables in the UI
 - ✓ Study mode for multi-phase experimental protocols
 - ✓ Export/import study configurations for sharing
 - ✓ Enhanced timing precision using requestAnimationFrame
 
 ### Planned Enhancements
+- ✓ Variable categories for stimuli with enhanced management features
 - Improved timing precision for more accurate response time measurement
-- Variable categories for stimuli with enhanced management features
 - Network data submission to remote servers
 - Conditional branching based on participant responses
 - Response criteria handling for advanced experimental control

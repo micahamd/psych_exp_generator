@@ -150,11 +150,15 @@
                         <p class="helper-text">List of stimuli that will be shown during trials. Separate each stimulus with a comma.</p>
                         <p class="helper-text">Use square brackets to group stimuli into sequences: e.g., [apple, corn], speed</p>
                         <p class="helper-text">Use curved brackets for concurrent display: e.g., (apple, corn), speed. Positioning defaults can be customized</p>
-                        <p class="helper-text">Indicate image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg. Images should be in the local directory. </p>
+                        <p class="helper-text">Indicate image files with extensions (.jpg, .png, etc.): e.g., apple, corn, image.jpg. Images should be in the local directory.</p>
+                        <p class="helper-text">Use single quotes for variable categories: e.g., ('X', 'Y'), ('Y', 'X'). Define variables using the "Define Variables" button.</p>
                         <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
 
-                        <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
-                        <p class="helper-text">Customize stimulus and response properties.</p>
+                        <div class="button-row">
+                            <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
+                            <button type="button" id="define-variables-btn" class="secondary-btn">Define Variables</button>
+                        </div>
+                        <p class="helper-text">Customize stimulus and response properties or define variable categories.</p>
 
                         <div class="form-row">
                             <div class="form-column">
@@ -374,6 +378,43 @@
                 <button type="button" id="import-mappings-btn" class="secondary-btn">Import Mappings</button>
                 <!-- Hidden file input for importing CSV -->
                 <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Variable Definition Modal -->
+    <div id="variable-definition-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn variable-modal-close">&times;</span>
+            <h2>Define Variable Categories</h2>
+            <p>Create variable categories that can be used in your stimulus sequence.</p>
+            <p class="helper-text">Use single quotes around variable names in the stimulus field: e.g., ('X', 'Y'), ('Y', 'X')</p>
+
+            <div class="variable-categories-container">
+                <div class="variable-list">
+                    <h3>Categories</h3>
+                    <div id="variable-categories-list">
+                        <!-- Variable categories will be listed here -->
+                    </div>
+                    <div class="add-variable-container">
+                        <input type="text" id="new-variable-name" placeholder="New category name">
+                        <button type="button" id="add-variable-btn" class="secondary-btn">Add Category</button>
+                    </div>
+                </div>
+                <div class="variable-values">
+                    <h3>Values for: <span id="current-variable-name">Select a category</span></h3>
+                    <div id="variable-values-container">
+                        <!-- Variable values will be listed here -->
+                    </div>
+                    <div class="add-value-container">
+                        <input type="text" id="new-value" placeholder="New value">
+                        <button type="button" id="add-value-btn" class="secondary-btn">Add Value</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="save-variables-btn">Save Variables</button>
             </div>
         </div>
     </div>

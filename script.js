@@ -128,6 +128,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let experimentData = [];
     let responseStartTime = null;
 
+    // Add new variables for variable categories
+    let variableCategories = {}; // Object to store variable categories and their values
+    let currentVariableCategory = null; // Currently selected variable category
+
     // Add new variables for high-precision timing
     let animationFrameId = null;
     let lastFrameTimestamp = 0;
@@ -1569,6 +1573,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
+            // Restore variable categories if they exist
+            if (savedState.variableCategories) {
+                variableCategories = savedState.variableCategories;
+                console.log('Loaded variable categories from saved state:', variableCategories);
+            }
+
             // Remember last stimuli text to track changes
             lastStimuliText = document.getElementById('stimuli-text').value;
         }
@@ -1678,14 +1688,16 @@ document.addEventListener('DOMContentLoaded', function() {
             positionX: parseInt(document.getElementById('position-x').value) || 0,
             positionY: parseInt(document.getElementById('position-y').value) || 0,
             saveData: saveData, // Use the global variable
-            stimuliResponses: stimuliResponses
+            stimuliResponses: stimuliResponses,
+            variableCategories: variableCategories, // Add variable categories
+            isExperimentMode: isExperimentMode // Add experiment mode flag
         };
 
         localStorage.setItem('experimentBuilderState', JSON.stringify(currentState));
         savedState = currentState;
     }
 
-    // Parse stimuli input to handle sequences, concurrent stimuli, and images with nested structures
+    // Parse stimuli input to handle sequences, concurrent stimuli, images, and variable categories
     function parseStimuli(input) {
         const result = [];
         let bracketStack = []; // Stack to track nested brackets
@@ -1693,14 +1705,33 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentSequence = [];
         let currentConcurrent = [];
         let nestedStructures = []; // Stack to track nested structures
+        let inSingleQuotes = false; // Track if we're inside single quotes (for variable categories)
 
         // Helper function to add an item to the appropriate container
         function addItem() {
             const trimmed = currentItem.trim();
             if (trimmed) {
-                // Check if the item is an image (has .jpg, .png, etc. extension)
-                const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(trimmed);
-                const itemWithType = isImage ? { text: trimmed, type: 'image' } : trimmed;
+                let itemToAdd;
+
+                // Check if the item is a variable category (enclosed in single quotes)
+                if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+                    const categoryName = trimmed.substring(1, trimmed.length - 1);
+                    if (variableCategories[categoryName]) {
+                        // Create a variable category object
+                        itemToAdd = {
+                            type: 'variable',
+                            category: categoryName,
+                            values: variableCategories[categoryName]
+                        };
+                    } else {
+                        // If the category doesn't exist, just use the text as is
+                        itemToAdd = trimmed;
+                    }
+                } else {
+                    // Check if the item is an image (has .jpg, .png, etc. extension)
+                    const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(trimmed);
+                    itemToAdd = isImage ? { text: trimmed, type: 'image' } : trimmed;
+                }
 
                 // Check if we're inside brackets
                 if (bracketStack.length > 0) {
@@ -1708,14 +1739,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     if (currentBracket === '[') {
                         // We're in a sequence
-                        currentSequence.push(itemWithType);
+                        currentSequence.push(itemToAdd);
                     } else if (currentBracket === '(') {
                         // We're in a concurrent group
-                        currentConcurrent.push(itemWithType);
+                        currentConcurrent.push(itemToAdd);
                     }
                 } else {
                     // Not in any brackets, add as a single item
-                    result.push([itemWithType]);
+                    result.push([itemToAdd]);
                 }
             }
             currentItem = '';
@@ -1857,6 +1888,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (typeof item === 'object' && item.type === 'image') {
                 // Image stimulus
                 return item.text;
+            } else if (typeof item === 'object' && item.type === 'variable') {
+                // Variable category
+                return `'${item.category}'`;
             } else {
                 // Regular text stimulus
                 return String(item);
@@ -1961,6 +1995,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Get the next stimulus sequence
     function getNextStimulusSequence() {
+        // Helper function to expand variable categories in a sequence
+        function expandVariableCategories(sequence) {
+            // If it's not an array, return as is
+            if (!Array.isArray(sequence)) return sequence;
+
+            // Process each item in the sequence
+            return sequence.map(item => {
+                // If it's a variable category, replace with a random value from the category
+                if (typeof item === 'object' && item.type === 'variable') {
+                    const values = item.values;
+                    if (values && values.length > 0) {
+                        // Select a random value from the category
+                        const randomIndex = Math.floor(Math.random() * values.length);
+                        return values[randomIndex];
+                    } else {
+                        // If no values, return the category name as fallback
+                        return item.category;
+                    }
+                } else if (typeof item === 'object' && item.type === 'concurrent') {
+                    // For concurrent stimuli, expand variables in each stimulus
+                    const expandedStimuli = item.stimuli.map(stimulus => {
+                        if (typeof stimulus === 'object' && stimulus.type === 'variable') {
+                            const values = stimulus.values;
+                            if (values && values.length > 0) {
+                                const randomIndex = Math.floor(Math.random() * values.length);
+                                return values[randomIndex];
+                            } else {
+                                return stimulus.category;
+                            }
+                        }
+                        return stimulus;
+                    });
+                    return { type: 'concurrent', stimuli: expandedStimuli };
+                } else if (Array.isArray(item)) {
+                    // For nested sequences, recursively expand
+                    return expandVariableCategories(item);
+                }
+                // Return other items as is
+                return item;
+            });
+        }
+
         if (randomizeStimuli) {
             // If all stimuli have been used, reset the tracking
             if (stimuliUsed.length >= stimuli.length) {
@@ -1982,16 +2058,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     JSON.stringify(seq) === JSON.stringify(selectedSequence));
                 stimuliUsed.push(originalIndex);
 
-                return selectedSequence;
+                // Expand any variable categories in the sequence
+                return expandVariableCategories(selectedSequence);
             } else {
                 // This shouldn't happen, but just in case
-                return stimuli[Math.floor(Math.random() * stimuli.length)];
+                const selectedSequence = stimuli[Math.floor(Math.random() * stimuli.length)];
+                return expandVariableCategories(selectedSequence);
             }
         } else {
             // Sequential mode: just advance the index
             const selectedSequence = stimuli[stimuliIndex];
             stimuliIndex = (stimuliIndex + 1) % stimuli.length;
-            return selectedSequence;
+
+            // Expand any variable categories in the sequence
+            return expandVariableCategories(selectedSequence);
         }
     }
 
@@ -2835,6 +2915,208 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Returned to intro screen, state reset');
         }
     });
+
+    // Get variable definition modal elements
+    const variableDefinitionModal = document.getElementById('variable-definition-modal');
+    const defineVariablesBtn = document.getElementById('define-variables-btn');
+    const variableCategoriesList = document.getElementById('variable-categories-list');
+    const variableValuesContainer = document.getElementById('variable-values-container');
+    const currentVariableName = document.getElementById('current-variable-name');
+    const newVariableNameInput = document.getElementById('new-variable-name');
+    const newValueInput = document.getElementById('new-value');
+    const addVariableBtn = document.getElementById('add-variable-btn');
+    const addValueBtn = document.getElementById('add-value-btn');
+    const saveVariablesBtn = document.getElementById('save-variables-btn');
+    const variableModalCloseBtn = document.querySelector('.variable-modal-close');
+
+    // Add event listener for Define Variables button
+    defineVariablesBtn.addEventListener('click', function() {
+        // Refresh the variable categories list
+        refreshVariableCategoriesList();
+
+        // Show the modal
+        variableDefinitionModal.classList.remove('hidden');
+    });
+
+    // Close variable modal when clicking X
+    variableModalCloseBtn.addEventListener('click', function() {
+        variableDefinitionModal.classList.add('hidden');
+    });
+
+    // Close variable modal when clicking outside
+    window.addEventListener('click', function(e) {
+        if (e.target === variableDefinitionModal) {
+            variableDefinitionModal.classList.add('hidden');
+        }
+    });
+
+    // Add new variable category
+    addVariableBtn.addEventListener('click', function() {
+        const variableName = newVariableNameInput.value.trim();
+        if (variableName) {
+            // Add the new variable category
+            if (!variableCategories[variableName]) {
+                variableCategories[variableName] = [];
+                refreshVariableCategoriesList();
+                selectVariableCategory(variableName);
+                newVariableNameInput.value = '';
+            } else {
+                alert(`Variable category '${variableName}' already exists.`);
+            }
+        }
+    });
+
+    // Add new value to current variable category
+    addValueBtn.addEventListener('click', function() {
+        const value = newValueInput.value.trim();
+        if (value && currentVariableCategory) {
+            // Add the new value to the current category
+            if (!variableCategories[currentVariableCategory].includes(value)) {
+                variableCategories[currentVariableCategory].push(value);
+                refreshVariableValuesList();
+                newValueInput.value = '';
+            } else {
+                alert(`Value '${value}' already exists in this category.`);
+            }
+        } else if (!currentVariableCategory) {
+            alert('Please select a variable category first.');
+        }
+    });
+
+    // Save variables button
+    saveVariablesBtn.addEventListener('click', function() {
+        // Save the variable categories to the state
+        saveCurrentState();
+
+        // Close the modal
+        variableDefinitionModal.classList.add('hidden');
+
+        // Show a confirmation message
+        alert('Variable categories saved successfully.');
+    });
+
+    // Function to refresh the variable categories list
+    function refreshVariableCategoriesList() {
+        variableCategoriesList.innerHTML = '';
+
+        for (const category in variableCategories) {
+            const categoryItem = document.createElement('div');
+            categoryItem.className = 'variable-category-item';
+            if (category === currentVariableCategory) {
+                categoryItem.classList.add('selected');
+            }
+
+            const categoryName = document.createElement('span');
+            categoryName.textContent = category;
+            categoryName.className = 'variable-name';
+
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'variable-action-buttons';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'secondary-btn';
+            deleteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (confirm(`Are you sure you want to delete the variable category '${category}'?`)) {
+                    delete variableCategories[category];
+                    if (currentVariableCategory === category) {
+                        currentVariableCategory = null;
+                        currentVariableName.textContent = 'Select a category';
+                        variableValuesContainer.innerHTML = '';
+                    }
+                    refreshVariableCategoriesList();
+                }
+            });
+
+            actionButtons.appendChild(deleteBtn);
+            categoryItem.appendChild(categoryName);
+            categoryItem.appendChild(actionButtons);
+
+            // Add click event to select this category
+            categoryItem.addEventListener('click', function() {
+                selectVariableCategory(category);
+            });
+
+            variableCategoriesList.appendChild(categoryItem);
+        }
+
+        // If no categories, show a message
+        if (Object.keys(variableCategories).length === 0) {
+            const noCategories = document.createElement('p');
+            noCategories.textContent = 'No variable categories defined. Add one below.';
+            noCategories.style.fontStyle = 'italic';
+            noCategories.style.color = '#666';
+            variableCategoriesList.appendChild(noCategories);
+        }
+    }
+
+    // Function to refresh the variable values list
+    function refreshVariableValuesList() {
+        variableValuesContainer.innerHTML = '';
+
+        if (!currentVariableCategory) {
+            const noCategory = document.createElement('p');
+            noCategory.textContent = 'Select a category to view and edit its values.';
+            noCategory.style.fontStyle = 'italic';
+            noCategory.style.color = '#666';
+            variableValuesContainer.appendChild(noCategory);
+            return;
+        }
+
+        const values = variableCategories[currentVariableCategory];
+
+        if (values.length === 0) {
+            const noValues = document.createElement('p');
+            noValues.textContent = 'No values in this category. Add some below.';
+            noValues.style.fontStyle = 'italic';
+            noValues.style.color = '#666';
+            variableValuesContainer.appendChild(noValues);
+            return;
+        }
+
+        for (let i = 0; i < values.length; i++) {
+            const value = values[i];
+            const valueItem = document.createElement('div');
+            valueItem.className = 'variable-value-item';
+
+            const valueText = document.createElement('span');
+            valueText.textContent = value;
+            valueText.className = 'variable-value';
+
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'variable-action-buttons';
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'secondary-btn';
+            deleteBtn.addEventListener('click', function() {
+                if (confirm(`Are you sure you want to delete the value '${value}'?`)) {
+                    variableCategories[currentVariableCategory].splice(i, 1);
+                    refreshVariableValuesList();
+                }
+            });
+
+            actionButtons.appendChild(deleteBtn);
+            valueItem.appendChild(valueText);
+            valueItem.appendChild(actionButtons);
+
+            variableValuesContainer.appendChild(valueItem);
+        }
+    }
+
+    // Function to select a variable category
+    function selectVariableCategory(category) {
+        // Update the current category
+        currentVariableCategory = category;
+
+        // Update the UI
+        currentVariableName.textContent = category;
+
+        // Refresh the lists to update selection highlighting
+        refreshVariableCategoriesList();
+        refreshVariableValuesList();
+    }
 
     // Add event listener for S-R mapping button
     srMappingBtn.addEventListener('click', function() {

@@ -163,9 +163,10 @@
                         <p class="helper-text checkbox-helper">When checked, stimuli are selected randomly without repeating until all are shown. When unchecked, stimuli appear in the order listed.</p>
 
                         <div class="button-row">
-                            <button type="button" id="sr-mapping-btn" class="secondary-btn">Custom S-R Mappings</button>
+                            <button type="button" id="text-mapping-btn" class="secondary-btn">Text-Resp Mapping</button>
+                            <button type="button" id="image-mapping-btn" class="secondary-btn">Image-Resp Mapping</button>
                         </div>
-                        <p class="helper-text">Customize stimulus and response properties for your variables.</p>
+                        <p class="helper-text">Customize response properties for text and image stimuli separately.</p>
 
                         <div class="form-row">
                             <div class="form-column">
@@ -352,19 +353,19 @@
         </div>
     </div>
 
-    <!-- S-R Mapping Modal -->
-    <div id="sr-mapping-modal" class="modal hidden">
+    <!-- Text Mapping Modal -->
+    <div id="text-mapping-modal" class="modal hidden">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
-            <h2>Custom Stimulus-Response Mappings</h2>
-            <p>Customize properties for each stimulus or sequence:</p>
+            <span class="close-btn text-modal-close">&times;</span>
+            <h2>Text Stimulus-Response Mappings</h2>
+            <p>Customize properties for text stimuli:</p>
             <p class="helper-text">Empty fields will use the values from the main form. The dialog is resizable - drag from the bottom-right corner.</p>
 
             <div class="mapping-table-container">
-                <table id="mapping-table">
+                <table id="text-mapping-table">
                     <thead>
                         <tr>
-                            <th>Stimulus</th>
+                            <th>Text Stimulus</th>
                             <th>Correct Response Key</th>
                             <th>X Position</th>
                             <th>Y Position</th>
@@ -373,18 +374,55 @@
                             <th>Size (px)</th>
                         </tr>
                     </thead>
-                    <tbody id="mapping-tbody">
+                    <tbody id="text-mapping-tbody">
                         <!-- Rows will be dynamically added here -->
                     </tbody>
                 </table>
             </div>
 
             <div class="button-group">
-                <button type="button" id="save-mappings-btn">Save Mappings</button>
-                <button type="button" id="export-mappings-btn" class="secondary-btn">Export Mappings</button>
-                <button type="button" id="import-mappings-btn" class="secondary-btn">Import Mappings</button>
+                <button type="button" id="save-text-mappings-btn">Save Mappings</button>
+                <button type="button" id="export-text-mappings-btn" class="secondary-btn">Export Mappings</button>
+                <button type="button" id="import-text-mappings-btn" class="secondary-btn">Import Mappings</button>
                 <!-- Hidden file input for importing CSV -->
-                <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+                <input type="file" id="text-csv-file-input" accept=".csv" style="display: none;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Mapping Modal -->
+    <div id="image-mapping-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn image-modal-close">&times;</span>
+            <h2>Image Stimulus-Response Mappings</h2>
+            <p>Customize properties for image stimuli:</p>
+            <p class="helper-text">Empty fields will use the values from the main form. The dialog is resizable - drag from the bottom-right corner.</p>
+
+            <div class="mapping-table-container">
+                <table id="image-mapping-table">
+                    <thead>
+                        <tr>
+                            <th>Image Stimulus</th>
+                            <th>Correct Response Key</th>
+                            <th>X Position</th>
+                            <th>Y Position</th>
+                            <th>Width (px)</th>
+                            <th>Height (px)</th>
+                            <th>Offset (ms)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="image-mapping-tbody">
+                        <!-- Rows will be dynamically added here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="save-image-mappings-btn">Save Mappings</button>
+                <button type="button" id="export-image-mappings-btn" class="secondary-btn">Export Mappings</button>
+                <button type="button" id="import-image-mappings-btn" class="secondary-btn">Import Mappings</button>
+                <!-- Hidden file input for importing CSV -->
+                <input type="file" id="image-csv-file-input" accept=".csv" style="display: none;">
             </div>
         </div>
     </div>
@@ -407,6 +445,10 @@
                     <div class="add-variable-container">
                         <input type="text" id="new-variable-name" placeholder="New category name">
                         <button type="button" id="add-variable-btn" class="secondary-btn">Add Category</button>
+                    </div>
+                    <div class="variable-actions">
+                        <button type="button" id="delete-category-btn" class="danger-btn">Delete Category</button>
+                        <button type="button" id="switch-category-btn" class="secondary-btn">Switch Category</button>
                     </div>
                 </div>
                 <div class="variable-values">

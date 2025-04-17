@@ -3338,8 +3338,22 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Variable categories saved successfully.');
     });
 
-    // Add event listener for S-R mapping button
-    srMappingBtn.addEventListener('click', function() {
+    // Get DOM elements for the new mapping buttons and modals
+    const textMappingBtn = document.getElementById('text-mapping-btn');
+    const imageMappingBtn = document.getElementById('image-mapping-btn');
+    const textMappingModal = document.getElementById('text-mapping-modal');
+    const imageMappingModal = document.getElementById('image-mapping-modal');
+    const textMappingTbody = document.getElementById('text-mapping-tbody');
+    const imageMappingTbody = document.getElementById('image-mapping-tbody');
+    const saveTextMappingsBtn = document.getElementById('save-text-mappings-btn');
+    const saveImageMappingsBtn = document.getElementById('save-image-mappings-btn');
+    const textModalCloseBtn = document.querySelector('.text-modal-close');
+    const imageModalCloseBtn = document.querySelector('.image-modal-close');
+    const deleteCategoryBtn = document.getElementById('delete-category-btn');
+    const switchCategoryBtn = document.getElementById('switch-category-btn');
+
+    // Add event listener for Text-Resp mapping button
+    textMappingBtn.addEventListener('click', function() {
         // Parse current stimuli to generate mapping table
         const stimuliInput = document.getElementById('stimuli-text').value;
 
@@ -3349,52 +3363,76 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Check if stimuli have changed
-        const stimuliChanged = (stimuliInput !== lastStimuliText);
+        try {
+            // Generate text mapping table
+            generateTextMappingTable();
 
-        // If stimuli changed, we need to regenerate mappings
-        if (stimuliChanged) {
-            lastStimuliText = stimuliInput;
+            // Show modal
+            textMappingModal.classList.remove('hidden');
+        } catch (error) {
+            console.error('Error generating text mapping table:', error);
+            alert('There was an error generating the text mapping table. Please check the console for details.');
+        }
+    });
 
-            try {
-                // If stimuli changed, clear old mappings that no longer apply
-                const newParsedStimuli = parseStimuli(stimuliInput);
-                console.log('Parsed stimuli for S-R mapping:', newParsedStimuli);
+    // Add event listener for Image-Resp mapping button
+    imageMappingBtn.addEventListener('click', function() {
+        // Parse current stimuli to generate mapping table
+        const stimuliInput = document.getElementById('stimuli-text').value;
 
-                const newStimuliKeys = newParsedStimuli.map(seq => {
-                    return getFormattedStimulusKey(seq);
-                });
-                console.log('Formatted stimulus keys:', newStimuliKeys);
-
-                // Create a new stimuliResponses with only valid keys
-                const updatedResponses = {};
-                for (const key of newStimuliKeys) {
-                    if (stimuliResponses[key]) {
-                        updatedResponses[key] = stimuliResponses[key];
-                    }
-                }
-
-                // Update with new mappings object
-                stimuliResponses = updatedResponses;
-            } catch (error) {
-                console.error('Error updating mappings:', error);
-            }
+        // Check if any variables are defined
+        if (Object.keys(variableCategories).length === 0) {
+            alert('You need to define variables first. Click "Define Variables" to create some.');
+            return;
         }
 
         try {
-            const parsedStimuli = parseStimuli(stimuliInput);
-            console.log('Parsed stimuli for mapping table:', parsedStimuli);
-
-            // Generate table rows
-            generateMappingTable(parsedStimuli);
+            // Generate image mapping table
+            generateImageMappingTable();
 
             // Show modal
-            srMappingModal.classList.remove('hidden');
+            imageMappingModal.classList.remove('hidden');
         } catch (error) {
-            console.error('Error generating mapping table:', error);
-            alert('There was an error generating the mapping table. Please check the console for details.');
+            console.error('Error generating image mapping table:', error);
+            alert('There was an error generating the image mapping table. Please check the console for details.');
         }
-    // End of srMappingBtn click handler
+    });
+
+    // Close text mapping modal when clicking X
+    textModalCloseBtn.addEventListener('click', function() {
+        textMappingModal.classList.add('hidden');
+    });
+
+    // Close image mapping modal when clicking X
+    imageModalCloseBtn.addEventListener('click', function() {
+        imageMappingModal.classList.add('hidden');
+    });
+
+    // Close modals when clicking outside
+    window.addEventListener('click', function(e) {
+        if (e.target === textMappingModal) {
+            textMappingModal.classList.add('hidden');
+        } else if (e.target === imageMappingModal) {
+            imageMappingModal.classList.add('hidden');
+        }
+    });
+
+    // Add event listeners for save mapping buttons
+    saveTextMappingsBtn.addEventListener('click', function() {
+        saveTextMappings();
+    });
+
+    saveImageMappingsBtn.addEventListener('click', function() {
+        saveImageMappings();
+    });
+
+    // Add event listeners for variable category management
+    deleteCategoryBtn.addEventListener('click', function() {
+        deleteCurrentCategory();
+    });
+
+    switchCategoryBtn.addEventListener('click', function() {
+        switchCategory();
     });
 
     // Close modal when clicking X
@@ -3454,7 +3492,500 @@ document.addEventListener('DOMContentLoaded', function() {
         saveCurrentState();
     });
 
-    // Generate mapping table with columns for concurrent stimuli
+    // Function to generate text mapping table
+    function generateTextMappingTable() {
+        // Clear existing rows
+        textMappingTbody.innerHTML = '';
+
+        // Get default values from current form settings
+        const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
+        const defaultSize = document.getElementById('stimulus-size').value;
+        const defaultColor = document.getElementById('stimulus-color').value;
+        const defaultOffset = document.getElementById('stimulus-offset').value;
+        const defaultX = document.getElementById('position-x').value || '0';
+        const defaultY = document.getElementById('position-y').value || '0';
+
+        // Process each variable category
+        for (const category in variableCategories) {
+            // Get the values for this category
+            const values = variableCategories[category];
+
+            // Filter out image values
+            const textValues = values.filter(value => {
+                return typeof value !== 'object' || value.type !== 'image';
+            });
+
+            // Skip if no text values
+            if (textValues.length === 0) continue;
+
+            // Add a header row for the category
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'category-header-row';
+
+            const headerCell = document.createElement('td');
+            headerCell.colSpan = 7;
+            headerCell.textContent = `Category: '${category}' (${textValues.length} text values)`;
+            headerCell.style.fontWeight = 'bold';
+            headerCell.style.backgroundColor = '#e3f2fd';
+            headerCell.style.color = '#2196F3';
+            headerRow.appendChild(headerCell);
+
+            textMappingTbody.appendChild(headerRow);
+
+            // Add a row for each text value
+            textValues.forEach(value => {
+                const valueText = typeof value === 'object' ? value.text : value;
+                const row = document.createElement('tr');
+                row.setAttribute('data-stimulus', valueText);
+                row.setAttribute('data-category', category);
+
+                // Stimulus cell
+                const stimulusCell = document.createElement('td');
+                stimulusCell.textContent = valueText;
+                row.appendChild(stimulusCell);
+
+                // Response key input
+                const keyCell = document.createElement('td');
+                const keyInput = document.createElement('input');
+                keyInput.type = 'text';
+                keyInput.setAttribute('data-type', 'key');
+                keyInput.setAttribute('data-default', defaultResponseKey);
+                keyInput.placeholder = defaultResponseKey;
+
+                // Check if we have a saved mapping
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].key) {
+                    keyInput.value = stimuliResponses[valueText].key;
+                }
+
+                keyCell.appendChild(keyInput);
+                row.appendChild(keyCell);
+
+                // X position input
+                const xCell = document.createElement('td');
+                const xInput = document.createElement('input');
+                xInput.type = 'number';
+                xInput.setAttribute('data-type', 'x');
+                xInput.setAttribute('data-default', defaultX);
+                xInput.placeholder = defaultX;
+
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].x !== undefined) {
+                    xInput.value = stimuliResponses[valueText].x;
+                }
+
+                xCell.appendChild(xInput);
+                row.appendChild(xCell);
+
+                // Y position input
+                const yCell = document.createElement('td');
+                const yInput = document.createElement('input');
+                yInput.type = 'number';
+                yInput.setAttribute('data-type', 'y');
+                yInput.setAttribute('data-default', defaultY);
+                yInput.placeholder = defaultY;
+
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].y !== undefined) {
+                    yInput.value = stimuliResponses[valueText].y;
+                }
+
+                yCell.appendChild(yInput);
+                row.appendChild(yCell);
+
+                // Offset input
+                const offsetCell = document.createElement('td');
+                const offsetInput = document.createElement('input');
+                offsetInput.type = 'number';
+                offsetInput.setAttribute('data-type', 'offset');
+                offsetInput.setAttribute('data-default', defaultOffset);
+                offsetInput.placeholder = defaultOffset;
+
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].offset !== undefined) {
+                    offsetInput.value = stimuliResponses[valueText].offset;
+                }
+
+                offsetCell.appendChild(offsetInput);
+                row.appendChild(offsetCell);
+
+                // Color input
+                const colorCell = document.createElement('td');
+                const colorInput = document.createElement('input');
+                colorInput.type = 'text';
+                colorInput.setAttribute('data-type', 'color');
+                colorInput.setAttribute('data-default', defaultColor);
+                colorInput.placeholder = defaultColor;
+
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].color) {
+                    colorInput.value = stimuliResponses[valueText].color;
+                }
+
+                colorCell.appendChild(colorInput);
+                row.appendChild(colorCell);
+
+                // Size input
+                const sizeCell = document.createElement('td');
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'number';
+                sizeInput.setAttribute('data-type', 'size');
+                sizeInput.setAttribute('data-default', defaultSize);
+                sizeInput.placeholder = defaultSize;
+
+                if (stimuliResponses[valueText] && stimuliResponses[valueText].size !== undefined) {
+                    sizeInput.value = stimuliResponses[valueText].size;
+                }
+
+                sizeCell.appendChild(sizeInput);
+                row.appendChild(sizeCell);
+
+                textMappingTbody.appendChild(row);
+            });
+        }
+
+        // If no rows were added, show a message
+        if (textMappingTbody.children.length === 0) {
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 7;
+            emptyCell.textContent = 'No text stimuli found in any variable category.';
+            emptyCell.style.textAlign = 'center';
+            emptyCell.style.padding = '20px';
+            emptyRow.appendChild(emptyCell);
+            textMappingTbody.appendChild(emptyRow);
+        }
+    }
+
+    // Function to generate image mapping table
+    function generateImageMappingTable() {
+        // Clear existing rows
+        imageMappingTbody.innerHTML = '';
+
+        // Get default values from current form settings
+        const defaultResponseKey = document.getElementById('response-key').value.trim() || 'Space';
+        const defaultWidth = 400; // Default width for images
+        const defaultHeight = 400; // Default height for images
+        const defaultOffset = document.getElementById('stimulus-offset').value;
+        const defaultX = document.getElementById('position-x').value || '0';
+        const defaultY = document.getElementById('position-y').value || '0';
+
+        // Process each variable category
+        for (const category in variableCategories) {
+            // Get the values for this category
+            const values = variableCategories[category];
+
+            // Filter out non-image values
+            const imageValues = values.filter(value => {
+                return typeof value === 'object' && value.type === 'image';
+            });
+
+            // Skip if no image values
+            if (imageValues.length === 0) continue;
+
+            // Add a header row for the category
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'category-header-row';
+
+            const headerCell = document.createElement('td');
+            headerCell.colSpan = 7;
+            headerCell.textContent = `Category: '${category}' (${imageValues.length} image values)`;
+            headerCell.style.fontWeight = 'bold';
+            headerCell.style.backgroundColor = '#e3f2fd';
+            headerCell.style.color = '#2196F3';
+            headerRow.appendChild(headerCell);
+
+            imageMappingTbody.appendChild(headerRow);
+
+            // Add a row for each image value
+            imageValues.forEach(value => {
+                const imageText = value.text;
+                const row = document.createElement('tr');
+                row.setAttribute('data-stimulus', imageText);
+                row.setAttribute('data-category', category);
+
+                // Stimulus cell
+                const stimulusCell = document.createElement('td');
+                stimulusCell.textContent = imageText;
+                row.appendChild(stimulusCell);
+
+                // Response key input
+                const keyCell = document.createElement('td');
+                const keyInput = document.createElement('input');
+                keyInput.type = 'text';
+                keyInput.setAttribute('data-type', 'key');
+                keyInput.setAttribute('data-default', defaultResponseKey);
+                keyInput.placeholder = defaultResponseKey;
+
+                // Check if we have a saved mapping
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].key) {
+                    keyInput.value = stimuliResponses[imageText].key;
+                }
+
+                keyCell.appendChild(keyInput);
+                row.appendChild(keyCell);
+
+                // X position input
+                const xCell = document.createElement('td');
+                const xInput = document.createElement('input');
+                xInput.type = 'number';
+                xInput.setAttribute('data-type', 'x');
+                xInput.setAttribute('data-default', defaultX);
+                xInput.placeholder = defaultX;
+
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].x !== undefined) {
+                    xInput.value = stimuliResponses[imageText].x;
+                }
+
+                xCell.appendChild(xInput);
+                row.appendChild(xCell);
+
+                // Y position input
+                const yCell = document.createElement('td');
+                const yInput = document.createElement('input');
+                yInput.type = 'number';
+                yInput.setAttribute('data-type', 'y');
+                yInput.setAttribute('data-default', defaultY);
+                yInput.placeholder = defaultY;
+
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].y !== undefined) {
+                    yInput.value = stimuliResponses[imageText].y;
+                }
+
+                yCell.appendChild(yInput);
+                row.appendChild(yCell);
+
+                // Width input
+                const widthCell = document.createElement('td');
+                const widthInput = document.createElement('input');
+                widthInput.type = 'number';
+                widthInput.setAttribute('data-type', 'width');
+                widthInput.setAttribute('data-default', defaultWidth);
+                widthInput.placeholder = defaultWidth;
+
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].width !== undefined) {
+                    widthInput.value = stimuliResponses[imageText].width;
+                }
+
+                widthCell.appendChild(widthInput);
+                row.appendChild(widthCell);
+
+                // Height input
+                const heightCell = document.createElement('td');
+                const heightInput = document.createElement('input');
+                heightInput.type = 'number';
+                heightInput.setAttribute('data-type', 'height');
+                heightInput.setAttribute('data-default', defaultHeight);
+                heightInput.placeholder = defaultHeight;
+
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].height !== undefined) {
+                    heightInput.value = stimuliResponses[imageText].height;
+                }
+
+                heightCell.appendChild(heightInput);
+                row.appendChild(heightCell);
+
+                // Offset input
+                const offsetCell = document.createElement('td');
+                const offsetInput = document.createElement('input');
+                offsetInput.type = 'number';
+                offsetInput.setAttribute('data-type', 'offset');
+                offsetInput.setAttribute('data-default', defaultOffset);
+                offsetInput.placeholder = defaultOffset;
+
+                if (stimuliResponses[imageText] && stimuliResponses[imageText].offset !== undefined) {
+                    offsetInput.value = stimuliResponses[imageText].offset;
+                }
+
+                offsetCell.appendChild(offsetInput);
+                row.appendChild(offsetCell);
+
+                imageMappingTbody.appendChild(row);
+            });
+        }
+
+        // If no rows were added, show a message
+        if (imageMappingTbody.children.length === 0) {
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 7;
+            emptyCell.textContent = 'No image stimuli found in any variable category.';
+            emptyCell.style.textAlign = 'center';
+            emptyCell.style.padding = '20px';
+            emptyRow.appendChild(emptyCell);
+            imageMappingTbody.appendChild(emptyRow);
+        }
+    }
+
+    // Function to save text mappings
+    function saveTextMappings() {
+        const mappingRows = textMappingTbody.querySelectorAll('tr[data-stimulus]');
+
+        // Process each mapping row
+        mappingRows.forEach(row => {
+            const stimulusText = row.getAttribute('data-stimulus');
+            const customMapping = {};
+
+            // Get all input values based on data-type attribute
+            row.querySelectorAll('input').forEach(input => {
+                const dataType = input.getAttribute('data-type');
+                const defaultValue = input.getAttribute('data-default');
+                const value = input.value.trim();
+
+                if (value && value !== defaultValue) {
+                    // Check if it's a number type
+                    if (input.type === 'number') {
+                        customMapping[dataType] = parseInt(value);
+                    } else {
+                        customMapping[dataType] = value;
+                    }
+                }
+            });
+
+            // Only save if there's at least one custom setting
+            if (Object.keys(customMapping).length > 0) {
+                stimuliResponses[stimulusText] = customMapping;
+                hasCustomMappings = true;
+            }
+        });
+
+        // Close the modal
+        textMappingModal.classList.add('hidden');
+
+        // Visual feedback that mappings were saved
+        textMappingBtn.textContent = hasCustomMappings ?
+            "Text-Resp Mapping (Set)" : "Text-Resp Mapping";
+
+        // Save state with updated mappings
+        saveCurrentState();
+
+        // Show confirmation
+        alert('Text mappings saved successfully.');
+    }
+
+    // Function to save image mappings
+    function saveImageMappings() {
+        const mappingRows = imageMappingTbody.querySelectorAll('tr[data-stimulus]');
+
+        // Process each mapping row
+        mappingRows.forEach(row => {
+            const stimulusText = row.getAttribute('data-stimulus');
+            const customMapping = {};
+
+            // Get all input values based on data-type attribute
+            row.querySelectorAll('input').forEach(input => {
+                const dataType = input.getAttribute('data-type');
+                const defaultValue = input.getAttribute('data-default');
+                const value = input.value.trim();
+
+                if (value && value !== defaultValue) {
+                    // Check if it's a number type
+                    if (input.type === 'number') {
+                        customMapping[dataType] = parseInt(value);
+                    } else {
+                        customMapping[dataType] = value;
+                    }
+                }
+            });
+
+            // Only save if there's at least one custom setting
+            if (Object.keys(customMapping).length > 0) {
+                stimuliResponses[stimulusText] = customMapping;
+                hasCustomMappings = true;
+            }
+        });
+
+        // Close the modal
+        imageMappingModal.classList.add('hidden');
+
+        // Visual feedback that mappings were saved
+        imageMappingBtn.textContent = hasCustomMappings ?
+            "Image-Resp Mapping (Set)" : "Image-Resp Mapping";
+
+        // Save state with updated mappings
+        saveCurrentState();
+
+        // Show confirmation
+        alert('Image mappings saved successfully.');
+    }
+
+    // Function to delete the current variable category
+    function deleteCurrentCategory() {
+        if (!currentVariableCategory) {
+            alert('Please select a category first.');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to delete the variable category '${currentVariableCategory}'?`)) {
+            delete variableCategories[currentVariableCategory];
+            currentVariableCategory = null;
+            currentVariableName.textContent = 'Select a category';
+            variableValuesContainer.innerHTML = '';
+            refreshVariableCategoriesList();
+
+            // Update the sequence builder
+            updateSequenceBuilder();
+
+            // Update the stimulus text to remove references to this category
+            const stimuliText = document.getElementById('stimuli-text');
+            if (stimuliText) {
+                const regex = new RegExp(`'${currentVariableCategory}'`, 'g');
+                stimuliText.value = stimuliText.value.replace(regex, `'deleted-category'`);
+
+                // Save the current state
+                saveCurrentState();
+            }
+        }
+    }
+
+    // Function to switch between variable categories
+    function switchCategory() {
+        // Create a dropdown to select a category
+        const categories = Object.keys(variableCategories);
+
+        if (categories.length === 0) {
+            alert('No categories defined yet. Please create a category first.');
+            return;
+        }
+
+        // Create a select element with options for each category
+        let html = '<select id="category-select">';
+        categories.forEach(category => {
+            const selected = category === currentVariableCategory ? 'selected' : '';
+            html += `<option value="${category}" ${selected}>${category}</option>`;
+        });
+        html += '</select>';
+
+        // Show a dialog with the select element
+        const categorySelect = document.createElement('div');
+        categorySelect.innerHTML = html;
+
+        // Use a custom dialog
+        const dialog = document.createElement('div');
+        dialog.className = 'custom-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-content">
+                <h3>Switch Category</h3>
+                <p>Select a category to switch to:</p>
+                ${html}
+                <div class="dialog-buttons">
+                    <button id="switch-ok" class="primary-btn">OK</button>
+                    <button id="switch-cancel" class="secondary-btn">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        // Add the dialog to the page
+        document.body.appendChild(dialog);
+
+        // Add event listeners
+        document.getElementById('switch-ok').addEventListener('click', function() {
+            const selectedCategory = document.getElementById('category-select').value;
+            selectVariableCategory(selectedCategory);
+            document.body.removeChild(dialog);
+        });
+
+        document.getElementById('switch-cancel').addEventListener('click', function() {
+            document.body.removeChild(dialog);
+        });
+    }
+
+    // Function to generate mapping table with columns for concurrent stimuli
     function generateMappingTable(parsedStimuli) {
         // Clear existing rows
         mappingTbody.innerHTML = '';
@@ -3466,52 +3997,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultOffset = document.getElementById('stimulus-offset').value;
         const defaultX = document.getElementById('position-x').value || '0';
         const defaultY = document.getElementById('position-y').value || '0';
-
-        // Add rows for variable categories if they exist
-        const stimuliInput = document.getElementById('stimuli-text').value;
-        for (const category in variableCategories) {
-            if (stimuliInput.includes(`'${category}'`)) {
-                const row = document.createElement('tr');
-                row.className = 'variable-category-row';
-
-                // Stimulus cell
-                const stimulusCell = document.createElement('td');
-                stimulusCell.textContent = `'${category}' (Variable)`;
-                stimulusCell.style.fontWeight = 'bold';
-                stimulusCell.style.color = '#2196F3';
-                row.appendChild(stimulusCell);
-
-                // Response key cell
-                const keyCell = document.createElement('td');
-                keyCell.textContent = 'N/A (Variable)';
-                keyCell.style.color = '#999';
-                row.appendChild(keyCell);
-
-                // Add empty cells for other columns
-                for (let i = 0; i < 5; i++) {
-                    const cell = document.createElement('td');
-                    cell.textContent = 'N/A';
-                    cell.style.color = '#999';
-                    row.appendChild(cell);
-                }
-
-                mappingTbody.appendChild(row);
-
-                // Add a note about variable categories
-                const noteRow = document.createElement('tr');
-                const noteCell = document.createElement('td');
-                noteCell.colSpan = 7;
-                noteCell.style.fontSize = '12px';
-                noteCell.style.fontStyle = 'italic';
-                noteCell.style.color = '#666';
-                noteCell.textContent = `Note: '${category}' will be replaced with one of its values: ${variableCategories[category].map(v => typeof v === 'object' && v.type === 'image' ? v.text : v).join(', ')}`;
-                noteRow.appendChild(noteCell);
-                mappingTbody.appendChild(noteRow);
-            }
-        }
-
-        // Update header columns first to match the inputs we'll create
-        updateMappingTableHeader(parsedStimuli);
 
         // Create a row for each stimulus or sequence
         parsedStimuli.forEach(stimulusItem => {

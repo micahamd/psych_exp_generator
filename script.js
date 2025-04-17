@@ -1723,9 +1723,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             category: categoryName,
                             values: variableCategories[categoryName]
                         };
+                        console.log(`Created variable category object for '${categoryName}'`, itemToAdd);
                     } else {
                         // If the category doesn't exist, just use the text as is
                         itemToAdd = trimmed;
+                        console.log(`No variable category found for '${categoryName}', using as text`);
                     }
                 } else {
                     // Check if the item is an image (has .jpg, .png, etc. extension)
@@ -1811,6 +1813,20 @@ document.addEventListener('DOMContentLoaded', function() {
         // Process each character in the input
         for (let i = 0; i < input.length; i++) {
             const char = input[i];
+
+            // Handle single quotes for variable categories
+            if (char === "'") {
+                // Toggle single quote state
+                inSingleQuotes = !inSingleQuotes;
+                currentItem += char;
+                continue;
+            }
+
+            // If we're inside single quotes, just add the character and continue
+            if (inSingleQuotes) {
+                currentItem += char;
+                continue;
+            }
 
             if (char === '[') {
                 // Start of a sequence
@@ -2027,7 +2043,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         return stimulus;
                     });
-                    return { type: 'concurrent', stimuli: expandedStimuli };
+
+                    // Make sure we return a properly formatted concurrent object
+                    return {
+                        type: 'concurrent',
+                        stimuli: expandedStimuli
+                    };
                 } else if (Array.isArray(item)) {
                     // For nested sequences, recursively expand
                     return expandVariableCategories(item);
@@ -2249,9 +2270,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Display concurrent stimuli - SIMPLIFIED to always wait for response
     function displayConcurrentStimuli(currentSequence) {
-        const stimuli = currentSequence.stimuli;
-        const stimulusDisplay = `(${stimuli.join(', ')})`;
+        // Make sure we have the stimuli array
+        const stimuli = currentSequence.stimuli || [];
+
+        // Create a display key for mapping lookup
+        const stimulusDisplay = `(${stimuli.map(s => {
+            if (typeof s === 'object' && s.type === 'image') {
+                return s.text;
+            }
+            return s;
+        }).join(', ')})`;
+
         const mapping = stimuliResponses[stimulusDisplay] || {};
+
+        // Debug output to help diagnose issues
+        console.log('Displaying concurrent stimuli:', stimuli);
+        console.log('Stimulus display key:', stimulusDisplay);
+        console.log('Mapping:', mapping);
 
         // Get default positions for the stimuli
         const defaultPositions = generateConcurrentPositions(stimuli.length);
@@ -2873,10 +2908,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return animationFrameId;
     }
 
-    // Get high-precision timestamp - used in various timing functions
-    function getPreciseTimestamp() {
-        return performance.now();
-    }
+    // High-precision timing is handled directly with performance.now() in the code
 
     // OK button click
     okBtn.addEventListener('click', function() {
@@ -2970,9 +3002,23 @@ document.addEventListener('DOMContentLoaded', function() {
     addValueBtn.addEventListener('click', function() {
         const value = newValueInput.value.trim();
         if (value && currentVariableCategory) {
-            // Add the new value to the current category
-            if (!variableCategories[currentVariableCategory].includes(value)) {
-                variableCategories[currentVariableCategory].push(value);
+            // Check if the value is an image (has .jpg, .png, etc. extension)
+            const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(value);
+
+            // Create the appropriate value object
+            const valueToAdd = isImage ? { text: value, type: 'image' } : value;
+
+            // Check if the value already exists in the category
+            const valueExists = variableCategories[currentVariableCategory].some(existingValue => {
+                if (typeof existingValue === 'object' && existingValue.type === 'image') {
+                    return existingValue.text === value;
+                }
+                return existingValue === value;
+            });
+
+            // Add the value if it doesn't exist
+            if (!valueExists) {
+                variableCategories[currentVariableCategory].push(valueToAdd);
                 refreshVariableValuesList();
                 newValueInput.value = '';
             } else {
@@ -3075,13 +3121,28 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Add a helper label
+        const helperLabel = document.createElement('p');
+        helperLabel.textContent = 'Add one value per row. Image files will be recognized automatically.';
+        helperLabel.className = 'helper-text';
+        helperLabel.style.marginBottom = '10px';
+        variableValuesContainer.appendChild(helperLabel);
+
         for (let i = 0; i < values.length; i++) {
             const value = values[i];
             const valueItem = document.createElement('div');
             valueItem.className = 'variable-value-item';
 
             const valueText = document.createElement('span');
-            valueText.textContent = value;
+
+            // Check if the value is an image object
+            if (typeof value === 'object' && value.type === 'image') {
+                valueText.textContent = value.text + ' (image)';
+                valueText.style.color = '#2196F3'; // Blue color to indicate image
+            } else {
+                valueText.textContent = value;
+            }
+
             valueText.className = 'variable-value';
 
             const actionButtons = document.createElement('div');
@@ -3091,7 +3152,8 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteBtn.textContent = 'Delete';
             deleteBtn.className = 'secondary-btn';
             deleteBtn.addEventListener('click', function() {
-                if (confirm(`Are you sure you want to delete the value '${value}'?`)) {
+                const displayValue = typeof value === 'object' && value.type === 'image' ? value.text : value;
+                if (confirm(`Are you sure you want to delete the value '${displayValue}'?`)) {
                     variableCategories[currentVariableCategory].splice(i, 1);
                     refreshVariableValuesList();
                 }
@@ -3226,6 +3288,49 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultOffset = document.getElementById('stimulus-offset').value;
         const defaultX = document.getElementById('position-x').value || '0';
         const defaultY = document.getElementById('position-y').value || '0';
+
+        // Add rows for variable categories if they exist
+        const stimuliInput = document.getElementById('stimuli-text').value;
+        for (const category in variableCategories) {
+            if (stimuliInput.includes(`'${category}'`)) {
+                const row = document.createElement('tr');
+                row.className = 'variable-category-row';
+
+                // Stimulus cell
+                const stimulusCell = document.createElement('td');
+                stimulusCell.textContent = `'${category}' (Variable)`;
+                stimulusCell.style.fontWeight = 'bold';
+                stimulusCell.style.color = '#2196F3';
+                row.appendChild(stimulusCell);
+
+                // Response key cell
+                const keyCell = document.createElement('td');
+                keyCell.textContent = 'N/A (Variable)';
+                keyCell.style.color = '#999';
+                row.appendChild(keyCell);
+
+                // Add empty cells for other columns
+                for (let i = 0; i < 5; i++) {
+                    const cell = document.createElement('td');
+                    cell.textContent = 'N/A';
+                    cell.style.color = '#999';
+                    row.appendChild(cell);
+                }
+
+                mappingTbody.appendChild(row);
+
+                // Add a note about variable categories
+                const noteRow = document.createElement('tr');
+                const noteCell = document.createElement('td');
+                noteCell.colSpan = 7;
+                noteCell.style.fontSize = '12px';
+                noteCell.style.fontStyle = 'italic';
+                noteCell.style.color = '#666';
+                noteCell.textContent = `Note: '${category}' will be replaced with one of its values: ${variableCategories[category].map(v => typeof v === 'object' && v.type === 'image' ? v.text : v).join(', ')}`;
+                noteRow.appendChild(noteCell);
+                mappingTbody.appendChild(noteRow);
+            }
+        }
 
         // Update header columns first to match the inputs we'll create
         updateMappingTableHeader(parsedStimuli);

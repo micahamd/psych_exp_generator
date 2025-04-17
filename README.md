@@ -35,15 +35,17 @@ The builder supports two ways to run experiments and surveys:
 
 ### Stimulus Presentation
    - Character strings entered as comma-separated values are registered as individual stimuli
-   - Strings registered as images automatically if the following extensions are added: : .jpg, .jpeg, .png, .gif, .bmp, .webp
+   - Strings registered as images automatically if the following extensions are added: .jpg, .jpeg, .png, .gif, .bmp, .webp
    - Images should be placed in the same directory as the HTML file, otherwise a placeholder text will be shown
    - For instance, the stimulus 'apple' will be registered as a string, whereas the stimulus 'apple.jpg' will be registered as an image
    - Optional randomization of stimulus sequence
    - Configurable font size and color for each text stimulus
    - Customizable width and height for each image stimulus (default: 400x400 pixels)
    - Adjustable stimulus offset
-   - Automatic centering with default positioning adjustments to preve
+   - Automatic centering with default positioning adjustments to prevent overlap
    - Maintains aspect ratio with configurable dimensions
+   - Variable categories for organizing stimuli into logical groups
+   - Ability to delete and switch between variable categories
 
 3. **Stimulus Presentation Options**:
    - **Sequential Presentation**: To present stimuli one after another, enclose them inside *square* brackets
@@ -62,25 +64,31 @@ The builder supports two ways to run experiments and surveys:
 
 ### Custom Stimulus-Response (S-R) Mappings
 
-The S-R Mapping dialog provides precise control over stimulus presentation and response requirements:
+The application now provides separate mapping interfaces for text and image stimuli, offering precise control over presentation and response requirements:
 
-1. **Per-stimulus Properties**:
-   - **Response Mapping**: Assign specific correct response keys to each stimulus
+1. **Text-Resp Mapping**:
+   - **Response Mapping**: Assign specific correct response keys to each text stimulus
    - **Position Control**: Set exact X and Y coordinates for precise placement
    - **Timing Parameters**: Configure individual presentation timing and offset
-   - **Appearance Settings**:
-     - For text: Custom color and font size (in pixels)
-     - For images: Custom width and height (in pixels)
-   - **Automatic Detection**: System automatically detects stimulus type and shows relevant options with default values
+   - **Appearance Settings**: Custom color and font size (in pixels)
+   - **Category-Based Organization**: Text stimuli are organized by their variable categories
+   - **Bulk Configuration**: Apply settings to all stimuli in a category at once
 
-2. **Concurrent Stimuli Settings**:
+2. **Image-Resp Mapping**:
+   - **Response Mapping**: Assign specific correct response keys to each image stimulus
+   - **Position Control**: Set exact X and Y coordinates for precise placement
+   - **Dimension Control**: Set custom width and height for each image (in pixels)
+   - **Timing Parameters**: Configure individual presentation timing and offset
+   - **Category-Based Organization**: Image stimuli are organized by their variable categories
+
+3. **Concurrent Stimuli Settings**:
    - Individual control for each stimulus within a concurrent group
    - Independent positioning with X and Y coordinates for each element
    - Custom colors and sizes for each concurrent stimulus
    - Individual timing offsets for staggered appearance
    - Maintain consistent response key or set individual keys
 
-3. **Sequential Stimuli Control**:
+4. **Sequential Stimuli Control**:
    - Configure each step in a sequence independently
    - Set progression rules between sequence elements
    - Individual styling for each sequence step
@@ -324,11 +332,13 @@ Precise control over stimulus positioning using a coordinate system:
    - Configure general parameters (timing, colors, trial count)
    - Set fixation point options and background colors
 
-2. **Stimulus Configuration**:
-   - Enter stimuli in the text area using comma separation
-   - Use brackets for sequential presentation: `[apple, corn]`
-   - Use parentheses for concurrent presentation: `(apple, corn)`
-   - Include image files by name: `apple.jpg` (place in same directory)
+2. **Variable Categories and Stimulus Configuration**:
+   - Click "Define Variables" to create variable categories
+   - Add categories and values for your stimuli
+   - Use the "Delete Category" button to remove unwanted categories
+   - Use the "Switch Category" button to quickly navigate between categories
+   - Include image files by adding the appropriate extension (.jpg, .png, etc.)
+   - Use the sequence builder to arrange stimuli in your experiment
 
 3. **Response Configuration**:
    - Set the primary response key (default is SPACEBAR)
@@ -336,7 +346,8 @@ Precise control over stimulus positioning using a coordinate system:
    - Configure feedback options and duration
 
 4. **Advanced Configuration**:
-   - Click "Custom S-R Mappings" to open the mapping dialog
+   - Click "Text-Resp Mapping" to configure text stimulus properties
+   - Click "Image-Resp Mapping" to configure image stimulus properties
    - Set stimulus-specific response keys, positions, and styling
    - Configure randomization and cycle threshold options
 
@@ -463,6 +474,16 @@ psychology-experiment-builder/
    - **Solution**: Close other browser tabs/applications and refresh the page
    - **Prevention**: Use a dedicated browser window for running experiments
 
+6. **S-R Mapping Issues**:
+   - **Issue**: S-R mapping window not opening or showing errors
+   - **Solution**: Make sure you've defined variables first and test the configuration
+   - **Prevention**: Always define variables before attempting to open mapping dialogs
+
+7. **Variable Category Issues**:
+   - **Issue**: Unable to delete or switch categories
+   - **Solution**: Make sure you've selected a category first before attempting to delete or switch
+   - **Prevention**: Create a clear organization of your variable categories from the start
+
 ## Experimental Paradigms Supported
 
 The Psychology Experiment Builder supports a wide range of common experimental paradigms used in psychological research:
@@ -498,12 +519,15 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 - ✓ Slider scale response type for surveys with customizable anchors
 - ✓ Visual stimulus support for images with automatic detection
 - ✓ Advanced stimulus presentation (sequential, concurrent, mixed)
-- ✓ Custom stimulus-response mappings with individual settings
+- ✓ Separate Text-Resp and Image-Resp mapping interfaces
+- ✓ Variable categories with management features (delete, switch)
 - ✓ Study mode for multi-phase experimental protocols
 - ✓ Export/import study configurations for sharing
 - ✓ Enhanced timing precision using requestAnimationFrame
 
 ### Planned Enhancements
+- Improved timing precision for more accurate response time measurement
+- Variable categories for stimuli with enhanced management features
 - Network data submission to remote servers
 - Conditional branching based on participant responses
 - Response criteria handling for advanced experimental control

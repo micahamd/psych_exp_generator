@@ -150,7 +150,10 @@
                             <div id="available-variables">
                                 <h4>Available Variables</h4>
                                 <div id="variable-categories-list" class="variable-list-container"></div>
-                                <button type="button" id="define-variables-btn" class="primary-btn">Define Variables</button>
+                                <div class="variable-buttons">
+                                    <button type="button" id="define-variables-btn" class="primary-btn">Define Variables</button>
+                                    <button type="button" id="clear-variables-btn" class="danger-btn hidden">Clear Variables</button>
+                                </div>
                             </div>
                             <div id="sequence-builder">
                                 <h4>Sequence Builder</h4>
@@ -453,6 +456,14 @@
                 </div>
                 <div class="variable-values">
                     <h3>Values for: <span id="current-variable-name">Select a category</span></h3>
+                    <div id="variable-selection-mode">
+                        <label>Selection Mode:</label>
+                        <select id="variable-mode-select">
+                            <option value="sequential">Sequential</option>
+                            <option value="random">Random</option>
+                            <option value="random-no-repeat">Random without Replacement</option>
+                        </select>
+                    </div>
                     <div id="variable-values-container">
                         <!-- Variable values will be listed here -->
                     </div>

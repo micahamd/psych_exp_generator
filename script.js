@@ -1,3 +1,6 @@
+// This file contains a single large DOMContentLoaded event handler with multiple function declarations
+// The linter may show comma errors between function declarations, but these are false positives
+// as these are separate function declarations, not object literal methods
 document.addEventListener('DOMContentLoaded', function() {
     // Get DOM elements
     const experimentForm = document.getElementById('experiment-form');
@@ -131,6 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add new variables for variable categories
     let variableCategories = {}; // Object to store variable categories and their values
     let currentVariableCategory = null; // Currently selected variable category
+    let variableCategoryModes = {}; // Store selection modes for each category
 
     // Add new variables for high-precision timing
     let animationFrameId = null;
@@ -1579,6 +1583,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Loaded variable categories from saved state:', variableCategories);
             }
 
+            // Restore variable category selection modes if they exist
+            if (savedState.variableCategoryModes) {
+                variableCategoryModes = savedState.variableCategoryModes;
+                console.log('Loaded variable category modes from saved state:', variableCategoryModes);
+            }
+
             // Remember last stimuli text to track changes
             lastStimuliText = document.getElementById('stimuli-text').value;
         }
@@ -1690,6 +1700,7 @@ document.addEventListener('DOMContentLoaded', function() {
             saveData: saveData, // Use the global variable
             stimuliResponses: stimuliResponses,
             variableCategories: variableCategories, // Add variable categories
+            variableCategoryModes: variableCategoryModes, // Add variable category selection modes
             isExperimentMode: isExperimentMode // Add experiment mode flag
         };
 
@@ -1713,26 +1724,32 @@ document.addEventListener('DOMContentLoaded', function() {
             if (trimmed) {
                 let itemToAdd;
 
-                // Check if the item is a variable category (enclosed in single quotes)
-                if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
-                    const categoryName = trimmed.substring(1, trimmed.length - 1);
-                    if (variableCategories[categoryName]) {
-                        // Create a variable category object
-                        itemToAdd = {
-                            type: 'variable',
-                            category: categoryName,
-                            values: variableCategories[categoryName]
-                        };
-                        console.log(`Created variable category object for '${categoryName}'`, itemToAdd);
-                    } else {
-                        // If the category doesn't exist, just use the text as is
-                        itemToAdd = trimmed;
-                        console.log(`No variable category found for '${categoryName}', using as text`);
-                    }
+                // Check if the item is a variable category (enclosed in single quotes or just the category name)
+                const isSingleQuoted = trimmed.startsWith("'") && trimmed.endsWith("'");
+                const categoryName = isSingleQuoted ? trimmed.substring(1, trimmed.length - 1) : trimmed;
+
+                if (variableCategories[categoryName]) {
+                    // Create a variable category object
+                    itemToAdd = {
+                        type: 'variable',
+                        category: categoryName,
+                        values: variableCategories[categoryName],
+                        selectionMode: variableCategoryModes[categoryName] || (randomizeStimuli ? 'random' : 'sequential')
+                    };
+                    console.log(`Created variable category object for '${categoryName}'`, itemToAdd);
+                } else if (isSingleQuoted) {
+                    // If the category doesn't exist but was in quotes, use the text as is
+                    itemToAdd = trimmed;
+                    console.log(`No variable category found for '${categoryName}', using as text`);
                 } else {
                     // Check if the item is an image (has .jpg, .png, etc. extension)
                     const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(trimmed);
-                    itemToAdd = isImage ? { text: trimmed, type: 'image' } : trimmed;
+                    if (isImage) {
+                        itemToAdd = { text: trimmed, type: 'image' };
+                    } else {
+                        // Just a regular text item
+                        itemToAdd = trimmed;
+                    }
                 }
 
                 // Check if we're inside brackets
@@ -2024,6 +2041,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Track variable category indices for sequential presentation
+    const variableCategoryIndices = {};
+
+    // Track used values for random without replacement
+    const variableCategoryUsedValues = {};
+
     // Get the next stimulus sequence
     function getNextStimulusSequence() {
         // Helper function to expand variable categories in a sequence
@@ -2033,13 +2056,61 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Process each item in the sequence
             return sequence.map(item => {
-                // If it's a variable category, replace with a random value from the category
+                // If it's a variable category, replace with the next value from the category
                 if (typeof item === 'object' && item.type === 'variable') {
+                    const categoryName = item.category;
                     const values = item.values;
+
                     if (values && values.length > 0) {
-                        // Select a random value from the category
-                        const randomIndex = Math.floor(Math.random() * values.length);
-                        return values[randomIndex];
+                        // Get the selection mode for variables (default to the global randomize setting)
+                        const variableSelectionMode = item.selectionMode || (randomizeStimuli ? 'random' : 'sequential');
+
+                        if (variableSelectionMode === 'sequential') {
+                            // Initialize index for this category if not exists
+                            if (variableCategoryIndices[categoryName] === undefined) {
+                                variableCategoryIndices[categoryName] = 0;
+                            }
+
+                            // Get the current index
+                            const currentIndex = variableCategoryIndices[categoryName];
+
+                            // Get the value at the current index
+                            const value = values[currentIndex];
+
+                            // Increment the index for next time, wrapping around if needed
+                            variableCategoryIndices[categoryName] = (currentIndex + 1) % values.length;
+
+                            return value;
+                        } else { // Random or random without replacement
+                            if (variableSelectionMode === 'random-no-repeat') {
+                                // Initialize used values array for this category if not exists
+                                if (!variableCategoryUsedValues[categoryName]) {
+                                    variableCategoryUsedValues[categoryName] = [];
+                                }
+
+                                // If all values have been used, reset
+                                if (variableCategoryUsedValues[categoryName].length >= values.length) {
+                                    variableCategoryUsedValues[categoryName] = [];
+                                }
+
+                                // Get unused values
+                                const unusedValues = values.filter(v =>
+                                    !variableCategoryUsedValues[categoryName].includes(v));
+
+                                // Select a random unused value
+                                const randomIndex = Math.floor(Math.random() * unusedValues.length);
+                                const selectedValue = unusedValues[randomIndex];
+
+                                // Mark as used
+                                variableCategoryUsedValues[categoryName].push(selectedValue);
+
+                                return selectedValue;
+                            } else { // Pure random
+                                // Select a random value from the category
+                                const randomIndex = Math.floor(Math.random() * values.length);
+                                return values[randomIndex];
+                            }
+                        }
                     } else {
                         // If no values, return the category name as fallback
                         return item.category;
@@ -2048,11 +2119,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     // For concurrent stimuli, expand variables in each stimulus
                     const expandedStimuli = item.stimuli.map(stimulus => {
                         if (typeof stimulus === 'object' && stimulus.type === 'variable') {
+                            const categoryName = stimulus.category;
                             const values = stimulus.values;
+
                             if (values && values.length > 0) {
-                                const randomIndex = Math.floor(Math.random() * values.length);
-                                return values[randomIndex];
+                                // Get the selection mode for variables (default to the global randomize setting)
+                                const variableSelectionMode = stimulus.selectionMode || (randomizeStimuli ? 'random' : 'sequential');
+
+                                if (variableSelectionMode === 'sequential') {
+                                    // Initialize index for this category if not exists
+                                    if (variableCategoryIndices[categoryName] === undefined) {
+                                        variableCategoryIndices[categoryName] = 0;
+                                    }
+
+                                    // Get the current index
+                                    const currentIndex = variableCategoryIndices[categoryName];
+
+                                    // Get the value at the current index
+                                    const value = values[currentIndex];
+
+                                    // Increment the index for next time, wrapping around if needed
+                                    variableCategoryIndices[categoryName] = (currentIndex + 1) % values.length;
+
+                                    return value;
+                                } else { // Random or random without replacement
+                                    if (variableSelectionMode === 'random-no-repeat') {
+                                        // Initialize used values array for this category if not exists
+                                        if (!variableCategoryUsedValues[categoryName]) {
+                                            variableCategoryUsedValues[categoryName] = [];
+                                        }
+
+                                        // If all values have been used, reset
+                                        if (variableCategoryUsedValues[categoryName].length >= values.length) {
+                                            variableCategoryUsedValues[categoryName] = [];
+                                        }
+
+                                        // Get unused values
+                                        const unusedValues = values.filter(v =>
+                                            !variableCategoryUsedValues[categoryName].includes(v));
+
+                                        // Select a random unused value
+                                        const randomIndex = Math.floor(Math.random() * unusedValues.length);
+                                        const selectedValue = unusedValues[randomIndex];
+
+                                        // Mark as used
+                                        variableCategoryUsedValues[categoryName].push(selectedValue);
+
+                                        return selectedValue;
+                                    } else { // Pure random
+                                        // Select a random value from the category
+                                        const randomIndex = Math.floor(Math.random() * values.length);
+                                        return values[randomIndex];
+                                    }
+                                }
                             } else {
+                                // If no values, return the category name as fallback
                                 return stimulus.category;
                             }
                         }
@@ -3075,6 +3196,18 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('DOMContentLoaded', function() {
         // Display available variables in the sequence builder
         displayAvailableVariables();
+
+        // Update the variable buttons based on the current state
+        const defineVariablesBtn = document.getElementById('define-variables-btn');
+        const clearVariablesBtn = document.getElementById('clear-variables-btn');
+
+        if (Object.keys(variableCategories).length > 0) {
+            defineVariablesBtn.textContent = 'Variables Defined';
+            clearVariablesBtn.classList.remove('hidden');
+        } else {
+            defineVariablesBtn.textContent = 'Define Variables';
+            clearVariablesBtn.classList.add('hidden');
+        }
     });
 
     // Update the sequence builder when variables are modified
@@ -3243,6 +3376,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Get the variable mode select element
+    const variableModeSelect = document.getElementById('variable-mode-select');
+
+    // Add event listener for selection mode change
+    variableModeSelect.addEventListener('change', function() {
+        if (currentVariableCategory) {
+            // Save the selection mode for this category
+            variableCategoryModes[currentVariableCategory] = this.value;
+            console.log(`Selection mode for '${currentVariableCategory}' set to ${this.value}`);
+
+            // Save the current state
+            saveCurrentState();
+        }
+    });
+
     // Function to select a variable category
     function selectVariableCategory(category) {
         // Update the current category
@@ -3251,14 +3399,46 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update the UI
         currentVariableName.textContent = category;
 
+        // Set the selection mode dropdown to the saved value or default
+        if (variableModeSelect) {
+            const savedMode = variableCategoryModes[category] || 'sequential';
+            variableModeSelect.value = savedMode;
+        }
+
         // Refresh the lists to update selection highlighting
         refreshVariableCategoriesList();
         refreshVariableValuesList();
     }
 
+    // Get the clear variables button
+    const clearVariablesBtn = document.getElementById('clear-variables-btn');
+
+    // Add event listener for clear variables button
+    clearVariablesBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all variable categories? This cannot be undone.')) {
+            // Clear all variable categories
+            variableCategories = {};
+            variableCategoryModes = {};
+            currentVariableCategory = null;
+
+            // Update the UI
+            refreshVariableCategoriesList();
+            displayAvailableVariables();
+
+            // Save the current state
+            saveCurrentState();
+
+            // Show confirmation
+            alert('All variable categories have been cleared.');
+        }
+    });
+
     // Function to display available variable categories in the sequence builder
     function displayAvailableVariables() {
         const variableCategoriesList = document.getElementById('variable-categories-list');
+        const defineVariablesBtn = document.getElementById('define-variables-btn');
+        const clearVariablesBtn = document.getElementById('clear-variables-btn');
+
         variableCategoriesList.innerHTML = '';
 
         // Create a list item for each variable category
@@ -3279,13 +3459,21 @@ document.addEventListener('DOMContentLoaded', function() {
             variableCategoriesList.appendChild(categoryItem);
         }
 
-        // If no categories, show a message
+        // If no categories, show a message and update button text
         if (Object.keys(variableCategories).length === 0) {
             const noCategories = document.createElement('p');
             noCategories.textContent = 'No variable categories defined. Click "Define Variables" to create some.';
             noCategories.style.fontStyle = 'italic';
             noCategories.style.color = '#666';
             variableCategoriesList.appendChild(noCategories);
+
+            // Update button text and visibility
+            defineVariablesBtn.textContent = 'Define Variables';
+            clearVariablesBtn.classList.add('hidden');
+        } else {
+            // Update button text and visibility
+            defineVariablesBtn.textContent = 'Variables Defined';
+            clearVariablesBtn.classList.remove('hidden');
         }
     }
 

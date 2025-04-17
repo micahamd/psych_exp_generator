@@ -2313,7 +2313,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Format the stimulus display key for mapping lookup
         const stimulusDisplay = getFormattedStimulusKey(currentSequence);
-        const mapping = stimuliResponses[stimulusDisplay] || {};
+
+        // For individual items in a sequence, we need to get the mapping for the current item
+        let mapping;
+        if (!isConcurrent && Array.isArray(currentSequence) && currentStimulus) {
+            // Get the formatted key for the current item in the sequence
+            const currentItemDisplay = getFormattedStimulusKey(currentStimulus);
+            // Try to get mapping for the current item first, fall back to sequence mapping
+            mapping = stimuliResponses[currentItemDisplay] || stimuliResponses[stimulusDisplay] || {};
+            console.log(`Using mapping for current item: ${currentItemDisplay}`, mapping);
+        } else {
+            // For concurrent or non-sequence stimuli, use the regular mapping
+            mapping = stimuliResponses[stimulusDisplay] || {};
+        }
 
         if (isConcurrent) {
             // Handle top-level concurrent stimulus group
@@ -2410,6 +2422,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use custom offset if available, otherwise use global offset
         const customOffset = mapping.offset !== undefined ? mapping.offset : stimulusOffset;
 
+        // Log the offset being used for debugging
+        console.log(`Using offset for ${getFormattedStimulusKey(currentStimulus || currentSequence)}: ${customOffset}ms`);
+        console.log(`Mapping:`, mapping);
+        console.log(`Global offset: ${stimulusOffset}ms`);
+
         // Record stimulus start time for timing data with high precision
         stimulusStartTime = performance.now();
         responseStartTime = stimulusStartTime; // For backward compatibility
@@ -2470,7 +2487,23 @@ document.addEventListener('DOMContentLoaded', function() {
             return s;
         }).join(', ')})`;
 
-        const mapping = stimuliResponses[stimulusDisplay] || {};
+        // Get mapping for the entire concurrent group
+        const groupMapping = stimuliResponses[stimulusDisplay] || {};
+
+        // Store individual stimulus mappings
+        const individualMappings = {};
+
+        // Get individual mappings for each stimulus
+        stimuli.forEach(s => {
+            const stimKey = typeof s === 'object' && s.type === 'image' ? s.text : s;
+            if (stimuliResponses[stimKey]) {
+                individualMappings[stimKey] = stimuliResponses[stimKey];
+                console.log(`Found individual mapping for ${stimKey}:`, individualMappings[stimKey]);
+            }
+        });
+
+        // Use group mapping as fallback
+        const mapping = groupMapping;
 
         // More debug output
         console.log('Stimulus display key:', stimulusDisplay);
@@ -2498,8 +2531,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Check for custom width and height in mapping
                 const stimKey = imageName.toLowerCase().replace(/\s+/g, '_');
-                const customWidth = mapping[`${stimKey}_width`] !== undefined ? mapping[`${stimKey}_width`] : (mapping.width !== undefined ? mapping.width : 400);
-                const customHeight = mapping[`${stimKey}_height`] !== undefined ? mapping[`${stimKey}_height`] : (mapping.height !== undefined ? mapping.height : 400);
+
+                // Check if we have individual mapping for this image
+                const individualMapping = individualMappings[imageName] || {};
+
+                // Priority: individual mapping > group specific mapping > group general mapping > default
+                const customWidth = individualMapping.width !== undefined ? individualMapping.width :
+                                  mapping[`${stimKey}_width`] !== undefined ? mapping[`${stimKey}_width`] :
+                                  mapping.width !== undefined ? mapping.width :
+                                  400;
+
+                const customHeight = individualMapping.height !== undefined ? individualMapping.height :
+                                   mapping[`${stimKey}_height`] !== undefined ? mapping[`${stimKey}_height`] :
+                                   mapping.height !== undefined ? mapping.height :
+                                   400;
 
                 // Apply width and height
                 imageElement.style.width = `${customWidth}px`;
@@ -2529,13 +2574,21 @@ document.addEventListener('DOMContentLoaded', function() {
             stimElement.style.top = '50%';
             stimElement.style.left = '50%';
 
-            // Get custom position if available
+            // Get the stimulus text/key
             const stimulusText = isImage ? stimulus.text : stimulus;
             const posKey = stimulusText.toLowerCase().replace(/\s+/g, '_');
-            const customX = mapping[`${posKey}_x`] !== undefined ?
-                mapping[`${posKey}_x`] : defaultPositions[i][0];
-            const customY = mapping[`${posKey}_y`] !== undefined ?
-                mapping[`${posKey}_y`] : defaultPositions[i][1];
+
+            // Check if we have individual mapping for this stimulus
+            const individualMapping = individualMappings[stimulusText] || {};
+
+            // Use individual mapping first, then group mapping, then default
+            const customX = individualMapping.x !== undefined ? individualMapping.x :
+                           mapping[`${posKey}_x`] !== undefined ? mapping[`${posKey}_x`] :
+                           defaultPositions[i][0];
+
+            const customY = individualMapping.y !== undefined ? individualMapping.y :
+                           mapping[`${posKey}_y`] !== undefined ? mapping[`${posKey}_y`] :
+                           defaultPositions[i][1];
 
             // Apply global offset plus specific offset for this item
             const totalX = (positionX || 0) + customX;
@@ -2544,9 +2597,16 @@ document.addEventListener('DOMContentLoaded', function() {
             stimElement.style.transform = `translate(calc(-50% + ${totalX}px), calc(-50% + ${totalY}px))`;
 
             // Apply custom or default color and size
-            const customColor = mapping[`${posKey}_color`] || mapping.color || stimulusColor;
-            const customSize = mapping[`${posKey}_size`] !== undefined ?
-                mapping[`${posKey}_size`] : (mapping.size !== undefined ? mapping.size : stimulusSize);
+            // Priority: individual mapping > group specific mapping > group general mapping > global default
+            const customColor = individualMapping.color !== undefined ? individualMapping.color :
+                              mapping[`${posKey}_color`] !== undefined ? mapping[`${posKey}_color`] :
+                              mapping.color !== undefined ? mapping.color :
+                              stimulusColor;
+
+            const customSize = individualMapping.size !== undefined ? individualMapping.size :
+                             mapping[`${posKey}_size`] !== undefined ? mapping[`${posKey}_size`] :
+                             mapping.size !== undefined ? mapping.size :
+                             stimulusSize;
 
             stimElement.style.color = customColor;
             stimElement.style.fontSize = `${customSize}px`;

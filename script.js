@@ -2009,6 +2009,10 @@ document.addEventListener('DOMContentLoaded', function() {
             stimuli = parseStimuli(stimuliText);
         }
 
+        // Reset variable category trial counts when starting a new experiment
+        variableCategoryTrialCount = {};
+        trialVariableIndices = {};
+
         // Start first trial
         experimentRunning = true;
 
@@ -2019,10 +2023,47 @@ document.addEventListener('DOMContentLoaded', function() {
         startTrial();
     }
 
+    // Track the current trial's variable indices
+    let trialVariableIndices = {};
+
+    // Track the current trial number for each variable category
+    let variableCategoryTrialCount = {};
+
     // Start a new trial with high-precision timing
     function startTrial() {
         // Reset sequence index for the new trial
         sequenceIndex = 0;
+
+        // For each variable category, advance to the next value for this trial
+        for (const categoryName in variableCategories) {
+            // Initialize trial count for this category if not exists
+            if (variableCategoryTrialCount[categoryName] === undefined) {
+                variableCategoryTrialCount[categoryName] = 0;
+            } else {
+                // Increment the trial count for this category
+                variableCategoryTrialCount[categoryName]++;
+            }
+
+            // Get the values for this category
+            const values = variableCategories[categoryName];
+
+            // Calculate the index for this trial based on the trial count
+            // This ensures we cycle through all values sequentially across trials
+            if (values && values.length > 0) {
+                const trialIndex = variableCategoryTrialCount[categoryName] % values.length;
+                trialVariableIndices[categoryName] = trialIndex;
+
+                // Log the current value for this trial
+                const currentValue = values[trialIndex];
+                console.log(`Trial ${currentTrial + 1}: Category '${categoryName}' using value at index ${trialIndex}: ${JSON.stringify(currentValue)}`);
+            }
+        }
+
+        // Reset the per-sequence indices to use our trial indices
+        variableCategoryIndices = {...trialVariableIndices};
+        variableCategoryUsedValues = {};
+
+        console.log('Starting new trial with indices:', trialVariableIndices);
 
         // Show fixation if enabled
         if (showFixation) {
@@ -2042,10 +2083,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Track variable category indices for sequential presentation
-    const variableCategoryIndices = {};
+    let variableCategoryIndices = {};
 
     // Track used values for random without replacement
-    const variableCategoryUsedValues = {};
+    let variableCategoryUsedValues = {};
 
     // Get the next stimulus sequence
     function getNextStimulusSequence() {
@@ -2066,19 +2107,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         const variableSelectionMode = item.selectionMode || (randomizeStimuli ? 'random' : 'sequential');
 
                         if (variableSelectionMode === 'sequential') {
-                            // Initialize index for this category if not exists
-                            if (variableCategoryIndices[categoryName] === undefined) {
-                                variableCategoryIndices[categoryName] = 0;
-                            }
-
-                            // Get the current index
+                            // Use the trial index for this category
                             const currentIndex = variableCategoryIndices[categoryName];
 
                             // Get the value at the current index
                             const value = values[currentIndex];
 
-                            // Increment the index for next time, wrapping around if needed
-                            variableCategoryIndices[categoryName] = (currentIndex + 1) % values.length;
+                            // Log the selection for debugging
+                            console.log(`Using sequential value for '${categoryName}': ${value} (index ${currentIndex})`);
 
                             return value;
                         } else { // Random or random without replacement
@@ -2127,19 +2163,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const variableSelectionMode = stimulus.selectionMode || (randomizeStimuli ? 'random' : 'sequential');
 
                                 if (variableSelectionMode === 'sequential') {
-                                    // Initialize index for this category if not exists
-                                    if (variableCategoryIndices[categoryName] === undefined) {
-                                        variableCategoryIndices[categoryName] = 0;
-                                    }
-
-                                    // Get the current index
+                                    // Use the trial index for this category
                                     const currentIndex = variableCategoryIndices[categoryName];
 
                                     // Get the value at the current index
                                     const value = values[currentIndex];
 
-                                    // Increment the index for next time, wrapping around if needed
-                                    variableCategoryIndices[categoryName] = (currentIndex + 1) % values.length;
+                                    // Log the selection for debugging
+                                    console.log(`Using sequential value for concurrent '${categoryName}': ${value} (index ${currentIndex})`);
 
                                     return value;
                                 } else { // Random or random without replacement
@@ -2790,6 +2821,10 @@ document.addEventListener('DOMContentLoaded', function() {
             currentTrial = 0;
             sequenceIndex = 0;
             currentCycleCorrect = 0;
+
+            // Reset variable category trial counts to start fresh
+            variableCategoryTrialCount = {};
+            trialVariableIndices = {};
 
             // Reset stimulus usage if randomizing
             if (randomizeStimuli) {

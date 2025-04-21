@@ -848,60 +848,335 @@ document.addEventListener('DOMContentLoaded', function() {
         startStudyConfiguration(currentStudyIndex);
     });
 
+    // Simple Study Management Functions
+
     // Save Study button click handler
-    document.getElementById('save-study-btn').addEventListener('click', function() {
-        if (studyConfigurations.length === 0) {
-            alert('Please add at least one configuration to the study before saving.');
+    const saveStudyBtn = document.getElementById('save-study-btn');
+    if (saveStudyBtn) {
+        saveStudyBtn.addEventListener('click', function() {
+            if (studyConfigurations.length === 0) {
+                alert('Please add at least one configuration to the study before saving.');
+                return;
+            }
+
+            // Show the simple study modal
+            showSimpleStudyModal();
+        });
+    }
+
+    // Load Study button click handler
+    const loadStudyBtn = document.getElementById('load-study-btn');
+    if (loadStudyBtn) {
+        loadStudyBtn.addEventListener('click', function() {
+            // Show the simple study modal and populate the study list
+            showSimpleStudyModal();
+        });
+    }
+
+    // Function to show the simple study modal
+    function showSimpleStudyModal() {
+        // Get the modal element
+        const modal = document.getElementById('simple-study-modal');
+        if (!modal) return;
+
+        // Set default study name
+        const studyNameInput = document.getElementById('simple-study-name');
+        if (studyNameInput) {
+            studyNameInput.value = 'Psychology Study ' + new Date().toLocaleDateString();
+        }
+
+        // Populate the study list
+        populateStudyList();
+
+        // Show the modal
+        modal.classList.remove('hidden');
+    }
+
+    // Function to hide the simple study modal
+    function hideSimpleStudyModal() {
+        const modal = document.getElementById('simple-study-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Function to populate the study list
+    function populateStudyList() {
+        const studyList = document.getElementById('simple-study-list');
+        if (!studyList) return;
+
+        // Clear the list
+        studyList.innerHTML = '';
+
+        // Get saved studies
+        let savedStudies = [];
+        try {
+            const savedStudiesJSON = localStorage.getItem('savedStudies');
+            if (savedStudiesJSON) {
+                savedStudies = JSON.parse(savedStudiesJSON);
+            }
+        } catch (error) {
+            console.error('Error loading saved studies:', error);
+        }
+
+        // If no studies found, show message
+        if (savedStudies.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No saved studies found';
+            studyList.appendChild(option);
             return;
         }
 
-        saveStudyToFile();
-    });
+        // Sort studies by timestamp (newest first)
+        savedStudies.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // Load Study button click handler
-    document.getElementById('load-study-btn').addEventListener('click', function() {
-        // Trigger the hidden file input
-        document.getElementById('study-file-input').click();
-    });
+        // Add each study to the list
+        savedStudies.forEach(study => {
+            const option = document.createElement('option');
+            option.value = study.id;
 
-    // File input change handler
-    document.getElementById('study-file-input').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            loadStudyFromFile(file);
+            // Format the date
+            const date = new Date(study.timestamp);
+            const formattedDate = date.toLocaleDateString();
+
+            option.textContent = `${study.name} (${formattedDate}) - ${study.configurations.length} config(s)`;
+            studyList.appendChild(option);
+        });
+    }
+
+    // Function to save the current study to localStorage
+    function saveStudyToLocalStorage() {
+        const studyNameInput = document.getElementById('simple-study-name');
+        if (!studyNameInput) return;
+
+        const studyName = studyNameInput.value.trim();
+        if (!studyName) {
+            alert('Please enter a name for your study.');
+            return;
         }
-    });
 
-    // Function to save the current study to a file
-    function saveStudyToFile() {
-        // Create a study object with metadata
+        // Create a study object
         const studyObject = {
+            id: Date.now().toString(),
             version: '1.0',
             timestamp: new Date().toISOString(),
-            name: 'Psychology Experiment Study',
+            name: studyName,
             configurations: studyConfigurations
         };
 
-        // Convert to JSON string
-        const studyJSON = JSON.stringify(studyObject, null, 2);
+        // Get existing saved studies
+        let savedStudies = [];
+        try {
+            const savedStudiesJSON = localStorage.getItem('savedStudies');
+            if (savedStudiesJSON) {
+                savedStudies = JSON.parse(savedStudiesJSON);
+            }
+        } catch (error) {
+            console.error('Error loading saved studies:', error);
+        }
 
-        // Create a blob and download link
-        const blob = new Blob([studyJSON], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
+        // Check if a study with this name already exists
+        const existingStudyIndex = savedStudies.findIndex(study => study.name === studyName);
+        if (existingStudyIndex !== -1) {
+            if (confirm(`A study named "${studyName}" already exists. Do you want to overwrite it?`)) {
+                savedStudies[existingStudyIndex] = studyObject;
+            } else {
+                return;
+            }
+        } else {
+            savedStudies.push(studyObject);
+        }
 
-        // Create a temporary link and trigger download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'psychology_experiment_study.json';
-        document.body.appendChild(a);
-        a.click();
+        // Save to localStorage
+        localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
 
-        // Clean up
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 100);
+        // Update the study list
+        populateStudyList();
+
+        // Show success message
+        alert(`Study "${studyName}" saved successfully.`);
     }
+
+    // Function to load a study from localStorage
+    function loadStudyFromLocalStorage() {
+        const studyList = document.getElementById('simple-study-list');
+        if (!studyList || !studyList.value) {
+            alert('Please select a study to load.');
+            return;
+        }
+
+        const studyId = studyList.value;
+
+        // Get saved studies
+        let savedStudies = [];
+        try {
+            const savedStudiesJSON = localStorage.getItem('savedStudies');
+            if (savedStudiesJSON) {
+                savedStudies = JSON.parse(savedStudiesJSON);
+            }
+        } catch (error) {
+            console.error('Error loading saved studies:', error);
+            return;
+        }
+
+        // Find the selected study
+        const study = savedStudies.find(s => s.id === studyId);
+        if (!study) {
+            alert('Selected study not found.');
+            return;
+        }
+
+        // Confirm if there are existing configurations
+        if (studyConfigurations.length > 0) {
+            if (!confirm('Loading this study will replace your current study configurations. Continue?')) {
+                return;
+            }
+        }
+
+        // Clear current configurations
+        studyConfigurations = [];
+        document.getElementById('study-window').innerHTML = '';
+
+        // Load the configurations
+        study.configurations.forEach(config => {
+            // Ensure the configuration has a unique ID
+            if (!config.id) {
+                config.id = Date.now() + Math.random().toString(36).substring(2, 11);
+            }
+
+            // Add to the study configurations array
+            studyConfigurations.push(config);
+
+            // Display in the UI
+            displayConfiguration(config);
+        });
+
+        // Hide the modal
+        hideSimpleStudyModal();
+
+        // Show success message
+        alert(`Study "${study.name}" loaded successfully with ${studyConfigurations.length} configuration(s).`);
+    }
+
+    // Function to delete a study from localStorage
+    function deleteStudyFromLocalStorage() {
+        const studyList = document.getElementById('simple-study-list');
+        if (!studyList || !studyList.value) {
+            alert('Please select a study to delete.');
+            return;
+        }
+
+        const studyId = studyList.value;
+
+        // Get saved studies
+        let savedStudies = [];
+        try {
+            const savedStudiesJSON = localStorage.getItem('savedStudies');
+            if (savedStudiesJSON) {
+                savedStudies = JSON.parse(savedStudiesJSON);
+            }
+        } catch (error) {
+            console.error('Error loading saved studies:', error);
+            return;
+        }
+
+        // Find the selected study
+        const studyIndex = savedStudies.findIndex(s => s.id === studyId);
+        if (studyIndex === -1) {
+            alert('Selected study not found.');
+            return;
+        }
+
+        // Confirm deletion
+        const studyName = savedStudies[studyIndex].name;
+        if (!confirm(`Are you sure you want to delete the study "${studyName}"? This cannot be undone.`)) {
+            return;
+        }
+
+        // Remove the study
+        savedStudies.splice(studyIndex, 1);
+
+        // Save to localStorage
+        localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
+
+        // Update the study list
+        populateStudyList();
+
+        // Show success message
+        alert(`Study "${studyName}" deleted successfully.`);
+    }
+
+    // Add event listeners for the simple study modal
+    document.addEventListener('DOMContentLoaded', function() {
+        // Close button
+        const closeBtn = document.getElementById('simple-modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', hideSimpleStudyModal);
+        }
+
+        // Save button
+        const saveBtn = document.getElementById('simple-save-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', saveStudyToLocalStorage);
+        }
+
+        // Load button
+        const loadBtn = document.getElementById('simple-load-btn');
+        if (loadBtn) {
+            loadBtn.addEventListener('click', loadStudyFromLocalStorage);
+        }
+
+        // Delete button
+        const deleteBtn = document.getElementById('simple-delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', deleteStudyFromLocalStorage);
+        }
+
+        // Close modal when clicking outside of it
+        const modal = document.getElementById('simple-study-modal');
+        if (modal) {
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    hideSimpleStudyModal();
+                }
+            });
+        }
+
+        // Import button handler
+        const importBtn = document.getElementById('simple-import-btn');
+        if (importBtn) {
+            importBtn.addEventListener('click', function() {
+                // Trigger the file input
+                const fileInput = document.getElementById('simple-study-file-input');
+                if (fileInput) {
+                    fileInput.click();
+                }
+            });
+        }
+
+        // File input change handler for simple modal
+        const simpleFileInput = document.getElementById('simple-study-file-input');
+        if (simpleFileInput) {
+            simpleFileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    loadStudyFromFile(file);
+                }
+            });
+        }
+
+        // File input change handler for main interface
+        const mainFileInput = document.getElementById('main-study-file-input');
+        if (mainFileInput) {
+            mainFileInput.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    loadStudyFromFile(file);
+                }
+            });
+        }
+    });
 
     // Function to load a study from a file
     function loadStudyFromFile(file) {
@@ -5606,5 +5881,370 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Deploy study functionality has been removed
+    // Initialize Study Management Modal Event Listeners
+    function initStudyManagementModalListeners() {
+        console.log('Initializing study management modal listeners');
+
+        // Close button
+        const studyModalClose = document.querySelector('.study-modal-close');
+        console.log('Study modal close button:', studyModalClose);
+        if (studyModalClose) {
+            studyModalClose.addEventListener('click', hideStudyManagementModal);
+        }
+
+        // Save study to localStorage button
+        const saveStudyLocalBtn = document.getElementById('save-study-local-btn');
+        console.log('Save study local button:', saveStudyLocalBtn);
+        if (saveStudyLocalBtn) {
+            saveStudyLocalBtn.addEventListener('click', saveStudyToLocalStorage);
+        }
+
+        // Export study to file button
+        const exportStudyBtn = document.getElementById('export-study-btn');
+        console.log('Export study button:', exportStudyBtn);
+        if (exportStudyBtn) {
+            exportStudyBtn.addEventListener('click', exportStudyToFile);
+        }
+
+        // Import study from file button
+        const importStudyBtn = document.getElementById('import-study-btn');
+        console.log('Import study button:', importStudyBtn);
+        if (importStudyBtn) {
+            importStudyBtn.addEventListener('click', function() {
+                // Trigger the hidden file input
+                document.getElementById('study-file-input').click();
+            });
+        }
+
+        // Close modal when clicking outside of it
+        const studyManagementModal = document.getElementById('study-management-modal');
+        console.log('Study management modal:', studyManagementModal);
+        if (studyManagementModal) {
+            studyManagementModal.addEventListener('click', function(event) {
+                if (event.target === studyManagementModal) {
+                    hideStudyManagementModal();
+                }
+            });
+        }
+
+        console.log('Study management modal listeners initialized');
+    }
+
+    // Initialize the study management modal listeners after a short delay to ensure DOM is fully loaded
+    setTimeout(initStudyManagementModalListeners, 500);
 });
+
+// Direct Study Management Functions
+
+// Show the direct modal
+function showDirectModal(mode) {
+    if (mode === 'save' && studyConfigurations.length === 0) {
+        alert('Please add at least one configuration to the study before saving.');
+        return;
+    }
+
+    const modal = document.getElementById('direct-study-modal');
+    if (!modal) return;
+
+    // Set default study name
+    if (mode === 'save') {
+        const nameInput = document.getElementById('direct-study-name');
+        if (nameInput) {
+            nameInput.value = 'Psychology Study ' + new Date().toLocaleDateString();
+        }
+    }
+
+    // Populate the study list
+    if (mode === 'load') {
+        populateDirectStudyList();
+    }
+
+    // Show the modal
+    modal.classList.remove('hidden');
+
+    // Focus on appropriate section
+    if (mode === 'load') {
+        document.getElementById('direct-load-section').scrollIntoView();
+    } else {
+        document.getElementById('direct-save-section').scrollIntoView();
+    }
+}
+
+// Hide the direct modal
+function hideDirectModal() {
+    const modal = document.getElementById('direct-study-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Populate the direct study list
+function populateDirectStudyList() {
+    const studyList = document.getElementById('direct-study-list');
+    if (!studyList) return;
+
+    // Clear the list
+    studyList.innerHTML = '';
+
+    // Get saved studies
+    let savedStudies = [];
+    try {
+        const savedStudiesJSON = localStorage.getItem('savedStudies');
+        if (savedStudiesJSON) {
+            savedStudies = JSON.parse(savedStudiesJSON);
+        }
+    } catch (error) {
+        console.error('Error loading saved studies:', error);
+    }
+
+    // If no studies found, show message
+    if (savedStudies.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No saved studies found';
+        studyList.appendChild(option);
+        return;
+    }
+
+    // Sort studies by timestamp (newest first)
+    savedStudies.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    // Add each study to the list
+    savedStudies.forEach(study => {
+        const option = document.createElement('option');
+        option.value = study.id;
+
+        // Format the date
+        const date = new Date(study.timestamp);
+        const formattedDate = date.toLocaleDateString();
+
+        option.textContent = `${study.name} (${formattedDate}) - ${study.configurations.length} config(s)`;
+        studyList.appendChild(option);
+    });
+}
+
+// Save study directly
+function directSaveStudy() {
+    const nameInput = document.getElementById('direct-study-name');
+    if (!nameInput) return;
+
+    const studyName = nameInput.value.trim();
+    if (!studyName) {
+        alert('Please enter a name for your study.');
+        return;
+    }
+
+    // Create a study object
+    const studyObject = {
+        id: Date.now().toString(),
+        version: '1.0',
+        timestamp: new Date().toISOString(),
+        name: studyName,
+        configurations: studyConfigurations
+    };
+
+    // Get existing saved studies
+    let savedStudies = [];
+    try {
+        const savedStudiesJSON = localStorage.getItem('savedStudies');
+        if (savedStudiesJSON) {
+            savedStudies = JSON.parse(savedStudiesJSON);
+        }
+    } catch (error) {
+        console.error('Error loading saved studies:', error);
+    }
+
+    // Check if a study with this name already exists
+    const existingStudyIndex = savedStudies.findIndex(study => study.name === studyName);
+    if (existingStudyIndex !== -1) {
+        if (confirm(`A study named "${studyName}" already exists. Do you want to overwrite it?`)) {
+            savedStudies[existingStudyIndex] = studyObject;
+        } else {
+            return;
+        }
+    } else {
+        savedStudies.push(studyObject);
+    }
+
+    // Save to localStorage
+    localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
+
+    // Show success message
+    alert(`Study "${studyName}" saved successfully.`);
+
+    // Hide the modal
+    hideDirectModal();
+}
+
+// Load study directly
+function directLoadStudy() {
+    const studyList = document.getElementById('direct-study-list');
+    if (!studyList || !studyList.value) {
+        alert('Please select a study to load.');
+        return;
+    }
+
+    const studyId = studyList.value;
+
+    // Get saved studies
+    let savedStudies = [];
+    try {
+        const savedStudiesJSON = localStorage.getItem('savedStudies');
+        if (savedStudiesJSON) {
+            savedStudies = JSON.parse(savedStudiesJSON);
+        }
+    } catch (error) {
+        console.error('Error loading saved studies:', error);
+        return;
+    }
+
+    // Find the selected study
+    const study = savedStudies.find(s => s.id === studyId);
+    if (!study) {
+        alert('Selected study not found.');
+        return;
+    }
+
+    // Confirm if there are existing configurations
+    if (studyConfigurations.length > 0) {
+        if (!confirm('Loading this study will replace your current study configurations. Continue?')) {
+            return;
+        }
+    }
+
+    // Clear current configurations
+    studyConfigurations = [];
+    document.getElementById('study-window').innerHTML = '';
+
+    // Load the configurations
+    study.configurations.forEach(config => {
+        // Ensure the configuration has a unique ID
+        if (!config.id) {
+            config.id = Date.now() + Math.random().toString(36).substring(2, 11);
+        }
+
+        // Add to the study configurations array
+        studyConfigurations.push(config);
+
+        // Display in the UI
+        displayConfiguration(config);
+    });
+
+    // Hide the modal
+    hideDirectModal();
+
+    // Show success message
+    alert(`Study "${study.name}" loaded successfully with ${studyConfigurations.length} configuration(s).`);
+}
+
+// Delete study directly
+function directDeleteStudy() {
+    const studyList = document.getElementById('direct-study-list');
+    if (!studyList || !studyList.value) {
+        alert('Please select a study to delete.');
+        return;
+    }
+
+    const studyId = studyList.value;
+
+    // Get saved studies
+    let savedStudies = [];
+    try {
+        const savedStudiesJSON = localStorage.getItem('savedStudies');
+        if (savedStudiesJSON) {
+            savedStudies = JSON.parse(savedStudiesJSON);
+        }
+    } catch (error) {
+        console.error('Error loading saved studies:', error);
+        return;
+    }
+
+    // Find the selected study
+    const studyIndex = savedStudies.findIndex(s => s.id === studyId);
+    if (studyIndex === -1) {
+        alert('Selected study not found.');
+        return;
+    }
+
+    // Confirm deletion
+    const studyName = savedStudies[studyIndex].name;
+    if (!confirm(`Are you sure you want to delete the study "${studyName}"? This cannot be undone.`)) {
+        return;
+    }
+
+    // Remove the study
+    savedStudies.splice(studyIndex, 1);
+
+    // Save to localStorage
+    localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
+
+    // Update the study list
+    populateDirectStudyList();
+
+    // Show success message
+    alert(`Study "${studyName}" deleted successfully.`);
+}
+
+// Load file directly
+function directLoadFile(fileInput) {
+    if (!fileInput.files || !fileInput.files[0]) return;
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+        try {
+            // Parse the JSON content
+            const studyObject = JSON.parse(event.target.result);
+
+            // Validate the study object
+            if (!studyObject.configurations || !Array.isArray(studyObject.configurations)) {
+                throw new Error('Invalid study file format');
+            }
+
+            // Confirm with the user if they want to replace the current study
+            if (studyConfigurations.length > 0) {
+                if (!confirm('Loading this study will replace your current study configurations. Continue?')) {
+                    return;
+                }
+            }
+
+            // Clear current configurations
+            studyConfigurations = [];
+            document.getElementById('study-window').innerHTML = '';
+
+            // Load the configurations
+            studyObject.configurations.forEach(config => {
+                // Ensure the configuration has a unique ID
+                if (!config.id) {
+                    config.id = Date.now() + Math.random().toString(36).substring(2, 11);
+                }
+
+                // Add to the study configurations array
+                studyConfigurations.push(config);
+
+                // Display in the UI
+                displayConfiguration(config);
+            });
+
+            // Hide the modal
+            hideDirectModal();
+
+            // Show success message
+            alert(`Study loaded successfully with ${studyConfigurations.length} configuration(s).`);
+
+            // Reset the file input
+            fileInput.value = '';
+
+        } catch (error) {
+            console.error('Error loading study:', error);
+            alert('Error loading study file. Please make sure it is a valid study configuration file.');
+        }
+    };
+
+    reader.onerror = function() {
+        alert('Error reading the file. Please try again.');
+    };
+
+    reader.readAsText(file);
+}

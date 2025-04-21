@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        select[size] {
+            height: auto;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+        .button-group {
+            margin-top: 15px;
+        }
+        .divider {
+            margin: 20px 0;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        #message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Psychology Experiment Study Manager</h1>
+    
+    <div id="message"></div>
+    
+    <div class="section">
+        <h2>Save Study</h2>
+        <div class="form-group">
+            <label for="study-name">Study Name:</label>
+            <input type="text" id="study-name" placeholder="Enter a name for your study">
+        </div>
+        <div class="form-group">
+            <label for="study-data">Study Data (JSON):</label>
+            <textarea id="study-data" rows="10" placeholder="Paste your study JSON data here"></textarea>
+        </div>
+        <button onclick="saveStudy()">Save Study</button>
+    </div>
+    
+    <div class="section">
+        <h2>Load Study</h2>
+        <div class="form-group">
+            <label for="study-list">Saved Studies:</label>
+            <select id="study-list" size="5">
+                <option value="">No saved studies found</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button onclick="loadStudy()">Load Selected Study</button>
+            <button onclick="deleteStudy()" class="danger">Delete Selected Study</button>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <h3>Import/Export</h3>
+        <div class="button-group">
+            <button onclick="document.getElementById('file-input').click()" class="secondary">Import from File</button>
+            <button onclick="exportStudy()" class="secondary">Export Selected Study</button>
+            <input type="file" id="file-input" accept=".json" style="display: none;" onchange="importStudy(this)">
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Study Data Output</h2>
+        <textarea id="output-data" rows="10" readonly placeholder="Loaded study data will appear here"></textarea>
+    </div>
+    
+    <script>
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            populateStudyList();
+        });
+        
+        // Show a message to the user
+        function showMessage(text, type) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = text;
+            messageElement.className = type;
+            messageElement.style.display = 'block';
+            
+            // Hide the message after 3 seconds
+            setTimeout(function() {
+                messageElement.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Populate the study list
+        function populateStudyList() {
+            const studyList = document.getElementById('study-list');
+            if (!studyList) return;
+            
+            // Clear the list
+            studyList.innerHTML = '';
+            
+            // Get saved studies
+            let savedStudies = [];
+            try {
+                const savedStudiesJSON = localStorage.getItem('savedStudies');
+                if (savedStudiesJSON) {
+                    savedStudies = JSON.parse(savedStudiesJSON);
+                }
+            } catch (error) {
+                console.error('Error loading saved studies:', error);
+            }
+            
+            // If no studies found, show message
+            if (savedStudies.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No saved studies found';
+                studyList.appendChild(option);
+                return;
+            }
+            
+            // Sort studies by timestamp (newest first)
+            savedStudies.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // Add each study to the list
+            savedStudies.forEach(study => {
+                const option = document.createElement('option');
+                option.value = study.id;
+                
+                // Format the date
+                const date = new Date(study.timestamp);
+                const formattedDate = date.toLocaleDateString();
+                
+                // Get configuration count
+                const configCount = study.configurations ? study.configurations.length : 0;
+                
+                option.textContent = `${study.name} (${formattedDate}) - ${configCount} config(s)`;
+                studyList.appendChild(option);
+            });
+        }
+        
+        // Save a study
+        function saveStudy() {
+            const studyName = document.getElementById('study-name').value.trim();
+            if (!studyName) {
+                showMessage('Please enter a name for your study.', 'error');
+                return;
+            }
+            
+            const studyDataText = document.getElementById('study-data').value.trim();
+            if (!studyDataText) {
+                showMessage('Please enter study data.', 'error');
+                return;
+            }
+            
+            let studyData;
+            try {
+                studyData = JSON.parse(studyDataText);
+            } catch (error) {
+                showMessage('Invalid JSON data. Please check your input.', 'error');
+                console.error('Error parsing JSON:', error);
+                return;
+            }
+            
+            // Create a study object
+            const studyObject = {
+                id: Date.now().toString(),
+                version: '1.0',
+                timestamp: new Date().toISOString(),
+                name: studyName,
+                configurations: studyData.configurations || []
+            };
+            
+            // Get existing saved studies
+            let savedStudies = [];
+            try {
+                const savedStudiesJSON = localStorage.getItem('savedStudies');
+                if (savedStudiesJSON) {
+                    savedStudies = JSON.parse(savedStudiesJSON);
+                }
+            } catch (error) {
+                console.error('Error loading saved studies:', error);
+            }
+            
+            // Check if a study with this name already exists
+            const existingStudyIndex = savedStudies.findIndex(study => study.name === studyName);
+            if (existingStudyIndex !== -1) {
+                if (confirm(`A study named "${studyName}" already exists. Do you want to overwrite it?`)) {
+                    savedStudies[existingStudyIndex] = studyObject;
+                } else {
+                    return;
+                }
+            } else {
+                savedStudies.push(studyObject);
+            }
+            
+            // Save to localStorage
+            try {
+                localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
+                showMessage(`Study "${studyName}" saved successfully.`, 'success');
+                
+                // Clear the input fields
+                document.getElementById('study-name').value = '';
+                document.getElementById('study-data').value = '';
+                
+                // Update the study list
+                populateStudyList();
+            } catch (error) {
+                showMessage('Error saving study. The data might be too large.', 'error');
+                console.error('Error saving to localStorage:', error);
+            }
+        }
+        
+        // Load a study
+        function loadStudy() {
+            const studyList = document.getElementById('study-list');
+            if (!studyList || !studyList.value) {
+                showMessage('Please select a study to load.', 'error');
+                return;
+            }
+            
+            const studyId = studyList.value;
+            
+            // Get saved studies
+            let savedStudies = [];
+            try {
+                const savedStudiesJSON = localStorage.getItem('savedStudies');
+                if (savedStudiesJSON) {
+                    savedStudies = JSON.parse(savedStudiesJSON);
+                }
+            } catch (error) {
+                console.error('Error loading saved studies:', error);
+                showMessage('Error loading saved studies.', 'error');
+                return;
+            }
+            
+            // Find the selected study
+            const study = savedStudies.find(s => s.id === studyId);
+            if (!study) {
+                showMessage('Selected study not found.', 'error');
+                return;
+            }
+            
+            // Display the study data
+            document.getElementById('output-data').value = JSON.stringify(study, null, 2);
+            showMessage(`Study "${study.name}" loaded successfully.`, 'success');
+        }
+        
+        // Delete a study
+        function deleteStudy() {
+            const studyList = document.getElementById('study-list');
+            if (!studyList || !studyList.value) {
+                showMessage('Please select a study to delete.', 'error');
+                return;
+            }
+            
+            const studyId = studyList.value;
+            
+            // Get saved studies
+            let savedStudies = [];
+            try {
+                const savedStudiesJSON = localStorage.getItem('savedStudies');
+                if (savedStudiesJSON) {
+                    savedStudies = JSON.parse(savedStudiesJSON);
+                }
+            } catch (error) {
+                console.error('Error loading saved studies:', error);
+                showMessage('Error loading saved studies.', 'error');
+                return;
+            }
+            
+            // Find the selected study
+            const studyIndex = savedStudies.findIndex(s => s.id === studyId);
+            if (studyIndex === -1) {
+                showMessage('Selected study not found.', 'error');
+                return;
+            }
+            
+            // Confirm deletion
+            const studyName = savedStudies[studyIndex].name;
+            if (!confirm(`Are you sure you want to delete the study "${studyName}"? This cannot be undone.`)) {
+                return;
+            }
+            
+            // Remove the study
+            savedStudies.splice(studyIndex, 1);
+            
+            // Save to localStorage
+            localStorage.setItem('savedStudies', JSON.stringify(savedStudies));
+            
+            // Update the study list
+            populateStudyList();
+            
+            // Clear the output
+            document.getElementById('output-data').value = '';
+            
+            // Show success message
+            showMessage(`Study "${studyName}" deleted successfully.`, 'success');
+        }
+        
+        // Import a study from a file
+        function importStudy(fileInput) {
+            if (!fileInput.files || !fileInput.files[0]) return;
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                try {
+                    // Parse the JSON content
+                    const studyObject = JSON.parse(event.target.result);
+                    
+                    // Validate the study object
+                    if (!studyObject.configurations || !Array.isArray(studyObject.configurations)) {
+                        throw new Error('Invalid study file format');
+                    }
+                    
+                    // Display the study data
+                    document.getElementById('study-data').value = JSON.stringify(studyObject, null, 2);
+                    
+                    // Set the study name if available
+                    if (studyObject.name) {
+                        document.getElementById('study-name').value = studyObject.name;
+                    }
+                    
+                    // Show success message
+                    showMessage('Study file imported successfully. Click "Save Study" to save it.', 'success');
+                    
+                } catch (error) {
+                    console.error('Error loading study:', error);
+                    showMessage('Error loading study file. Please make sure it is a valid study configuration file.', 'error');
+                }
+                
+                // Reset the file input
+                fileInput.value = '';
+            };
+            
+            reader.onerror = function() {
+                showMessage('Error reading the file. Please try again.', 'error');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Export a study to a file
+        function exportStudy() {
+            const studyList = document.getElementById('study-list');
+            if (!studyList || !studyList.value) {
+                showMessage('Please select a study to export.', 'error');
+                return;
+            }
+            
+            const studyId = studyList.value;
+            
+            // Get saved studies
+            let savedStudies = [];
+            try {
+                const savedStudiesJSON = localStorage.getItem('savedStudies');
+                if (savedStudiesJSON) {
+                    savedStudies = JSON.parse(savedStudiesJSON);
+                }
+            } catch (error) {
+                console.error('Error loading saved studies:', error);
+                showMessage('Error loading saved studies.', 'error');
+                return;
+            }
+            
+            // Find the selected study
+            const study = savedStudies.find(s => s.id === studyId);
+            if (!study) {
+                showMessage('Selected study not found.', 'error');
+                return;
+            }
+            
+            // Convert to JSON string
+            const studyJSON = JSON.stringify(study, null, 2);
+            
+            // Create a blob and download link
+            const blob = new Blob([studyJSON], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create a temporary link and trigger download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = study.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.json';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            // Show success message
+            showMessage(`Study "${study.name}" exported successfully.`, 'success');
+        }
+    </script>
+</body>
+</html>

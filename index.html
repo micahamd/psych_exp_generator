@@ -345,9 +345,8 @@
                 <div class="study-buttons-container">
                     <button type="button" id="begin-study-btn">Begin Study</button>
                     <div class="study-file-buttons">
-                        <button type="button" id="save-study-btn">Save Study</button>
-                        <button type="button" id="load-study-btn">Load Study</button>
-                        <input type="file" id="study-file-input" accept=".json" style="display: none;">
+                        <button type="button" onclick="openStudyManager('save')">Save Study</button>
+                        <button type="button" onclick="openStudyManager('load')">Load Study</button>
                     </div>
                 </div>
             </div>
@@ -496,6 +495,9 @@
         <button id="ok-btn">OK</button>
     </div>
 
+    <!-- Study management is now handled by study-manager.html -->
+
     <script src="script.js"></script>
+    <script src="study-integration.js"></script>
 </body>
 </html>

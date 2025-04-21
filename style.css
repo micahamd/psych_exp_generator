@@ -153,6 +153,10 @@ button:hover {
     z-index: 100;
 }
 
+.modal.hidden {
+    display: none;
+}
+
 .modal-content {
     background-color: white;
     padding: 20px;
@@ -493,6 +497,77 @@ close-btn:hover,
     display: flex;
     gap: 20px;
     margin: 20px 0;
+}
+
+/* Study management modal styles */
+.saved-items-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 15px 0;
+    background-color: #f9f9f9;
+}
+
+.saved-study-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.saved-study-item:hover {
+    background-color: #f0f0f0;
+}
+
+.saved-study-item:last-child {
+    border-bottom: none;
+}
+
+.saved-study-info {
+    flex: 1;
+}
+
+.saved-study-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.saved-study-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.saved-study-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.saved-study-actions button {
+    padding: 5px 10px;
+    margin: 0;
+    min-width: 0;
+    font-size: 12px;
+}
+
+.no-studies-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+#save-study-section, #load-study-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+#load-study-section {
+    border-bottom: none;
 }
 
 /* Custom dialog styles */

@@ -549,6 +549,11 @@ The Psychology Experiment Builder supports a wide range of common experimental p
 ### Planned Enhancements
 - ✓ Variable categories for stimuli with enhanced management features
 - Improved timing precision for more accurate response time measurement
+- Study deployment functionality for remote testing
+  - The 'Deploy Study' button will compile a self-contained HTML file with the entire study configuration
+  - This file can be hosted online or sent directly to participants
+  - Participants can complete the study remotely and download/email the data back to the researcher
+  - No server-side infrastructure required for basic deployment
 - Network data submission to remote servers
 - Conditional branching based on participant responses
 - Response criteria handling for advanced experimental control

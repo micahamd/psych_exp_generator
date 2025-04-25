@@ -854,49 +854,63 @@ document.addEventListener('DOMContentLoaded', function() {
         startStudyConfiguration(currentStudyIndex);
     });
 
-    // Simple Study Management Functions
-
     // Save Study button click handler
-    const saveStudyBtn = document.getElementById('save-study-btn');
-    if (saveStudyBtn) {
-        saveStudyBtn.addEventListener('click', function() {
-            if (studyConfigurations.length === 0) {
-                alert('Please add at least one configuration to the study before saving.');
-                return;
-            }
-
-            // Show the simple study modal
-            showSimpleStudyModal();
-        });
-    }
-
-    // Load Study button click handler
-    const loadStudyBtn = document.getElementById('load-study-btn');
-    if (loadStudyBtn) {
-        loadStudyBtn.addEventListener('click', function() {
-            // Show the simple study modal and populate the study list
-            showSimpleStudyModal();
-        });
-    }
-
-    // Function to show the simple study modal
-    function showSimpleStudyModal() {
-        // Get the modal element
-        const modal = document.getElementById('simple-study-modal');
-        if (!modal) return;
-
-        // Set default study name
-        const studyNameInput = document.getElementById('simple-study-name');
-        if (studyNameInput) {
-            studyNameInput.value = 'Psychology Study ' + new Date().toLocaleDateString();
+    document.getElementById('save-study-btn').addEventListener('click', function() {
+        if (studyConfigurations.length === 0) {
+            alert('Please add at least one configuration to the study before saving.');
+            return;
         }
 
-        // Populate the study list
-        populateStudyList();
+        // Create a study object
+        const studyObject = {
+            id: Date.now().toString(),
+            version: '1.0',
+            timestamp: new Date().toISOString(),
+            name: 'Psychology Study ' + new Date().toLocaleDateString(),
+            configurations: studyConfigurations
+        };
 
-        // Show the modal
-        modal.classList.remove('hidden');
-    }
+        // Convert to JSON string
+        const studyJSON = JSON.stringify(studyObject, null, 2);
+
+        // Create a blob and download link
+        const blob = new Blob([studyJSON], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        // Create a temporary link and trigger download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = studyObject.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.json';
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+
+        console.log('Study saved to file:', studyObject.name);
+    });
+
+    // Load Study button click handler
+    document.getElementById('load-study-btn').addEventListener('click', function() {
+        // Trigger the file input
+        const fileInput = document.getElementById('study-file-input');
+        if (fileInput) {
+            fileInput.click();
+        }
+    });
+
+    // File input change handler
+    document.getElementById('study-file-input').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            loadStudyFromFile(file);
+        }
+    });
+
+    // Study Management Functions
 
     // Function to hide the simple study modal
     function hideSimpleStudyModal() {
@@ -1113,76 +1127,7 @@ document.addEventListener('DOMContentLoaded', function() {
         alert(`Study "${studyName}" deleted successfully.`);
     }
 
-    // Add event listeners for the simple study modal
-    document.addEventListener('DOMContentLoaded', function() {
-        // Close button
-        const closeBtn = document.getElementById('simple-modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', hideSimpleStudyModal);
-        }
 
-        // Save button
-        const saveBtn = document.getElementById('simple-save-btn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', saveStudyToLocalStorage);
-        }
-
-        // Load button
-        const loadBtn = document.getElementById('simple-load-btn');
-        if (loadBtn) {
-            loadBtn.addEventListener('click', loadStudyFromLocalStorage);
-        }
-
-        // Delete button
-        const deleteBtn = document.getElementById('simple-delete-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', deleteStudyFromLocalStorage);
-        }
-
-        // Close modal when clicking outside of it
-        const modal = document.getElementById('simple-study-modal');
-        if (modal) {
-            modal.addEventListener('click', function(event) {
-                if (event.target === modal) {
-                    hideSimpleStudyModal();
-                }
-            });
-        }
-
-        // Import button handler
-        const importBtn = document.getElementById('simple-import-btn');
-        if (importBtn) {
-            importBtn.addEventListener('click', function() {
-                // Trigger the file input
-                const fileInput = document.getElementById('simple-study-file-input');
-                if (fileInput) {
-                    fileInput.click();
-                }
-            });
-        }
-
-        // File input change handler for simple modal
-        const simpleFileInput = document.getElementById('simple-study-file-input');
-        if (simpleFileInput) {
-            simpleFileInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    loadStudyFromFile(file);
-                }
-            });
-        }
-
-        // File input change handler for main interface
-        const mainFileInput = document.getElementById('main-study-file-input');
-        if (mainFileInput) {
-            mainFileInput.addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    loadStudyFromFile(file);
-                }
-            });
-        }
-    });
 
     // Function to load a study from a file
     function loadStudyFromFile(file) {

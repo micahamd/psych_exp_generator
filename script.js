@@ -147,6 +147,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add new variables for study management
     let studyConfigurations = [];
+    // Make studyConfigurations globally accessible
+    window.studyConfigurations = studyConfigurations;
+
     let currentStudyIndex = 0;
 
     let isStudyMode = false;      // Add with other state variables
@@ -665,6 +668,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const configElement = document.createElement('div');
         configElement.className = 'study-config-item';
         configElement.dataset.configId = config.id;
+
+        // Make displayConfiguration globally accessible
+        window.displayConfiguration = displayConfiguration;
 
         // Different display for experiment vs survey blocks
         let detailsHTML = '';

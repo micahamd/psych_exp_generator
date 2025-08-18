@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Experiment</title>
+    <style>
+        body { background-color: darkgrey; color: white; font-family: Arial, sans-serif; height: 100vh; margin: 0; display: flex; justify-content: center; align-items: center; }
+        #container { text-align: center; max-width: 90%; }
+        #feedback { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 8px 12px; background: rgba(0,0,0,0.6); border-radius: 6px; display: none; }
+        input[type='text'] { font-size: 24px; padding: 8px; }
+        button { font-size: 18px; padding: 8px 16px; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="feedback"></div>
+    <script>
+        const trials = [
+    {
+        "block": 1,
+        "stimulus": "This is a stroop task. You will have to identify the color of the ink. Please press the keys 'r', 'y', 'g', or 'b' if the color of the ink is red, yellow, green or blue respectively.",
+        "response": "r,g,b,y",
+        "latency": 3000,
+        "correctResponse": null,
+        "feedbackText": null,
+        "feedbackDuration": null,
+        "stimulusColor": "white",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 0
+    },
+    {
+        "block": 108,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 1
+    },
+    {
+        "block": 102,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 2
+    },
+    {
+        "block": 105,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 3
+    },
+    {
+        "block": 112,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 4
+    },
+    {
+        "block": 103,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 5
+    },
+    {
+        "block": 112,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 6
+    },
+    {
+        "block": 116,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 7
+    },
+    {
+        "block": 104,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 8
+    },
+    {
+        "block": 103,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 9
+    },
+    {
+        "block": 107,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 10
+    },
+    {
+        "block": 108,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 11
+    },
+    {
+        "block": 114,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 12
+    },
+    {
+        "block": 101,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 13
+    },
+    {
+        "block": 113,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 14
+    },
+    {
+        "block": 106,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 15
+    },
+    {
+        "block": 106,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 16
+    },
+    {
+        "block": 107,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 17
+    },
+    {
+        "block": 116,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 18
+    },
+    {
+        "block": 104,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "y",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "yellow",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 19
+    },
+    {
+        "block": 101,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 20
+    },
+    {
+        "block": 113,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 21
+    },
+    {
+        "block": 115,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 22
+    },
+    {
+        "block": 102,
+        "stimulus": "red",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 23
+    },
+    {
+        "block": 114,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 24
+    },
+    {
+        "block": 105,
+        "stimulus": "green",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 25
+    },
+    {
+        "block": 109,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 26
+    },
+    {
+        "block": 115,
+        "stimulus": "yellow",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 27
+    },
+    {
+        "block": 111,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 28
+    },
+    {
+        "block": 111,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "g",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "green",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 29
+    },
+    {
+        "block": 109,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "r",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "red",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 30
+    },
+    {
+        "block": 110,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 31
+    },
+    {
+        "block": 110,
+        "stimulus": "blue",
+        "response": "r,g,b,y",
+        "latency": null,
+        "correctResponse": "b",
+        "feedbackText": "[correct] Correct!",
+        "feedbackDuration": 500,
+        "stimulusColor": "blue",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 2,
+        "trialIndex": 32
+    },
+    {
+        "block": 2,
+        "stimulus": "Thanks for taking part!",
+        "response": "NA",
+        "latency": 3000,
+        "correctResponse": null,
+        "feedbackText": null,
+        "feedbackDuration": null,
+        "stimulusColor": "white",
+        "backgroundColor": "black",
+        "position": "center-center",
+        "repetition": 1,
+        "blockRepetition": 1,
+        "trialIndex": 33
+    }
+];
+        const preloadList = [];
+        const keyMap = { 'space': ' ', 'ctrl': 'control', 'alt': 'alt', 'lshift': 'shift', 'rshift': 'shift' };
+        
+        let currentTrial = 0;
+        let startTime = 0;
+        let trialResults = [];
+        let rafTimer = null;
+
+        function preloadImages(srcs) {
+            if (!srcs || srcs.length === 0) return Promise.resolve();
+            return Promise.all(srcs.map(src => new Promise(resolve => {
+                const img = new Image();
+                img.onload = img.onerror = () => resolve();
+                img.src = src;
+            })));
+        }
+
+        function displayTrial(trial) {
+            const container = document.getElementById('container');
+            document.body.style.backgroundColor = trial.backgroundColor;
+            container.style.color = trial.stimulusColor;
+
+            const [y_pos, x_pos] = trial.position.split('-');
+            document.body.style.alignItems = y_pos === 'top' ? 'flex-start' : y_pos === 'bottom' ? 'flex-end' : 'center';
+            document.body.style.justifyContent = x_pos === 'left' ? 'flex-start' : x_pos === 'right' ? 'flex-end' : 'center';
+            
+            container.innerHTML = trial.stimulus;
+            startTime = performance.now();
+
+            if (rafTimer) clearTimeout(rafTimer);
+            document.onkeydown = null;
+
+            const isText = trial.response.trim().startsWith('[text');
+            if (isText) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                const btn = document.createElement('button');
+                btn.textContent = 'Continue';
+                btn.onclick = () => handleResponse(input.value);
+                container.appendChild(document.createElement('br'));
+                container.appendChild(input);
+                container.appendChild(btn);
+                input.focus();
+            } else if (trial.response.toUpperCase() !== 'NA') {
+                document.onkeydown = (e) => {
+                    const allowed = trial.response.split(',').map(k => {
+                        const keyName = k.trim().toLowerCase();
+                        return keyMap[keyName] || keyName;
+                    });
+                    if (allowed.includes(e.key.toLowerCase())) {
+                        document.onkeydown = null; // Disable further key presses
+                        handleResponse(e.key);
+                    }
+                };
+            }
+
+            if (trial.latency !== null) {
+                rafTimer = setTimeout(() => handleResponse(null), trial.latency);
+            }
+        }
+
+        function handleResponse(response) {
+            if (rafTimer) clearTimeout(rafTimer);
+            const responseTime = performance.now() - startTime;
+            const trial = trials[currentTrial];
+            
+            const correctResponseMapped = trial.correctResponse ? (keyMap[trial.correctResponse.toLowerCase()] || trial.correctResponse) : null;
+            const isCorrect = correctResponseMapped ? (response && response.toLowerCase() === correctResponseMapped.toLowerCase()) : null;
+
+            trialResults.push(Object.assign(trial, {
+                actualResponse: response,
+                responseTime: responseTime,
+                isCorrect: isCorrect,
+                timestamp: new Date().toISOString()
+            }));
+
+            // Handle feedback based on markers: [correct], [incorrect], [all]
+            let showFeedback = false;
+            let feedbackMessage = '';
+            
+            if (trial.feedbackText) {
+                const feedbackText = trial.feedbackText.trim();
+                
+                if (feedbackText.includes('[all]')) {
+                    showFeedback = true;
+                    feedbackMessage = feedbackText.replace('[all]', '').trim();
+                } else if (feedbackText.includes('[correct]') && isCorrect === true) {
+                    showFeedback = true;
+                    feedbackMessage = feedbackText.replace('[correct]', '').trim();
+                } else if (feedbackText.includes('[incorrect]') && isCorrect === false) {
+                    showFeedback = true;
+                    feedbackMessage = feedbackText.replace('[incorrect]', '').trim();
+                } else if (!feedbackText.includes('[correct]') && !feedbackText.includes('[incorrect]') && !feedbackText.includes('[all]')) {
+                    // No markers - show feedback for any response
+                    showFeedback = true;
+                    feedbackMessage = feedbackText;
+                }
+            }
+
+            if (showFeedback && feedbackMessage) {
+                const fb = document.getElementById('feedback');
+                fb.textContent = feedbackMessage;
+                fb.style.display = 'block';
+                setTimeout(() => {
+                    fb.style.display = 'none';
+                    nextTrial();
+                }, trial.feedbackDuration || 1000);
+            } else {
+                nextTrial();
+            }
+        }
+
+        function nextTrial() {
+            currentTrial++;
+            if (currentTrial < trials.length) {
+                displayTrial(trials[currentTrial]);
+            } else {
+                document.getElementById('container').innerHTML = "<h2>Experiment complete. Thank you!</h2>";
+                downloadData();
+            }
+        }
+
+        function downloadData() {
+            const experimentId = 'exp_' + Date.now().toString(36);
+            const data = {
+                experimentId: experimentId,
+                timestamp: new Date().toISOString(),
+                browserInfo: navigator.userAgent,
+                randomized: true,
+                repetitions: 1,
+                trials: trialResults
+            };
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `experiment_data_${experimentId}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        preloadImages(preloadList).then(() => {
+            if (trials.length > 0) displayTrial(trials[0]);
+        });
+    </script>
+</body>
+</html>

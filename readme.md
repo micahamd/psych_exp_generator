@@ -84,6 +84,9 @@ The current version includes the following features:
 * **Backward compatibility** - can load old CSV files without Block Repeats column
 * **Enhanced data recording** - tracks both sequence repetitions and block repetitions
 * **Hierarchical control** - Block Repeats for fine-grained control, Repeat Sequence for macro-level control
+* **Section-based repeats** - Block repeats apply to entire sections (100s, 200s, etc.) rather than individual trials
+* **Advanced GUI** - Scrollable interface for handling large numbers of trial rows
+* **Precision timing** - High-resolution latency collection with dual response/auto-progression capability
   
 ## Future Development Roadmap
 
@@ -98,6 +101,33 @@ The following features are planned for future releases:
 * Support for audio files as stimuli using [audio:filename.mp3] syntax
 * Configurable audio playback controls
 * Multimodal stimulus presentation (text + audio, image + audio)
+
+## Timing and Data Collection System
+
+PEG features a sophisticated dual-timing mechanism that provides precise latency measurement while supporting flexible response options:
+
+### High-Precision Timing
+* **JavaScript `performance.now()`**: Uses browser's high-resolution timer for microsecond precision
+* **Accurate Start Time**: Captured at exact moment stimulus appears on screen
+* **Response Time Calculation**: Precise measurement from stimulus onset to response
+
+### Smart Latency Handling
+* **Dual-Mode Operation**: Supports both manual responses AND automatic progression
+* **Latency Priority**: When both latency and response are specified, automatic progression takes precedence
+* **Response Window**: Brief 50ms window allows immediate responses before auto-progression
+* **Data Collection**: Records timing data for both manual responses and auto-progressions
+
+### Use Cases
+* **Reaction Time Tasks**: Precise measurement of participant response latencies
+* **Slideshow Presentations**: Automatic progression with optional response capability (perfect for Color Phi illusions)
+* **Mixed Paradigms**: Some trials auto-advance, others wait for responses
+* **Training Sessions**: Automatic progression with response monitoring
+
+### Data Export
+* **Comprehensive Recording**: Every trial captures response time, actual response, correctness, and timestamp
+* **Millisecond Precision**: Response times rounded to nearest millisecond for practical analysis
+* **JSON Format**: Structured data export compatible with R, Python, SPSS, and other analysis tools
+* **Session Metadata**: Includes browser info, timestamps, and experiment configuration
 
 ## Complete Column Reference
 
@@ -208,6 +238,34 @@ PEG supports multiple stimulus formats and parameters.
 ### 7. Colors
 - **Stimulus Color**: Color of the text/stimulus (white, #FF0000, rgb(255,0,0))
 - **Background Color**: Screen background color (darkgrey, black, #333333)
+
+## Included Psychology Experiment Library
+
+PEG comes with a library of ready-to-run classic psychology experiments:
+
+### Available Experiments
+1. **`stroop_peg.csv`** - Classic Stroop color-word interference task
+2. **`gonogo_task.csv`** - Go/No-Go response inhibition paradigm  
+3. **`flanker_task.csv`** - Eriksen Flanker attention and conflict task
+4. **`rsvp_task.csv`** - Rapid Serial Visual Presentation attentional blink
+5. **`simon_task.csv`** - Simon spatial conflict task
+6. **`color_phi_task.csv`** - Color Phi motion illusion demonstration
+
+### Key Features of Library Experiments
+* **Reliable Key Mappings**: Use space, z, and m keys (avoiding problematic arrow keys)
+* **Block Randomization**: Proper use of 100+ block numbering for randomizable trials
+* **Section-Based Design**: Instructions (1-99), practice trials (100s), test trials (200s+)
+* **Automatic Timing**: Color Phi uses latency-based auto-progression for precise timing
+* **Ready to Run**: Each experiment is immediately usable with sensible defaults
+
+### Usage
+1. Click **Load CSV** in PEG interface
+2. Select any experiment from the library (e.g., `stroop_peg.csv`)
+3. Modify parameters as needed (repetitions, timing, colors)
+4. Click **Start Experiment** to generate HTML file
+5. Use the generated data collection system for analysis
+
+These experiments demonstrate best practices for PEG design and serve as templates for creating custom paradigms.
 
 ## Example Experiment Designs
 
@@ -345,5 +403,14 @@ Block | Block Repeats | Stimulus | Response | Latency
 - **Missing Images**: Upload images via the button and ensure filenames match exactly
 - **CSV Loading**: For old CSV files, Block Repeats column will be added automatically
 - **Block Repeats**: Only fill this for the first row of each block - subsequent rows inherit the value
-- **Response Timing**: Use "NA" for latency OR response, not both
+- **Response + Latency**: Can use both together - latency takes priority for auto-progression while still collecting response data
 - **Feedback**: Requires "Correct Response" column to be filled for [correct]/[incorrect] markers
+- **GUI Scrolling**: Large experiments with many rows can be scrolled - all buttons remain accessible
+- **Section Repeats**: Block Repeats apply to entire sections (all 100s, all 200s) not individual trials
+
+## Recent Updates (v13)
+- **Fixed GUI Scrolling**: Large experiments with many trial rows now properly scrollable
+- **Enhanced Timing Control**: Latency-priority system allows automatic progression while preserving response collection
+- **Section-Based Repeats**: Block Repeats now correctly repeat entire sections rather than individual trials
+- **Color Phi Support**: Precise automatic timing for motion illusion experiments
+- **Library Expansion**: Added 6 classic psychology experiments ready to use

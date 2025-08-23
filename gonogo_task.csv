@@ -1,8 +1,0 @@
-Block,Block Repeats,Stimulus,Response,Latency,Correct Response,Feedback Text,Feedback Duration,Stimulus Color,Background Color
-1,1,"Go/No-Go Task: Press SPACE quickly for GREEN words, do NOT press anything for RED words. Be fast but accurate!",space,5000,,,,white,black
-101,12,GO,space,1500,space,"[correct] Correct!",400,green,black
-102,12,GO,space,1500,space,"[correct] Correct!",400,green,black
-103,12,GO,space,1500,space,"[correct] Correct!",400,green,black
-104,6,NO-GO,NA,1500,,"[incorrect] You should not have responded!",600,red,black
-105,6,NO-GO,NA,1500,,"[incorrect] You should not have responded!",600,red,black
-2,1,"Go/No-Go task complete! Thank you for your participation.",NA,3000,,,,white,black

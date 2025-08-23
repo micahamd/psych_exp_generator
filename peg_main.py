@@ -12,9 +12,36 @@ class ExperimentGenerator:
     def __init__(self, master):
         self.master = master
         master.title("Psychological Experiment Generator")
+        master.geometry("1200x600")
+
+        # Create main container with scrollbar
+        main_container = tk.Frame(master)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Create canvas and scrollbar for scrolling
+        canvas = tk.Canvas(main_container)
+        scrollbar = tk.Scrollbar(main_container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Bind mousewheel to canvas
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
         # --- Main Frames ---
-        self.main_frame = tk.Frame(master)
+        self.main_frame = tk.Frame(scrollable_frame)
         self.main_frame.pack(padx=10, pady=10)
 
         # --- Header ---
@@ -31,9 +58,9 @@ class ExperimentGenerator:
         self.trial_rows = []
         self.add_trial_row() # Start with one row
 
-        # --- Controls ---
-        self.button_frame = tk.Frame(master)
-        self.button_frame.pack(padx=10, pady=(0,10))
+        # --- Controls (moved inside scrollable area) ---
+        self.button_frame = tk.Frame(scrollable_frame)
+        self.button_frame.pack(padx=10, pady=(10,10))
 
         self.add_button = tk.Button(self.button_frame, text="Add Trial Row", command=self.add_trial_row)
         self.add_button.grid(row=0, column=0, padx=5)
@@ -176,60 +203,59 @@ class ExperimentGenerator:
         final_trials = []
         
         for rep in range(repeat_count):
-            # Create trial groups for randomization
-            randomizable_groups = {}
-            fixed_trials = []
+            # Create section groups for randomization (100s, 200s, etc.)
+            randomizable_sections = {}
             
-            # Process blocks in design order to maintain structure
+            # First, organize trials into sections
+            for block_num in original_block_order:
+                if block_num >= 100:
+                    section_id = block_num // 100  # 101->1, 201->2, etc.
+                    if section_id not in randomizable_sections:
+                        randomizable_sections[section_id] = []
+                    randomizable_sections[section_id].append(block_num)
+            
+            # Determine section repeat counts (from first block in each section)
+            section_repeats = {}
+            for section_id, section_blocks in randomizable_sections.items():
+                first_block = min(section_blocks)
+                section_repeats[section_id] = block_repeats.get(first_block, 1)
+            
+            # Process the sequence following the original design order
             for block_num in original_block_order:
                 if block_num < 100:
-                    # Fixed block - add all repeats directly
+                    # Fixed block - add with its individual repeats
                     for block_rep in range(block_repeats[block_num]):
                         for trial in trials_by_block[block_num]:
                             trial_copy = trial.copy()
                             trial_copy['repetition'] = rep + 1
                             trial_copy['block_repetition'] = block_rep + 1
-                            trial_copy['sequence_position'] = len(fixed_trials)
-                            fixed_trials.append(trial_copy)
+                            final_trials.append(trial_copy)
                 else:
-                    # Randomizable block - group by hundreds
-                    group_id = block_num // 100
-                    if group_id not in randomizable_groups:
-                        randomizable_groups[group_id] = []
+                    # Randomizable section - check if this is the first block in its section
+                    section_id = block_num // 100
+                    section_blocks = randomizable_sections[section_id]
                     
-                    # Add all repeats of this block to the group
-                    for block_rep in range(block_repeats[block_num]):
-                        for trial in trials_by_block[block_num]:
-                            trial_copy = trial.copy()
-                            trial_copy['repetition'] = rep + 1
-                            trial_copy['block_repetition'] = block_rep + 1
-                            randomizable_groups[group_id].append(trial_copy)
-            
-            # Randomize each group independently
-            if self.randomize_var.get():
-                for group_trials in randomizable_groups.values():
-                    random.shuffle(group_trials)
-            
-            # Reconstruct the sequence following the original design order
-            group_iterators = {gid: iter(trials) for gid, trials in randomizable_groups.items()}
-            fixed_iterator = iter(fixed_trials)
-            
-            for block_num in original_block_order:
-                if block_num < 100:
-                    # Add all trials for this fixed block
-                    for _ in range(block_repeats[block_num] * len(trials_by_block[block_num])):
-                        try:
-                            final_trials.append(next(fixed_iterator))
-                        except StopIteration:
-                            break
-                else:
-                    # Add all trials for this randomizable block
-                    group_id = block_num // 100
-                    for _ in range(block_repeats[block_num] * len(trials_by_block[block_num])):
-                        try:
-                            final_trials.append(next(group_iterators[group_id]))
-                        except StopIteration:
-                            break
+                    if block_num == min(section_blocks):
+                        # This is the first block in the section - process the entire section
+                        section_repeat_count = section_repeats[section_id]
+                        
+                        for section_rep in range(section_repeat_count):
+                            # Collect all trials in this section
+                            section_trials = []
+                            for sect_block_num in section_blocks:
+                                for trial in trials_by_block[sect_block_num]:
+                                    trial_copy = trial.copy()
+                                    trial_copy['repetition'] = rep + 1
+                                    trial_copy['section_repetition'] = section_rep + 1
+                                    section_trials.append(trial_copy)
+                            
+                            # Randomize section if requested
+                            if self.randomize_var.get():
+                                random.shuffle(section_trials)
+                            
+                            # Add all section trials to final list
+                            final_trials.extend(section_trials)
+                    # If not the first block in section, skip (already processed)
 
         self.compile_and_run(final_trials)
 
@@ -422,7 +448,20 @@ class ExperimentGenerator:
             }}
 
             if (trial.latency !== null) {{
-                rafTimer = setTimeout(() => handleResponse(null), trial.latency);
+                rafTimer = setTimeout(() => {{
+                    document.onkeydown = null; // Disable key responses during auto-progression
+                    handleResponse(null);
+                }}, trial.latency);
+                // For trials with both response and latency, prioritize latency (automatic progression)
+                // This allows for automatic slideshow-style presentations
+                if (trial.response.toUpperCase() !== 'NA') {{
+                    // Brief delay before disabling keys to allow immediate response if needed
+                    setTimeout(() => {{
+                        if (rafTimer) {{ // Only disable if timer is still active
+                            document.onkeydown = null;
+                        }}
+                    }}, 50);
+                }}
             }}
         }}
 

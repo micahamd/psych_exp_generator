@@ -1,0 +1,5 @@
+Block,Stimulus,Response,Latency,Correct Response,Feedback Text,Feedback Duration,Stimulus Color,Background Color
+1,+,NA,1000,,,,red,black
+1,soup,NA,1000,,,,red,black
+1,"[image:arrow.png(width=120,top-left)]",space,NA,space,Got it!,2000,red,black
+1,Is soup tasty?,[text],NA,,,,,

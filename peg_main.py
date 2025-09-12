@@ -87,6 +87,15 @@ class ExperimentGenerator:
         self.repeat_entry = tk.Entry(self.button_frame, width=4, textvariable=self.repeat_var)
         self.repeat_entry.grid(row=0, column=7, padx=5)
 
+        # Add server save checkbox
+        self.save_to_server_var = tk.BooleanVar(value=False)
+        self.save_to_server_check = tk.Checkbutton(
+            self.button_frame,
+            text="Save Results to Server (PHP)?",
+            variable=self.save_to_server_var
+        )
+        self.save_to_server_check.grid(row=1, column=0, columnspan=3, padx=5, sticky='w')
+
     def add_trial_row(self):
         row_num = len(self.trial_rows) + 1
         widgets = []
@@ -312,6 +321,9 @@ class ExperimentGenerator:
                     e.insert(0, val)
 
     def generate_html(self, trials):
+        # Capture server save preference
+        save_to_server = self.save_to_server_var.get()
+
         image_regex = re.compile(r'\[image:([^()\]]+?)(?:\((.*?)\))?\]')
         preloaded_images = set()
 
@@ -373,6 +385,97 @@ class ExperimentGenerator:
 
         trials_json = json.dumps(js_trials, indent=4)
         preload_list_json = json.dumps(list(preloaded_images))
+
+        # Generate conditional downloadData function
+        if save_to_server:
+            download_function = f'''
+        function downloadData() {{
+            const experimentId = 'exp_' + Date.now().toString(36);
+            const data = {{
+                experimentId: experimentId,
+                timestamp: new Date().toISOString(),
+                browserInfo: navigator.userAgent,
+                randomized: {str(self.randomize_var.get()).lower()},
+                repetitions: {self.repeat_var.get()},
+                trials: trialResults
+            }};
+
+            // Send to server via PHP
+            fetch('/experiments/save_peg_results.php', {{
+                method: 'POST',
+                headers: {{
+                    'Content-Type': 'application/json'
+                }},
+                body: JSON.stringify(data)
+            }})
+            .then(response => {{
+                if (!response.ok) {{
+                    throw new Error('HTTP error! status: ' + response.status);
+                }}
+                return response.json();
+            }})
+            .then(result => {{
+                if (result.status === 'success') {{
+                    document.getElementById('container').innerHTML =
+                        "<h2>Experiment complete. Results sent to server!</h2>";
+                }} else {{
+                    throw new Error(result.message || 'Failed to save results');
+                }}
+            }})
+            .catch(error => {{
+                console.error('Save error:', error);
+                document.getElementById('container').innerHTML =
+                    "<h2>Experiment complete. Error saving to server: " + error.message + "</h2><p>Attempting local download...</p>";
+                // Fallback to local download
+                downloadDataLocally();
+            }});
+        }}
+
+        function downloadDataLocally() {{
+            const experimentId = 'exp_' + Date.now().toString(36);
+            const data = {{
+                experimentId: experimentId,
+                timestamp: new Date().toISOString(),
+                browserInfo: navigator.userAgent,
+                randomized: {str(self.randomize_var.get()).lower()},
+                repetitions: {self.repeat_var.get()},
+                trials: trialResults
+            }};
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], {{ type: 'application/json' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `experiment_data_${{experimentId}}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}'''
+        else:
+            # Preserve existing local download functionality
+            download_function = f'''
+        function downloadData() {{
+            const experimentId = 'exp_' + Date.now().toString(36);
+            const data = {{
+                experimentId: experimentId,
+                timestamp: new Date().toISOString(),
+                browserInfo: navigator.userAgent,
+                randomized: {str(self.randomize_var.get()).lower()},
+                repetitions: {self.repeat_var.get()},
+                trials: trialResults
+            }};
+            const jsonData = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonData], {{ type: 'application/json' }});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `experiment_data_${{experimentId}}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}'''
 
         return f'''<!DOCTYPE html>
 <html>
@@ -526,27 +629,7 @@ class ExperimentGenerator:
             }}
         }}
 
-        function downloadData() {{
-            const experimentId = 'exp_' + Date.now().toString(36);
-            const data = {{
-                experimentId: experimentId,
-                timestamp: new Date().toISOString(),
-                browserInfo: navigator.userAgent,
-                randomized: {str(self.randomize_var.get()).lower()},
-                repetitions: {self.repeat_var.get()},
-                trials: trialResults
-            }};
-            const jsonData = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonData], {{ type: 'application/json' }});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `experiment_data_${{experimentId}}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }}
+{download_function}
 
         preloadImages(preloadList).then(() => {{
             if (trials.length > 0) displayTrial(trials[0]);

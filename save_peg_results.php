@@ -99,7 +99,7 @@ if (!is_array($data['trials'])) {
 }
 
 // Create results directory if it doesn't exist
-$upload_dir = '../experiment_results/';
+$upload_dir = './experiment_results/';
 if (!is_dir($upload_dir)) {
     if (!mkdir($upload_dir, 0755, true)) {
         http_response_code(500);

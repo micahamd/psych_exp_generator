@@ -1,0 +1,51 @@
+Block,Block Repeats,Stimulus,Response,Latency,Correct Response,Feedback Text,Feedback Duration,Stimulus Color,Background Color
+1,,"Welcome! 
+
+Please enter your ID in the text field below and press Continue. ","[text(placeholder=""Enter your ID here"", maxlength=50,width=300)]",NA,,,0,white,black
+2,,"In this task, you will see RED or BLUE squares appear on the left or right sides of the screen. Your goal is to identify these colors as quickly and as accurately as you can.
+
+ Please press the letter 'z'  RED squares, or the letter 'm' for BLUE squares. To facilitate responding, you can place the index fingers of your left and right hands respectively near the letters 'z' and 'm' on your keyboard. 
+
+You can press the spacebar to continue.",space,NA,,,0,white,black
+3,,Get ready,NA,3000,,,0,white,black
+101,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+102,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+103,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+104,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+105,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+106,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+107,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+108,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+201,3,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+202,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+203,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+204,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+205,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+206,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+207,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+208,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+209,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+210,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+211,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+212,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+213,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+214,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+215,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+216,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+217,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+218,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+219,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+220,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+221,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+222,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+223,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+224,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+225,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+226,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+227,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+228,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+229,,[image:red_square.png(left)],"z,m",NA,z,[correct] Correct!,500,white,black
+230,,[image:blue_square.png(right)],"z,m",NA,m,[correct] Correct!,500,white,black
+231,,[image:red_square.png(right)],"z,m",NA,z,[correct] Correct!,500,white,black
+232,,[image:blue_square.png(left)],"z,m",NA,m,[correct] Correct!,500,white,black
+999,,Thank you! The experiment is complete.,NA,1000,,,5,white,black

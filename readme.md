@@ -182,62 +182,116 @@ The current interface includes the following columns (in order):
 
 ## Detailed Stimulus Syntax Reference
 
-PEG supports multiple stimulus formats and parameters.
+PEG supports multiple stimulus formats and parameters, as demonstrated in the included experiment library.
 
 ### 1. Text Stimuli
-- Plain text is displayed directly in the stimulus area.
+- **Plain text** is displayed directly in the stimulus area
+- **Multi-line text** with line breaks is supported using proper CSV formatting
 - Example: `Press Y for Yes or N for No`
+- Multi-line example:
+  ```csv
+  "Welcome! 
+
+  Please enter your ID in the text field below and press Continue."
+  ```
 
 ### 2. Image Stimuli
-- Syntax: `[image:filename.ext(options)]`
-- `filename.ext` should match an image uploaded via the **Upload Images** button. Files are stored in `./images/`.
-- Supported formats: `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`.
-- Options (comma-separated, optional):
-  - `width=<pixels>` – Set width in pixels.
-  - `height=<pixels>` – Set height in pixels.
-  - Position flags: `center`, `top`, `bottom`, `left`, `right`
-  - Diagonal positioning: `top-left`, `top-right`, `bottom-left`, `bottom-right`
-- Examples:
-  - `[image:face01.jpg]` (display as-is, centered)
-  - `[image:arrow.png(width=200,height=100)]`
-  - `[image:logo.svg(top-left,width=150)]`
+- **Syntax**: `[image:filename.ext(options)]`
+- **File location**: Images must be uploaded via **Upload Images** button (stored in `./images/`)
+- **Supported formats**: `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`
+- **Options** (comma-separated, optional):
+  - `width=<pixels>` – Set width in pixels
+  - `height=<pixels>` – Set height in pixels
+  - **Position flags**: `center`, `top`, `bottom`, `left`, `right`
+  - **Diagonal positioning**: `top-left`, `top-right`, `bottom-left`, `bottom-right`
+
+#### Image Examples:
+```csv
+[image:face01.jpg]                           # Centered, natural size
+[image:arrow.png(width=200,height=100)]      # Custom dimensions
+[image:logo.svg(top-left,width=150)]         # Positioned with size
+[image:red_square.png(left)]                 # Left-positioned (Simon task)
+[image:blue_square.png(right)]               # Right-positioned (Simon task)
+```
 
 ### 3. Mixed Text + Image
-- You can mix text and image references in the same Stimulus field
+- Combine text and images in the same stimulus field
 - Example: `Look here [image:arrow.png(width=120)] then press space`
 
 ### 4. Response Types
 
 #### Keyboard Responses
-- Use key names: `space`, `ctrl`, `alt`, `lshift`, `rshift`, or any letter/number
-- Multiple responses: `y,n,space` or `1,2,3,4,5`
+- **Single response**: `space`, `z`, `m`, `y`, `n`, any letter/number
+- **Multiple responses**: `"z,m"`, `"y,n,space"`, `"1,2,3,4,5"` (comma-separated, quoted)
+- **Special keys**: `space`, `ctrl`, `alt`, `lshift`, `rshift`
 
 #### Text Entry Responses
-- Use `[text]` marker in the Response field to enable free-text input
-- Optional parameters: `[text(placeholder="Your answer",maxlength=50,width=300)]`
+- **Basic syntax**: `[text]` - Creates a text input field
+- **Advanced syntax**: `"[text(placeholder=""Enter your ID here"", maxlength=50,width=300)]"`
+- **Parameters**:
+  - `placeholder` - Hint text shown in empty field
+  - `maxlength` - Maximum characters allowed
+  - `width` - Field width in pixels
 
-### 5. Block Repeats
-- Enter a number in the "Block Repeats" column for the **first row** of each block
-- Empty cells default to 1 repetition
-- Example:
-  ```
-  Block | Block Repeats | Stimulus
-  1     | 1            | Instructions
-  2     | 5            | Training trial 1  
-  2     |              | Training trial 2  (inherits 5 repeats)
-  3     | 20           | Test trial
-  ```
+#### Response Examples from Simon Task:
+```csv
+Response                                     | Description
+"[text(placeholder=""Enter your ID here"", maxlength=50,width=300)]" | ID collection
+space                                        | Single key press
+"z,m"                                        | Multiple choice (z OR m)
+NA                                           | No response (auto-advance)
+```
 
-### 6. Feedback System
-- Use feedback markers in "Feedback Text" column:
-  - `[correct] Great job!` - Shows only for correct responses
-  - `[incorrect] Try again` - Shows only for incorrect responses  
-  - `[all] Response recorded` - Shows for any response
-- Set "Feedback Duration" in milliseconds
+### 5. Block Structure and Repeats
 
-### 7. Colors
-- **Stimulus Color**: Color of the text/stimulus (white, #FF0000, rgb(255,0,0))
-- **Background Color**: Screen background color (darkgrey, black, #333333)
+#### Block Numbering Strategy
+- **Instructions/Setup**: Blocks 1-99 (fixed order, not randomized)
+- **Practice Trials**: Blocks 101-199 (can be randomized)
+- **Main Experiment**: Blocks 201-299+ (randomized within section)
+- **Completion**: Block 999 (final message)
+
+#### Block Repeats Column
+- Enter number in **first row only** of each block
+- Empty cells inherit the repeat value
+- **Example from Simon Task**:
+```csv
+Block | Block Repeats | Stimulus                    | Notes
+1     |              | Welcome message             | Instructions (no repeats)
+101   |              | Practice trial 1            | Practice (8 trials total)
+201   | 3            | [image:red_square.png(left)] | Main experiment (repeated 3 times)
+202   |              | [image:blue_square.png(right)] | Inherits 3 repeats
+```
+
+### 6. Advanced Feedback System
+
+#### Conditional Feedback Markers
+- **`[correct]`** - Shows only for correct responses
+- **`[incorrect]`** - Shows only for incorrect responses  
+- **`[all]`** - Shows for any response
+
+#### Feedback Examples:
+```csv
+Feedback Text              | When Displayed
+"[correct] Correct!"       | Only when participant responds correctly
+"[incorrect] Try again"    | Only when participant responds incorrectly
+"[all] Response recorded"  | After any response
+"Great job!"               | Always (no conditional marker)
+```
+
+### 7. Timing and Latency Control
+
+#### Latency Column Options
+- **`NA`** - Wait indefinitely for response
+- **`3000`** - Auto-advance after 3000 milliseconds (3 seconds)
+- **Combined with Response**: Both automatic timing AND response collection
+
+#### Timing Examples from Experiments:
+```csv
+Stimulus           | Response | Latency | Result
+"Get ready"        | NA       | 3000    | Shows for exactly 3 seconds
+"Press space"      | space    | NA      | Waits for spacebar press
+"[image:phi1.png]" | space    | 200     | Auto-advances OR responds early
+```
 
 ## Included Psychology Experiment Library
 
@@ -248,8 +302,47 @@ PEG comes with a library of ready-to-run classic psychology experiments:
 2. **`gonogo_task.csv`** - Go/No-Go response inhibition paradigm  
 3. **`flanker_task.csv`** - Eriksen Flanker attention and conflict task
 4. **`rsvp_task.csv`** - Rapid Serial Visual Presentation attentional blink
-5. **`simon_task.csv`** - Simon spatial conflict task
-6. **`color_phi_task.csv`** - Color Phi motion illusion demonstration
+5. **`simon_task.csv`** - Simon spatial conflict task (text-based)
+6. **`simon_colored_squares.csv`** - Simon task with positioned colored square images
+7. **`color_phi_task.csv`** - Color Phi motion illusion demonstration
+
+### Experiment Design Patterns
+
+#### Complete Simon Task Example (`simon_colored_squares.csv`)
+This experiment demonstrates professional experimental design with:
+
+**1. Participant ID Collection:**
+```csv
+Block | Stimulus | Response
+1     | "Welcome! Please enter your ID..." | "[text(placeholder=""Enter your ID here"", maxlength=50,width=300)]"
+```
+
+**2. Detailed Instructions:**
+```csv
+Block | Stimulus | Response  
+2     | "In this task, you will see RED or BLUE squares appear on the left or right sides..." | space
+```
+
+**3. Practice Phase (8 trials):**
+```csv
+Block | Stimulus | Response | Correct Response
+101   | [image:red_square.png(left)]  | "z,m" | z
+102   | [image:blue_square.png(right)] | "z,m" | m
+```
+
+**4. Main Experiment (32 trials × 3 repetitions):**
+```csv
+Block | Block Repeats | Stimulus | Response | Correct Response | Feedback Text
+201   | 3            | [image:red_square.png(left)] | "z,m" | z | "[correct] Correct!"
+```
+
+#### Design Features Demonstrated:
+- **Spatial compatibility manipulation**: Left/right image positioning vs. left/right response keys
+- **Counterbalanced design**: Equal congruent and incongruent trials
+- **Professional instructions**: Clear, detailed participant guidance
+- **Data collection**: ID collection for participant tracking
+- **Feedback system**: Immediate performance feedback
+- **Block structure**: Logical progression from instructions → practice → main experiment
 
 ### Key Features of Library Experiments
 * **Reliable Key Mappings**: Use space, z, and m keys (avoiding problematic arrow keys)
@@ -267,29 +360,176 @@ PEG comes with a library of ready-to-run classic psychology experiments:
 
 These experiments demonstrate best practices for PEG design and serve as templates for creating custom paradigms.
 
-## Example Experiment Designs
+## Complete Experiment Design Examples
 
-### Simple Reaction Time Task
-```
-Block | Block Repeats | Stimulus | Response | Latency
-1     | 1            | Press space when you see the + | space | NA
-2     | 10           | + | space | NA
-3     | 1            | Thank you! | NA | 2000
+### Professional Simon Task Design
+Based on the included `simon_colored_squares.csv`, here's how to structure a complete psychology experiment:
+
+#### Phase 1: Setup and Instructions
+```csv
+Block | Block Repeats | Stimulus | Response | Latency | Feedback Duration
+1     |              | "Welcome! Please enter your ID..." | "[text(placeholder=""Enter your ID here""...)]" | NA | 0
+2     |              | "In this task, you will see RED or BLUE squares..." | space | NA | 0
+3     |              | "Get ready" | NA | 3000 | 0
 ```
 
-### Training + Testing Paradigm
+#### Phase 2: Practice Trials (Blocks 101-108)
+```csv
+Block | Stimulus | Response | Correct Response | Feedback Text | Feedback Duration
+101   | [image:red_square.png(left)]  | "z,m" | z | "[correct] Correct!" | 500
+102   | [image:blue_square.png(right)] | "z,m" | m | "[correct] Correct!" | 500
+103   | [image:red_square.png(right)] | "z,m" | z | "[correct] Correct!" | 500
+104   | [image:blue_square.png(left)]  | "z,m" | m | "[correct] Correct!" | 500
 ```
+
+#### Phase 3: Main Experiment (Blocks 201-232, Repeated 3 times)
+```csv
+Block | Block Repeats | Stimulus | Response | Correct Response | Feedback Text
+201   | 3            | [image:red_square.png(left)]  | "z,m" | z | "[correct] Correct!"
+202   |              | [image:blue_square.png(right)] | "z,m" | m | "[correct] Correct!"
+...   |              | (32 total trials with balanced congruent/incongruent conditions)
+```
+
+#### Phase 4: Completion
+```csv
+Block | Stimulus | Latency
+999   | "Thank you! The experiment is complete." | 1000
+```
+
+### Key Design Principles Demonstrated:
+
+1. **Block Numbering Strategy**: 
+   - 1-99: Instructions and setup
+   - 101-199: Practice trials
+   - 201-299+: Main experimental trials
+   - 999: Completion message
+
+2. **Spatial Compatibility Manipulation**:
+   - **Congruent**: Red square left + Z key (left), Blue square right + M key (right)
+   - **Incongruent**: Red square right + Z key (left), Blue square left + M key (right)
+
+3. **Professional Data Collection**:
+   - Participant ID collection with text input
+   - Immediate feedback for learning
+   - Balanced trial presentation
+   - Clear completion message
+
+### Simple Training + Testing Paradigm
+```csv
 Block | Block Repeats | Stimulus | Response | Latency | Feedback Text
-1     | 1            | Training Phase: Press Y or N | space | NA |
-2     | 5            | [image:stimulus1.jpg] | y,n | NA | [correct] Correct!
-3     | 1            | Training complete. Testing begins. | space | NA |
-4     | 20           | [image:stimulus2.jpg] | y,n | NA |
-5     | 1            | Experiment complete! | NA | 3000 |
+1     | 1            | "Training Phase: Press Y or N" | space | NA |
+101   | 5            | [image:stimulus1.jpg] | "y,n" | NA | "[correct] Correct!"
+201   | 1            | "Training complete. Testing begins." | space | NA |
+301   | 20           | [image:stimulus2.jpg] | "y,n" | NA |
+999   | 1            | "Experiment complete!" | NA | 3000 |
+```
+
+### Quick Reaction Time Task
+```csv
+Block | Block Repeats | Stimulus | Response | Latency
+1     | 1            | "Press space when you see the +" | space | NA
+101   | 10           | "+" | space | NA
+999   | 1            | "Thank you!" | NA | 2000
 ```
 
 ### Notes:
-- All images are **preloaded** before the experiment starts to avoid display delays.
-- If a referenced image is missing from `./images/`, the experiment will not start — an error will list missing files.
+- All images are **preloaded** before the experiment starts to avoid display delays
+- If a referenced image is missing from `./images/`, the experiment will not start — an error will list missing files
+- Use proper CSV quoting for complex fields: `"[image:file.png(left)]"` and `"z,m"`
+
+## Best Practices and Design Patterns
+
+### CSV Formatting Guidelines
+1. **Quote complex fields**: Use quotes around multi-line text, image syntax, and multiple responses
+   ```csv
+   "Welcome! 
+
+   This is a multi-line instruction."
+   "[image:stimulus.png(left)]"
+   "z,m"
+   ```
+
+2. **Proper comma separation**: Multiple responses must be comma-separated within quotes
+   ```csv
+   Correct: "z,m"
+   Incorrect: "z m" or z,m
+   ```
+
+3. **Escape quotes in text**: Use double quotes to escape quotes within quoted fields
+   ```csv
+   "[text(placeholder=""Enter your response here"")]"
+   ```
+
+### Experimental Design Patterns
+
+#### Standard Block Structure
+- **1-99**: Instructions, consent, demographics
+- **101-199**: Practice/training trials  
+- **201-299**: Main experiment block 1
+- **301-399**: Main experiment block 2 (if needed)
+- **999**: Completion message
+
+#### Response Key Selection
+- **Recommended keys**: `space`, `z`, `m`, `y`, `n` (reliable across browsers/keyboards)
+- **Avoid**: Arrow keys, function keys, or keys that might conflict with browser shortcuts
+- **Spatial tasks**: Use `z` (left) and `m` (right) for spatial compatibility
+
+#### Timing Best Practices
+- **Instructions**: No time limit (`Response: space, Latency: NA`)
+- **Preparation screens**: Fixed duration (`Response: NA, Latency: 3000`)
+- **Stimulus presentation**: Response-based or fixed timing depending on paradigm
+- **Feedback**: Brief duration (300-1000ms)
+
+#### Feedback Design
+- **Learning phases**: Provide immediate feedback with `[correct] Correct!`
+- **Test phases**: Minimal or no feedback to avoid influencing responses
+- **Error feedback**: Use `[incorrect] Please try again` for training
+- **Response registration**: Use `[all] Response recorded` when needed
+
+### Common Experiment Types
+
+#### Choice Reaction Time
+```csv
+Block | Stimulus | Response | Correct Response | Feedback Text
+201   | [image:target_left.png] | "z,m" | z | "[correct] Correct!"
+202   | [image:target_right.png] | "z,m" | m | "[correct] Correct!"
+```
+
+#### Go/No-Go Paradigm  
+```csv
+Block | Stimulus | Response | Correct Response | Feedback Text
+201   | [image:go_stimulus.png] | "space,NA" | space | "[correct] Good!"
+202   | [image:nogo_stimulus.png] | "space,NA" | NA | "[correct] Correct withhold!"
+```
+
+#### Survey/Questionnaire
+```csv
+Block | Stimulus | Response
+201   | "Rate your mood (1-7)" | "1,2,3,4,5,6,7"
+202   | "Any additional comments?" | "[text(maxlength=500)]"
+```
+
+### Troubleshooting Common Issues
+
+#### Image Problems
+- **Missing images**: Upload via "Upload Images" button first
+- **Wrong syntax**: Use `[image:filename.png]` not `image:filename.png`
+- **Positioning**: Use `[image:file.png(left)]` not separate position column
+
+#### Response Issues  
+- **Multiple responses**: Use `"z,m"` not `z m` or `z,m`
+- **Text input**: Use `[text]` or `"[text(parameters)]"`
+- **No response trials**: Use `NA` in response field
+
+#### Timing Problems
+- **Immediate advance**: Use `Latency: 0` 
+- **Wait for response**: Use `Latency: NA`
+- **Fixed duration**: Use `Latency: 3000` (milliseconds)
+
+#### Block Structure
+- **Randomization**: Only blocks 100+ are randomized
+- **Repeats**: Enter number only in first row of each block
+- **Order**: Instructions (1-99) always come first, completion (999) always last
 
 
 ## Quick Start Guide
